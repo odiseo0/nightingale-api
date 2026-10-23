@@ -10,6 +10,8 @@ requires-python = ">=3.15.1"
 dependencies = [
     "asyncpg>=0.32.0",
     "fastapi[standard]>=0.159.1",
+    "httptools>=0.9.0",
+    "orjson>=3.13.0",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.1",
     "sqlalchemy[asyncio]>=2.1.6",
@@ -26,3 +28,17 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "src"
 module-root = ""
+
+[tool.basedpyright]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+typeCheckingMode = "basic"
+reportUnnecessaryTypeIgnoreComment = true
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportReturnType = false
+reportArgumentType = false
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

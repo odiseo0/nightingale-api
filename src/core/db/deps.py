@@ -1,22 +1,23 @@
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import HTTPException, Request
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .session import async_session_factory
 
 
-async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
-    factory = request.app.state.session_factory
-
-    if factory is None:
-        raise HTTPException(status_code=503, detail="Database unavailable")
-
-    async with factory() as db:
-        yield db
+async def get_db() -> AsyncIterator[AsyncSession]:
+    async with async_session_factory() as db:
+        try:
+            yield db
+        finally:
+            await db.close()
 
 
 @asynccontextmanager
-async def session(factory: async_sessionmaker[AsyncSession]) -> AsyncGenerator[AsyncSession]:
-    """Open a session without choosing when the caller commits."""
-    async with factory() as db:
+async def session() -> AsyncGenerator[AsyncSession]:
+    """Use this in case you can't use dependency injection."""
+    async with async_session_factory() as db:
         yield db
