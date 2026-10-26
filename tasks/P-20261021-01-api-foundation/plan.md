@@ -1,10 +1,24 @@
 # P-20261021-01-api-foundation
 
-**Estado:** In progress. **Fecha:** 2026-10-21. **Trabajo actual:** T04, acuerdo de acceso. **C03:** habilitado por el usuario tras corregir las anotaciones.
+**Estado vigente:** Superseded para ejecución desde el 2026-10-24 por [P-20261024-01-desktop-shared-api](../P-20261024-01-desktop-shared-api/plan.md), aprobado por el usuario. Se conservan las aceptaciones y el registro anterior; no se marca completado el trabajo pendiente. La tabla de sucesión del plan nuevo asigna el núcleo y conserva las etapas excluidas.
+
+## Registro histórico hasta la sustitución
+
+**Estado:** In progress. **Fecha:** 2026-10-21. **Último cierre:** T24, revisión documental del esquema aceptada en C14 el 2026-10-24. El acuerdo parcial de T04 se conserva como siguiente tarea por retomar; no se inicia en esta entrega. **C03:** habilitado por el usuario tras corregir las anotaciones.
+
+**Actualización del 2026-10-24:** T24 toma `docs/database-schema.md` como única fuente del modelo según D08. El usuario retira el borrador lógico anterior, aplaza la corrección de identidad global y pide dejar el diseño preparado para avanzar. Solo se ajusta documentación: las dos propuestas de §8.9 siguen para revisión y los pendientes afectan al recorrido que los necesita. Se conservan IDs, dependencias y checkpoints del plan.
+
+**Aceptación posterior del 2026-10-24:** el usuario responde «Listo, todo bien» a la revisión y sus propuestas 2 y 3. C14 queda aceptado; T24 incorpora ambas al esquema 0.9 y cierra su alcance documental. El pendiente global sigue aplazado; no se cierra C04 ni se inicia implementación.
 
 El 2026-10-21 el usuario indicó que ya había instalado dependencias y añadió código base; autorizó comenzar la fundación. Esa instrucción habilita T03 con su selección de herramientas y sustituye la espera documental de C01/C02 para este alcance. La base PostgreSQL de prueba de O08 sigue pendiente y debe definirse antes de T07. No se extiende esta autorización a esquema, negocio o despliegue.
 
 Después pidió cambiar las anotaciones de `@asynccontextmanager` a `AsyncGenerator` y autorizó continuar. La corrección y sus comprobaciones permiten iniciar T04. Confirmó OIDC externo y permisos vigentes al aceptar; el resto se distingue como propuesta en [diseño de acceso](../../docs/access-design.md).
+
+El 2026-10-23 el usuario autorizó resolver las diferencias documentales con la copia del escritorio añadida a este repositorio. Esta ampliación de T04 alinea decisiones ya confirmadas y prepara los acuerdos pendientes para revisión. No autoriza cambios en otros repositorios, código, esquema o despliegue; no cierra T04 ni adelanta T05/T06/T19.
+
+Después aceptó C13 y los criterios P05/P06, con la condición de poder cambiarlos al implementar. Indicó que trasladará los documentos del escritorio al repositorio original y pidió conservar todas sus rutas. Esta instrucción sustituye la adaptación de esos enlaces al árbol de API: se restauran sus destinos originales y se eliminan dependencias relativas añadidas hacia archivos exclusivos de API. Los criterios quedan confirmados; los ciclos, canales y demás detalles siguen pendientes, sin habilitar implementación.
+
+Después confirmó el traslado y pidió centrar el trabajo en el diseño de la base de datos. Se añade T24, sin renumerar tareas anteriores, para adelantar solo el diseño lógico que no depende del cierre de T04–T06. Sus respuestas de producto se registran en D07. T04 vuelve a Todo para retomarlo con su acuerdo parcial intacto; no se trabaja en dos tareas a la vez. Esta prioridad documental no habilita persistencia, migraciones, código de acceso o cambios en el escritorio.
 
 ## Objetivo y límites
 
@@ -48,6 +62,7 @@ No incluye código del escritorio/Hub, datos reales, historias clínicas, pagos,
 | T21 | Indicadores básicos / analytics | T20; O11 | Definir fórmulas y frecuencia antes de implementar proyecciones en PostgreSQL separado; consumo/avance repetible y alcance por cuenta. Repetir lote sin doble conteo y recuperar caída ETL; sin informe costoso sobre operativo |
 | T22 | Operación y restauración / operación, todos los adaptadores | T21; O08–O10 | Proponer y revisar límites/umbrales, disponibilidad, retenciones, red/secretos, copias y RPO/RTO. Verificar salud, carga, recuperación y restauración en entorno aislado autorizado. No desplegar producción por esta tarea; registrar lo no disponible |
 | T23 | Integración y aceptación de versión / API + consumidores | T22 + C11 | Matriz contractual, cambios de esquema compatibles, casos conjuntos de Q01–Q16 y recorrido con Hub/escritorio cuando estén disponibles. Separar evidencia de API de pruebas externas faltantes; preparación de publicación para revisión, sin desplegar por defecto |
+| T24 | Revisión del esquema / datos, producto y documentación | Instrucciones del usuario del 2026-10-23/24; D01/D02/D06/D08 y P05/P06; esquema aportado por el usuario | 1. Única fuente en `docs/database-schema.md`, con acuerdos y propuestas separados. 2. Registrar pendiente global aplazado, propuestas de verificación/fin de jornada y conservación de correcciones en historia, sin diseñar seguridad o sync excluidos. 3. Comprobar estructura del esquema preservada, referencias nuevas, plan y ausencia de cambios de código. Sin DDL, migraciones o pruebas de producto |
 
 T07 crea solo la base técnica aprobada; cada componente añade sus migraciones al existir su caso de uso. Los contratos y las restricciones compartidas quedan definidos antes, sin crear un modelo global editable desde todos los componentes. T12/T14 deben repetir las carreras de cambios de agenda con citas reales; T11 por sí sola no acredita ese recorrido.
 
@@ -67,6 +82,23 @@ T07 crea solo la base técnica aprobada; cada componente añade sus migraciones 
 | C10 | T19: alcance de ofertas y papel del paciente/personal | T20–T22: lista de espera, indicadores y preparación operativa |
 | C11 | T20–T22: datos, indicadores, restauración y objetivos aprobados | T23: integración para aceptación de versión |
 | C12 | T23: evidencia disponible y faltantes externos identificados | Solo cierre del plan si se cumplen los criterios; despliegue requiere alcance propio |
+| C13 | Aceptado por el usuario el 2026-10-23: alineación documental y criterios P05/P06 revisables; rutas del escritorio conservadas para su traslado | Los detalles restantes se resolverán en T06/T19; no sustituye C04 ni habilita código |
+| C14 | Aceptado por el usuario el 2026-10-24: T24, fuente única del esquema, pendientes acotados y propuestas 2/3 incorporadas en 0.9 | Cierra la revisión documental de T24; no cierra T04–T06 ni sustituye C04 |
+
+T24 cierra su alcance documental. Entradas: esquema aportado por el usuario, instrucciones actuales, especificación, arquitectura, contratos y decisiones; las lecturas anteriores del escritorio se conservan como contexto. Salida vigente: `docs/database-schema.md` 0.9, fuente única según D08; el borrador lógico anterior queda retirado. No cambia transacciones ejecutables, modelos ORM ni consumidores. La aplicación del diseño a migraciones sigue en T07 y exige C04. La evidencia se registra en `todo.md`; C14 queda aceptado por la respuesta del usuario. Los C01–C03 citados en el esquema tienen su propio contexto de revisión y no aceptan checkpoints de este plan.
+
+## Ampliación documental de T04 · 2026-10-23
+
+Entradas: revisión de discrepancias y propuesta aceptada por el usuario; D06, arquitectura y contratos de API; documentos importados del escritorio. Se conserva el orden y estado del resto del plan. Trabajar los pasos siguientes en secuencia, sin delegación:
+
+| Paso / propietario | Archivos y alcance | Aceptación / comprobación |
+|---|---|---|
+| 1 · Acceso / API y documentación del escritorio | Especificación API, plan maestro, arquitectura técnica, SRS y guía de desarrollo del escritorio | D06 figura como confirmada; proveedor/sesiones siguen pendientes; ningún texto vigente acepta por fecha local. Revisión de contenido y búsqueda de reglas antiguas |
+| 2 · Citas y comunicaciones / API + escritorio | Contratos API, plan maestro y arquitectura técnica | Invalidación de confirmación atómica; resultado desconocido sin reenvío ciego; escenarios de fallo documentados. Recorrido manual de ambos casos, sin pruebas de producto |
+| 3 · Procedencia / documentación | Índice de la copia, referencia a especificación API, ADR vigente, enlaces de la base y registro de fuentes | Una fuente por contrato; origen/versiones identificados; conservar las rutas originales del escritorio, incluidos planes que esta copia no contiene. Conservar ADR históricos y cambios previos del usuario |
+| 4 · Acuerdos / producto + API + Hub | Registro de decisiones y referencias desde contratos y documentos del escritorio | Criterios P05/P06 aprobados y revisables; O04/O05 siguen abiertos para detalles. Solicitud separada y asignación de ofertas por personal, sin ampliar Hub |
+
+Límites de transacción, sync y consumidores: solo se aclaran los límites ya acordados y sus efectos sobre Rust/Hub; no cambian formatos ejecutables ni migraciones. La evidencia documental se registra en `todo.md` después de comprobar. El usuario ya revisó C13 y aprobó los dos criterios; esta aprobación no sustituye los controles ni decisiones posteriores.
 
 ## Riesgos y cierre
 

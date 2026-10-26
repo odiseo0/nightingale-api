@@ -2,7 +2,7 @@
 
 API de autorización, aceptación del estado compartido y sincronización de Nightingale. Python y FastAPI; PostgreSQL operativo privado. Este repositorio también tendrá los módulos y workers de recordatorios, entregas, integración con n8n e indicadores básicos.
 
-**Estado al 2026-10-21:** base de proceso T03 comprobada; el usuario autorizó continuar con el acuerdo de acceso T04. El repositorio usa Python 3.15.1 y `uv.lock`; arranca FastAPI, valida configuración y expone salud. No hay esquema ni operaciones de negocio.
+**Estado al 2026-10-26:** C01/C02/C12/C13/C14 aceptados. La corrección T34–T45 queda para revisión en C15. authorization, accounts y sync siguen la estructura acordada; se retiran los cursores de página y la CLI, y el alta usa [scripts/create_practice.py](scripts/create_practice.py). Las rutas HTTP siguen siendo las cuatro de credenciales; las lecturas de cuenta aún no tienen endpoints. T09 y C03 siguen pendientes. El [contrato 1.1](docs/api-v1.md) fija camelCase y page/shows. Sin nuevas dependencias ni cambios físicos. Evidencia y límites en la [lista de control](tasks/P-20261024-01-desktop-shared-api/todo.md).
 
 El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient Hub tiene su web, backend y datos propios; usa esta API para consultar y cambiar citas autorizadas. Ninguno recibe acceso SQL al PostgreSQL operativo.
 
@@ -12,24 +12,27 @@ El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient 
 |---|---|
 | [Especificación](docs/nightingale-api.md) | Fuente del alcance y los límites confirmados |
 | [Reglas de trabajo](AGENTS.md) | Guía común para colaboradores y agentes |
-| [Desarrollo y evidencia de T03](docs/operations/development.md) | Comandos, configuración, versiones, pruebas y límites actuales |
+| [Desarrollo y evidencia](docs/operations/development.md) | Corrección actual y registros de comprobaciones previas |
+| [Soporte local de pruebas](test-support/README.md) | PostgreSQL y Keycloak sin Docker; OIDC, migraciones y transacciones con datos ficticios |
 | [Arquitectura](docs/architecture.md) | Componentes, datos, dependencias y flujos propuestos |
 | [Contratos](docs/contracts.md) | Propiedad, criterios de diseño y acuerdos por cerrar |
+| [Contrato de diseño HTTP v1](docs/api-v1.md) | Rutas, operaciones, modelos públicos, permisos y recuperación de esta etapa |
+| [Esquema físico de diseño](docs/database-schema.md) | Única fuente del modelo; ampliación 1.0 para revisión C01, sin SQL ejecutado |
 | [Calidad y pruebas](docs/quality.md) | Requisitos verificables y pruebas futuras |
 | [Decisiones](docs/decisions.md) | Qué está confirmado, propuesto o pendiente |
-| [Diseño de acceso T04](docs/access-design.md) | OIDC y permisos vigentes confirmados; sesiones, dispositivos y Hub en revisión |
+| [Diseño de acceso](docs/access-design.md) | OIDC de emisión y token API sin vencimiento/revocable; Hub posterior aún en revisión |
 | [Fuentes y revisión](docs/sources.md) | Referencias, diferencias y comprobaciones documentales |
-| [Plan de implementación](tasks/P-20261021-01-api-foundation/plan.md) | Tareas, dependencias y puntos de revisión |
+| [Plan sucesor aprobado](tasks/P-20261024-01-desktop-shared-api/plan.md) | Tareas, dependencias y checkpoints de API para escritorio |
 
 ## Empezar a colaborar
 
-Lee la especificación y el plan antes de cambiar archivos. La primera versión cubre pacientes, servicios, agenda, citas, recordatorios, lista de espera e indicadores básicos. Excluye historias clínicas, diagnósticos, resultados médicos, pagos y gestión de clínicas con varias sedes.
+Lee la especificación y el plan antes de cambiar archivos. Esta etapa cubre acceso, consulta independiente/equipo, pacientes, contactos, servicios, agenda, citas e intercambio entre dispositivos. Recordatorios, Hub, espera e indicadores corresponden a etapas posteriores. Se excluyen datos reales, producción, historia clínica, pagos, gestión clínica avanzada y cambios al escritorio.
 
-Desde la raíz, con `uv` disponible:
+Comandos de la base, desde la raíz con `uv` disponible:
 
 ```powershell
 uv sync --locked
-uv run --locked nightingale-api
+uv run --locked uvicorn src.application:app --host 127.0.0.1 --port 8000
 ```
 
-El servicio escucha en `127.0.0.1:8000`. `/health/live` indica si responde; `/health/ready` devuelve 503 sin PostgreSQL configurado. Consulta la guía de desarrollo para pruebas y configuración. Los acuerdos pendientes de T04 y los checkpoints posteriores conservan sus límites.
+El comando usa la app de módulo y la fábrica de sesiones existente, sin lifespan para la base ni comando propio del paquete. Configura la URI de PostgreSQL antes de importar la app: el motor actual la exige, aunque no abre conexiones al importar. `/health/live` responde 200 y `/health/ready` comprueba disponibilidad SQL. Las pruebas unitarias usan sustitutos; el soporte de integración usa PostgreSQL/Keycloak reales aislados, sin Docker. Se omite la prueba HTTP separada del wheel por petición del usuario. Cada checkpoint conserva revisión expresa.

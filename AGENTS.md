@@ -6,7 +6,7 @@
 2. Inspecciona los archivos y el estado real de Git, si existe. Conserva el trabajo ajeno. No crees repositorios, remotos, commits o despliegues como efecto de otra tarea.
 3. Si una instrucción nueva cambia con claridad el alcance, regístrala. Ante una contradicción sin resolver, detén solo el trabajo afectado y pide una decisión.
 
-El usuario autorizó iniciar la fundación el 2026-10-21 y, después de pedir la corrección de anotaciones de contextos asíncronos, autorizó continuar con T04. El alcance actual es documental: identidad, revocación y alcance del Hub. Los acuerdos de seguridad pendientes requieren decisión antes de implementar acceso. No crear tablas, ejecutar migraciones ni desplegar con esta autorización; esas acciones pertenecen a etapas posteriores del plan.
+El contrato de diseño v1 está en [api-v1.md](docs/api-v1.md); el modelo físico conserva su única fuente en [database-schema.md](docs/database-schema.md). Keycloak autentica al emitir un token opaco de dispositivo sin vencimiento y revocable en API. No añadir sesiones/renovación de API ni prometer revocación por logout del proveedor. Hub y funciones posteriores permanecen fuera de la etapa; su acuerdo pendiente no bloquea el núcleo independiente aprobado.
 
 ## Trabajo por tareas
 
@@ -17,13 +17,21 @@ El usuario autorizó iniciar la fundación el 2026-10-21 y, después de pedir la
 - Antes de usar APIs de herramientas, consulta el manifiesto y las versiones resueltas. Lee la página oficial de esa versión, registra el enlace y explica cualquier dependencia nueva. No instales ni actualices herramientas dentro de una tarea ajena.
 - No copies código Rust, planes históricos ni instrucciones exclusivas del escritorio. No modifiques otros repositorios sin una instrucción nueva.
 
-## Límites de diseño
+Usa [la arquitectura](docs/architecture.md) y [la propiedad de contratos](docs/contracts.md), con `api/users` como referencia de estilo. La arquitectura es hexagonal con empaquetado por componentes. Estas reglas sustituyen las descripciones previas incompatibles:
 
-Usa [la arquitectura](docs/architecture.md) y [la propiedad de contratos](docs/contracts.md). El dominio no depende de FastAPI, SQLAlchemy ni transporte. La aplicación coordina transacciones; los repositorios no confirman partes de una operación por su cuenta. `core/` solo contiene soporte técnico concreto.
+- `infrastructure/` contiene solo endpoints y su configuración. No contiene esquemas, helpers ni adaptadores de proveedores.
+- `application/` contiene casos de uso con funciones y resultados `Ok`/`Err`. No importa SQLAlchemy en ejecución ni consulta, escribe o hace flush sobre sesiones. Puede usar anotaciones de tipos como `users`.
+- `repository/` contiene solo modelos SQLAlchemy y DAOs derivados de `core/db/dao.py`. Las consultas propias son métodos de esos DAOs.
+- `domain/` contiene esquemas, objetos de valor, tipos y errores propios. Todos los esquemas de datos heredan del `BaseModel` del proyecto. No contiene SQL ni acceso a proveedores o generación de credenciales.
+- Separar `authorization` (identidad, credenciales y dispositivos globales) de `accounts` (cuenta, pertenencias, perfil profesional y autorización por cuenta). Entre componentes, consumir casos de uso y tipos de dominio; no importar repositorios ajenos.
+- `core/services/` contiene soporte técnico concreto para proveedores y credenciales. `core/db` ofrece el soporte mínimo para delimitar una transacción sobre la sesión existente. La aplicación la coordina; los DAOs usan `commit=False` y no confirman partes por su cuenta.
+- JSON público en camelCase mediante la base existente; Python en snake_case. No alterar credenciales ni la pareja exacta issuer/subject. Respetar nombres propios de protocolos externos.
+- Listas y páginas de snapshot usan `page` desde 1 y `shows` 100 por defecto, máximo 500, con LIMIT/OFFSET en DAO y `items`/`total`. No usar cursores de página ni su configuración. Conservar el avance incremental de sincronización, sus controles y su recuperación.
+- Sustituir `src/cli.py` por `scripts/create_practice.py`, un flujo pequeño de alta administrativa. No crear un sistema de comandos ni hacer que el servidor dependa de scripts.
+
+Antes de cada cambio, releer el archivo y el diff actual. Al corregir cada componente, activar sus controles de estructura; el cierre no admite excepciones que oculten infracciones. No restaurar código retirado por el usuario para satisfacer pruebas antiguas. `core/` no contiene reglas del producto ni lógica de negocio.
 
 Toda operación remota exige autorización vigente por cuenta, objeto y acción, aunque Rust o el Hub ya la hayan validado. No confíes en campos de identidad o fechas del cliente. No entregues credenciales SQL al escritorio o al Hub. n8n usa una API interna limitada.
-
-Conserva efectos, versiones, historial, auditoría, resultado idempotente, cambios y trabajo derivado en el límite atómico aprobado. Ejecuta llamadas externas después del commit. Ante un resultado desconocido, conserva ese estado y concilia antes de repetir efectos externos.
 
 ## Evidencia y documentación
 

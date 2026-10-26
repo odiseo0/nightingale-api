@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado:** criterios de diseño para revisión; aún no hay rutas, esquemas ejecutables ni clientes generados. Complementa los límites de [la especificación](nightingale-api.md), sin fijar su formato final.
+**Estado al 2026-10-26:** propiedad y principios vigentes. El [contrato de diseño HTTP v1](api-v1.md), revisión 1.1, incorpora JSON camelCase, esquemas en domain y listas con page/shows e items/total. Existen cuatro rutas de credenciales; los casos y lecturas de accounts/sync aún no tienen endpoints. C12/C13/C14 aceptados; corrección para revisión en C15, sin aceptar C15 ni C03. El catálogo restante, clientes generados e integración de consumidores siguen pendientes.
 
 ## Una fuente por contrato
 
@@ -13,9 +13,15 @@
 | API pública del Hub, enlaces, sesiones, política del paciente y solicitudes | Patient Hub | Web del paciente y escritorio; API consume solo las capacidades necesarias |
 | Comandos Tauri, SQLite, Outbox, aplicación de páginas y estados visibles | Escritorio | React y Rust; no son fuente de esquemas remotos |
 
-Se propone OpenAPI para HTTP y JSON Schema para mensajes, con tipos comunes referenciados desde una sola fuente. T05 decidirá si HTTP se define primero en esquema o en modelos del adaptador. El archivo generado se identifica como tal y CI verifica su correspondencia; no se editan ambos. Los consumidores fijan una versión o huella del artefacto. El esquema de base de datos nunca genera un contrato público por defecto.
+Selección aprobada para v1: esquemas Pydantic de domain derivados del BaseModel del proyecto como origen de OpenAPI y JSON Schema, con tipos comunes en core/schema. La base conserva alias camelCase y los atributos Python siguen en snake_case. Los proveedores externos conservan sus nombres propios de protocolo. Hasta implementarlos, api-v1.md posee el diseño; después conserva explicación y ejemplos, no una segunda definición editable del esquema generado. El generado identifica origen/versión y las pruebas verifican correspondencia; no se editan ambos. Consumidores fijan una versión o huella. La base de datos no genera un contrato público por defecto.
+
+Para el modelo de datos operativo cubierto, [database-schema.md](database-schema.md) es la única fuente de diseño por instrucción del usuario del 2026-10-24. Sus acuerdos sustituyen las reglas previas incompatibles de D07; las propuestas pendientes se distinguen en el propio esquema. El borrador lógico anterior queda retirado. La revisión 1.0 añade soporte físico de acceso/sync/auditoría en §9, sin convertirlo en contrato HTTP; el comportamiento y las proyecciones públicas viven en api-v1.md. Analítica, Hub y módulos excluidos conservan sus fuentes y tareas posteriores.
+
+La precedencia depende del tema: SRS y decisiones funcionales confirmadas fijan requisitos del producto; API posee la aceptación remota y sus contratos; Hub posee su API pública, accesos y solicitudes; escritorio posee comandos, SQLite y operación local. Una decisión posterior confirmada identifica qué sustituye. La copia del escritorio ya trasladada es antecedente; las fuentes originales y sus versiones figuran en [sources.md](sources.md). Las propuestas no sustituyen acuerdos confirmados.
 
 ## Operaciones y resultados
+
+Los criterios siguientes conservan su fundamento; en el ámbito de escritorio v1, sus elecciones están concretadas en api-v1.md y D09. Las referencias a T04/T05 históricas corresponden al plan sustituido; ejecutar las tareas del sucesor. Hub conserva sus acuerdos pendientes y queda fuera de la entrega.
 
 El acuerdo previo a código debe fijar:
 
@@ -27,11 +33,13 @@ El acuerdo previo a código debe fijar:
 
 La autorización se comprueba también para consultas, duplicados, exportaciones y errores. El consumidor no puede obtener un resultado revocado por conocer su identificador. El error permitido y el procedimiento de revisión deben conservar la intención local sin revelar el dato remoto.
 
-## Cursor y snapshot
+## Paginación, avance incremental y snapshot
 
-T05 debe demostrar: orden confirmado, frontera de snapshot, continuidad a incremental, cambios concurrentes, bajas lógicas, ámbito por cuenta/permisos y tratamiento de cursor manipulado, vencido o de otra cuenta. La paginación usa un orden estable; no deriva el cursor de la hora del equipo ni salta transacciones aún sin confirmar.
+Las listas y elementos del snapshot usan page desde 1 y shows 100 por defecto, máximo 500; DAO aplica LIMIT/OFFSET, autorización y filtros antes de paginar y contar. Reutilizar PaginatedResponse con items/total. No hay cursores de página, firmas ni configuración de paginación. Las listas corrientes pueden variar entre peticiones; una captura materializada conserva su conjunto y orden mientras siga vigente y autorizado.
 
-Cursor y snapshot tendrán versión, alcance y vigencia verificables. Si cambia la autorización, API debe impedir nuevas lecturas fuera de alcance y definir si exige recuperación. El protocolo podrá ordenar retirar datos locales, pero no prueba que un equipo intervenido los haya borrado. Retenciones de cambios, bajas y resultados deben cubrir la ventana de escritorios soportados o forzar recuperación segura. El arranque conserva la intención pendiente en el escritorio; no la sobrescribe con el snapshot.
+El avance incremental mantiene orden confirmado, frontera compartida con snapshot, continuidad, bajas, ámbito por cuenta/permisos y recuperación ante posición inválida o vencida. No se expresa mediante OFFSET ni la hora del equipo. Su cursor representa solo la posición del último cambio aplicado, con versión, alcance y vigencia verificables; no se comparte con listados. T28–T30 deben demostrar estas garantías.
+
+Si cambia la autorización, API impide nuevas lecturas fuera de alcance y exige la recuperación definida. El protocolo podrá ordenar retirar datos locales, pero no prueba que un equipo intervenido los haya borrado. Retenciones de cambios, bajas y resultados deben cubrir la ventana de escritorios soportados o forzar recuperación segura. El arranque conserva la intención pendiente en el escritorio; no la sobrescribe con el snapshot.
 
 ## Hub
 
@@ -39,7 +47,11 @@ La identidad técnica acredita al backend del Hub, pero no su derecho sobre una 
 
 El acuerdo distinguirá confirmar/cancelar una cita de solicitar un cambio en el almacén del Hub. Definirá versiones, invalidación de confirmación al reprogramar, rechazo/retirada de solicitudes y conciliación de fallos parciales. Un éxito remoto con respuesta perdida se recupera por la misma operación. No se compensa cambiando otra vez la cita sin un caso de uso autorizado.
 
+La reprogramación aceptada cambia el intervalo e invalida la confirmación anterior dentro de una sola transacción de API. Un aviso posterior al Hub concilia accesos y solicitudes; no decide la validez de la confirmación compartida. Su fallo no deshace la cita ni permite repetir su efecto con otra identidad.
+
 Este contrato no permite al paciente crear citas, listar disponibilidad general ni elegir o reservar otro horario. El recorrido de ofertas de lista de espera requiere una decisión previa y no amplía por sí solo estas acciones.
+
+[P05](decisions.md#p05--solicitud-de-reprogramación-separada) confirma la solicitud separada del estado de cita; pedir un cambio conserva estado, horario y confirmación. [P06](decisions.md#p06--ofertas-con-asignación-por-el-personal) confirma que la respuesta a una oferta expresa interés y que el personal autoriza la reserva. El usuario aprobó ambos criterios el 2026-10-23 y puede revisarlos antes o durante la implementación. Los ciclos, canales y formatos exactos siguen pendientes en O04/O05; no se añaden capacidades públicas al Hub.
 
 ## Trabajo y compatibilidad
 

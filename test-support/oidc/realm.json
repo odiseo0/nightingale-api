@@ -1,0 +1,70 @@
+{
+  "realm": "nightingale-test",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "loginWithEmailAllowed": false,
+  "clients": [
+    {
+      "clientId": "nightingale-desktop-test",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://127.0.0.1:18765/callback"],
+      "attributes": {"pkce.code.challenge.method": "S256"},
+      "protocolMappers": [
+        {
+          "name": "nightingale-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "nightingale-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "fixture-owner",
+      "enabled": true,
+      "firstName": "Fixture",
+      "lastName": "Owner",
+      "email": "owner@example.invalid",
+      "emailVerified": true,
+      "credentials": [
+        {"type": "password", "value": "Fixture-only-2026!", "temporary": false}
+      ]
+    },
+    {
+      "username": "fixture-assistant",
+      "enabled": true,
+      "firstName": "Fixture",
+      "lastName": "Assistant",
+      "email": "assistant@example.invalid",
+      "emailVerified": true,
+      "credentials": [
+        {"type": "password", "value": "Fixture-only-2026!", "temporary": false}
+      ]
+    },
+    {
+      "username": "fixture-outsider",
+      "enabled": true,
+      "firstName": "Fixture",
+      "lastName": "Outsider",
+      "email": "outsider@example.invalid",
+      "emailVerified": true,
+      "credentials": [
+        {"type": "password", "value": "Fixture-only-2026!", "temporary": false}
+      ]
+    }
+  ]
+}

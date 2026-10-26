@@ -1,6 +1,20 @@
 # T04 · Identidad, permisos y alcance del Hub
 
-**Estado:** acuerdo parcial de seguridad, en revisión. **Confirmado por el usuario:** proveedor externo OIDC para el personal; API conserva permisos y dispositivos; acepta cambios con los permisos vigentes y conserva para revisión la intención rechazada. El alcance del Hub sigue como propuesta. No se elige proveedor, biblioteca de autenticación, duración ni esquema SQL. No hay controles de acceso implementados todavía.
+**Estado al 2026-10-26:** el acuerdo de escritorio se concreta por el plan sucesor aprobado y D09/D10; el [contrato v1](api-v1.md) posee su formato. C12/C13/C14 aceptados; corrección para revisión en C15. El alta administrativa atómica y las lecturas de cuenta usan casos de uso, sin endpoints nuevos. Las cuatro rutas de credenciales usan authorization con integración real Keycloak/PostgreSQL correcta. Keycloak permite obtener un token opaco por usuario/dispositivo, sin vencimiento y revocable en API. Sin sesiones ni renovación de API. C15 y C03 no están aceptados. Hub sigue excluido.
+
+## Acuerdo vigente de la primera etapa
+
+Alta de consulta mediante un script pequeño en scripts/create_practice.py con issuer/subject exactos del propietario y conexión administrativa separada; [uso local](../test-support/README.md#alta-administrativa). No hay sistema de comandos ni dependencia de arranque del servidor. authorization posee identidad, credenciales y dispositivos globales; accounts posee cuenta, pertenencias, perfil profesional y autorizaciones por cuenta. Autenticarse por OIDC puede registrar identidad sin conceder cuenta. Rol propietario derivado de propiedad; resto del equipo activo, asistentes. Solo propietario invita y gestiona pertenencias, políticas y acceso de dispositivos en su cuenta. Una invitación tiene destinatario autenticado concreto, dura 72 horas y se consume una vez, sin correo automático.
+
+API valida el access token OIDC únicamente al emitir credencial; no ID token ni contraseñas. Guarda huella de secreto aleatorio de 256 bits y lo entrega una sola vez. Toda entrada normal exige token API vigente, usuario/dispositivo activos, pertenencia y autorización de cuenta/objeto/acción. Revocar instalación propia afecta sus tokens globales; propietario de una cuenta solo puede revocar acceso de esa instalación en su ámbito. Cambiar reloj o campos del cliente no modifica esa autoridad.
+
+El token no vence. Logout o desactivación en Keycloak no revocan por sí solos un token ya emitido; la operación administrativa de API debe revocarlo o desactivar la identidad. No se implementan introspección por petición, sesiones API, renovación ni logout distribuido. Una credencial perdida exige nueva autenticación y revocación del dispositivo anterior, sin recuperar secretos guardados.
+
+Aceptación y revocación se coordinan en PostgreSQL con el orden y relecturas de api-v1.md. Si revocación confirma primero no hay efecto posterior con acceso viejo; aceptación válida anterior conserva su hecho. La intención rechazada sigue en escritorio y una persona con permiso puede revisarla y crear una operación nueva con actor real, nunca reenviar como otra persona. Lecturas y resultados previos también se reautorizan; SSE revisa acceso al emitir y en heartbeat, sin transacción larga por conexión.
+
+La definición física está solo en database-schema.md. El historial restante de T04 se conserva abajo; sus alternativas de sesiones/proveedor quedan sustituidas en este ámbito. O02 y toda autorización del Hub siguen fuera, sin cierre por deducción.
+
+## Antecedente T04 y alcance posterior del Hub
 
 ## Identidad del personal
 
@@ -15,7 +29,8 @@ Para un access token JWT se verifican firma, algoritmos permitidos, emisor, audi
 | Propietario | Información y autoridad |
 |---|---|
 | Proveedor OIDC | Autenticación del personal, credenciales del proveedor, factores y tokens según su contrato |
-| API / `access` | Usuario interno y vínculo externo, cuentas, pertenencias, permisos, dispositivos, estado de acceso remoto y evidencia de revocación |
+| API / `authorization` | Usuario interno y vínculo externo, credenciales y dispositivos globales |
+| API / `accounts` | Cuentas, pertenencias, perfil profesional, permisos y autorización de dispositivos por cuenta |
 | Escritorio | Sesión/secretos locales en almacenamiento seguro, copia de permisos e intenciones pendientes; no puede modificar permisos sin conexión |
 | Hub | Identidad y acceso del paciente, enlaces, reglas propias y solicitudes; no usa la sesión del profesional como identidad del paciente |
 

@@ -1,6 +1,7 @@
+from datetime import UTC, datetime
 from typing import TypeVar
 
-from pydantic import Field
+from pydantic import UUID7, ConfigDict, Field, field_serializer
 
 from .base import BaseModel
 
@@ -29,6 +30,34 @@ class ValidationErrorResponse(BaseModel):
 class PaginatedResponse[T](BaseModel):
     items: list[T]
     total: int = Field(ge=0)
+
+
+class PageQuery(BaseModel):
+    page: int = Field(default=1, ge=1)
+    shows: int = Field(default=100, ge=1, le=500)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class AdministrativeResponse(BaseModel):
+    @field_serializer("created_at", "updated_at", "last_seen_at", check_fields=False)
+    def serialize_instant(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+class FieldError(BaseModel):
+    loc: list[str | int]
+    code: str
+
+
+class ApiError(BaseModel):
+    code: str
+    message: str
+    correlation_id: UUID7
+    details: list[FieldError] = Field(default_factory=list)
 
 
 UNAUTHORIZED_RESPONSE: dict[str, type[ErrorResponse] | str] = {

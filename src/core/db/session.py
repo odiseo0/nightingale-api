@@ -48,8 +48,10 @@ def _sqla_on_connect(dbapi_connection: Any, _: Any) -> Any:  # pragma: no cover
 
         raise ValueError
 
-    dbapi_connection.await_(
-        dbapi_connection.driver_connection.set_type_codec(
+    # SQLAlchemy 2.1 uses run_async for awaitable driver methods in events.
+    # https://docs.sqlalchemy.org/en/21/orm/extensions/asyncio.html#using-awaitable-only-driver-methods-in-connection-pool-and-other-events
+    dbapi_connection.run_async(
+        lambda connection: connection.set_type_codec(
             schema="pg_catalog",
             typename="timestamptz",
             encoder=timestamptz_encoder,
