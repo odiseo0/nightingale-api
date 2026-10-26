@@ -64,3 +64,17 @@ class AccountDeviceAccess(Base):
     created_at: Mapped[datetime]
     updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
+
+
+class AccountInvitation(Base):
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    account_id: Mapped[UUID]
+    invitee_user_id: Mapped[UUID]
+    created_by_user_id: Mapped[UUID]
+    status: Mapped[str] = mapped_column(Text, server_default="pending")
+    created_at: Mapped[datetime]
+    updated_at: Mapped[datetime]
+    expires_at: Mapped[datetime]
+    accepted_at: Mapped[datetime | None]
+    accepted_operation_id: Mapped[UUID | None]
+    version: Mapped[int] = mapped_column(server_default="1")

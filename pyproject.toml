@@ -15,6 +15,7 @@ dependencies = [
     "httpx==0.28.1",
     "msgspec>=0.22.0",
     "orjson>=3.13.0",
+    "phonenumbers>=9.0.41",
     "pycountry>=26.2.16",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.1",

@@ -8,11 +8,17 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    field_serializer,
     field_validator,
 )
 
 from src.api.authorization.domain.authorization import AuthenticatedActor
-from src.core.schema import AdministrativeResponse, BaseModel, PaginatedResponse
+from src.core.schema import (
+    AdministrativeResponse,
+    BaseModel,
+    PageQuery,
+    PaginatedResponse,
+)
 
 
 class AccountDetails(BaseModel):
@@ -110,6 +116,129 @@ class ProfessionalResponse(AdministrativeResponse):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int
+
+
+class AccountDeviceResponse(AdministrativeResponse):
+    device_id: UUID7
+    display_name: str
+    status: Literal["active", "revoked"]
+    client_version: str
+    local_schema_version: int
+    last_seen_at: AwareDatetime | None
+    version: int
+
+
+class InvitationResponse(AdministrativeResponse):
+    id: UUID7
+    account_id: UUID7
+    invitee_user_id: UUID7
+    created_by_user_id: UUID7
+    status: Literal["pending", "accepted", "revoked", "expired"]
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    expires_at: AwareDatetime
+    accepted_at: AwareDatetime | None
+    version: int
+
+    @field_serializer("expires_at", "accepted_at")
+    def serialize_invitation_instants(self, value):
+        return self.serialize_instant(value)
+
+
+class InvitationQuery(PageQuery):
+    status: Literal["pending", "accepted", "revoked", "expired"] | None = None
+
+
+class InvitationAcceptRequest(BaseModel):
+    operation_id: UUID7
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class InvitationAcceptanceResult(BaseModel):
+    operation_id: UUID7
+    status: Literal["accepted", "duplicate"]
+    invitation_id: UUID7
+    account_id: UUID7
+    membership_version: int
+
+
+class MemberResponse(AdministrativeResponse):
+    user_id: UUID7
+    display_name: str
+    role: Literal["owner", "assistant"]
+    status: Literal["active", "inactive"]
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    version: int
+
+
+class CreateInvitationPayload(BaseModel):
+    invitee_user_id: UUID7
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MembershipStatusPayload(BaseModel):
+    status: Literal["active", "inactive"]
+
+    model_config = ConfigDict(extra="forbid")
+
+
+@dataclass(frozen=True, slots=True)
+class AccountChange:
+    entity_type: str
+    entity_key: str | dict[str, str]
+    state: BaseModel
+    version: int
+    audience: Literal["members", "owner"] = "owner"
+
+
+@dataclass(frozen=True, slots=True)
+class AccountEffect:
+    state: BaseModel
+    version: int
+    changes: list[AccountChange]
+    permission_changed: bool
+
+
+class AccountDetailsPatch(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1)
+    time_zone: str | None = Field(default=None, min_length=1)
+    location_name: str | None = Field(default=None, min_length=1)
+    location_address: str | None = Field(default=None, min_length=1)
+    location_country: str | None = None
+    location_state: str | None = Field(default=None, min_length=1)
+    location_city: str | None = Field(default=None, min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("location_country")
+    def assigned_country(cls, value):
+        return value if value is None else AccountDetails.assigned_country(value)
+
+    @field_validator("*")
+    def present_value(cls, value):
+        if value is None:
+            raise ValueError("El campo presente no puede ser nulo")
+
+        return value
+
+
+class AccountPolicyPayload(BaseModel):
+    no_show_grace_minutes: int = Field(strict=True, ge=0, le=1440)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ProfessionalPayload(BaseModel):
+    public_name: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ProfessionalQuery(PageQuery):
+    status: Literal["active", "inactive"] | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -101,7 +101,7 @@ class AuthorizationEndpointTests(unittest.TestCase):
                 return {
                     "statuses": [response.status_code for response in responses],
                     "codes": [response.json()["code"] for response in responses],
-                    "paths": [path for path in schema["paths"] if path.startswith("/v1/")],
+                    "paths": [path for path in schema["paths"] if path.startswith(("/v1/auth/", "/v1/me/devices"))],
                     "input_fields": list(schema["components"]["schemas"]["DeviceRegistrationRequest"]["properties"]),
                     "output_fields": list(schema["components"]["schemas"]["DeviceTokenIssued"]["properties"]),
                 }
@@ -117,6 +117,7 @@ class AuthorizationEndpointTests(unittest.TestCase):
         self.assertEqual(set(result["paths"]), {
             "/v1/auth/config", "/v1/auth/device-tokens",
             "/v1/me/devices/{device_id}/rotate-token", "/v1/me/devices/{device_id}/revoke",
+            "/v1/me/devices",
         })
         self.assertEqual(set(result["input_fields"]), {"deviceName", "clientVersion", "localSchemaVersion"})
         self.assertEqual(set(result["output_fields"]), {

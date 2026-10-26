@@ -14,15 +14,15 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 | T04 | Done | Recuperar la base de proceso |
 | T05 | Done | Preparar el entorno aislado |
 | T06 | Done | Preparar migraciones y coordinación |
-| T07 | Todo | Aceptar operaciones con idempotencia |
+| T07 | Done | Registro propio, recibos y resultados atómicos comprobados |
 | T08 | Done | Emitir credenciales de dispositivo |
-| T09 | Todo | Retomar consulta independiente tras C15; conserva trabajo parcial |
-| T10 | Todo | Gestionar invitaciones |
-| T11 | Todo | Gestionar cuenta y dispositivos autorizados |
-| T12 | Todo | Registrar y consultar auditoría |
-| T13 | Todo | Registrar fichas borrador |
-| T14 | Todo | Gestionar contactos y vínculos |
-| T15 | Todo | Completar fichas y añadir documentos declarados |
+| T09 | Done | Alta atómica y seis lecturas HTTP propias comprobadas |
+| T10 | Done | Invitaciones dirigidas y pertenencias comprobadas |
+| T11 | Done | Cuenta, perfil y dispositivos por cuenta comprobados |
+| T12 | Done | Consulta protegida, controles y mantenimiento comprobados |
+| T13 | Done | Borradores, documentos opcionales y aislamiento comprobados |
+| T14 | Done | Contactos reutilizables, vínculos y constancias comprobados |
+| T15 | Done | Completitud y documentos declarados con integridad diferida comprobados |
 | T16 | Todo | Gestionar catálogo propio |
 | T17 | Todo | Gestionar ofertas por cuenta |
 | T18 | Todo | Gestionar reglas semanales |
@@ -182,15 +182,17 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 ### T07: Aceptar operaciones con idempotencia
 
-**Estado:** Todo. **Propietario:** sync. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** sync. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T09 comprobada; orden T08 → T09 → T07 aprobado por el usuario el 2026-10-25. Recibos y autorización usan las identidades, pertenencias y dispositivos reales de esas tareas.
 
+**División de ejecución (2026-10-26):** T07.1 define envoltorios/resultados y persistencia técnica de recibos, journal y auditoría con migración. T07.2 coordina autorización vigente, registro propio de dispositivo (único efecto inicial), versiones, dependencias e idempotencia en la misma transacción. Las acciones posteriores conservan sus tareas y devuelven UNSUPPORTED_OPERATION. T07.3 conecta lote/consulta de resultado a HTTP y comprueba límites antes de efectos. T07.4 prueba PostgreSQL real: duplicados concurrentes, respuesta perdida tras commit, conflicto de cuerpo, aislamiento, rollback integral y reautorización. Sin trabajo paralelo ni aceptación anticipada de C03.
+
 **Aceptación:**
 
-- [ ] Cada operación usa autorización, versión y recibo dentro de una transacción.
-- [ ] Misma clave y cuerpo recuperan resultado; otro cuerpo produce conflicto.
-- [ ] Lotes conservan independencia; fallos temporales no quedan fijados como rechazos.
+- [x] Cada operación usa autorización, versión y recibo dentro de una transacción.
+- [x] Misma clave y cuerpo recuperan resultado; otro cuerpo produce conflicto.
+- [x] Lotes conservan independencia; fallos temporales no quedan fijados como rechazos.
 
 **Comprobación:** Repetir simultáneamente y cortar la respuesta después del commit. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -198,7 +200,11 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Efecto, versión, historia, auditoría, recibo y cambios comparten commit; reautoriza duplicados.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** Lote y consulta de resultado HTTP conectados, con RegisterAccountDevice como primer efecto real. El registro exige instalación propia y autorización vigente; no restaura una autorización revocada. Cuenta/control/filas/recibo mantienen el orden de bloqueo tras identidad. Misma sesión y commit=False coordinan acceso, versión 1, época, posición, grupo owner, recibo y hecho audit; no corresponde historia funcional de citas a esta acción. La revisión 20261026_01 añade las tres tablas técnicas, restricciones/FK, inmutabilidad y control diferido del grupo/frontera; rol operativo sin UPDATE/DELETE en historia. transaction(db) traduce DBAPIError después del rollback, conserva errores de programación/cancelación y no abre otra sesión.
+
+Probe test-support/sync/check.py correcto con PostgreSQL/Keycloak reales: dos solicitudes concurrentes producen accepted/duplicate y un solo efecto/recibo/auditoría/grupo; omisión de campos opcionales conserva huella y otro cuerpo produce conflicto. Payload inválido conserva texto exacto para la huella y solo guarda rechazo seguro. Claves aisladas por actor/cuenta y recuperación desde otra instalación propia ya autorizada. Respuesta perdida en ASGI tras commit recupera el resultado sin efecto nuevo. Fallos CHECK inmediato y de grupo diferido revierten acceso/época/posición/recibo/auditoría/cambio y permiten reintentar. Un lote con fallo temporal y dependencia temporal conserva el independiente y no fija recibos temporales. La prueba observa pg_blocking_pids y relee la revocación tras esperar un bloqueo real. Límites 1–100 operaciones, 1 MiB de cuerpo y 64 KiB por operación, orden de dependencias y campos extra rechazan antes de efectos. Recibo ficticio antiguo devuelve 410, conserva clave/huella tras purga y rechaza contenido distinto; se sustituye el reloj del DAO para preparar esa fixture, sin cambiar el reloj del servicio.
+
+Suite final de 71 pruebas correcta en 33.383 s; 25 controles de estructura y tres generales sin excepciones nuevas. Probes finales de acceso, cuentas, sync y persistencia correctos; upgrade/downgrade/reaplicación del head (12 tablas), fallo de migración sin DDL parcial, permisos y dos escritores. uv build --offline produce sdist/wheel; inspección de 111 entradas confirma rutas/casos nuevos y ausencia de módulos retirados o archivos privados. git diff --check correcto. Sin nuevas dependencias, cambios a fábrica/DAO base/esquema base, commits, despliegues, servicios iniciados/detenidos ni otros repositorios. Solo bases ficticias verificadas y eliminadas. No se ejecuta la prueba HTTP separada del wheel. Sin consumidor Rust/Hub ni caída TCP real; catálogo posterior, invitaciones, gestión de permisos, consulta de auditoría, snapshot, descarga y SSE siguen en sus tareas. Detenido en C03 sin aceptar.
 
 ### T08: Emitir credenciales de dispositivo
 
@@ -224,7 +230,7 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 ### T09: Habilitar una consulta independiente
 
-**Estado:** Todo. **Propietario:** accounts y authorization. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** accounts y authorization. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T08 comprobada históricamente; corrección T34–T45 comprobada y C15 aceptado antes de retomar. El trabajo parcial se conserva sin acreditarlo como terminado.
 
@@ -232,9 +238,9 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Aceptación:**
 
-- [ ] Alta administrativa crea propietario, cuenta, pertenencia y profesional juntos.
-- [ ] Consultas propias no revelan otra cuenta ni crean permisos al autenticar.
-- [ ] Solo el ámbito independiente se habilita por esta etapa.
+- [x] Alta administrativa crea propietario, cuenta, pertenencia y profesional juntos.
+- [x] Consultas propias no revelan otra cuenta ni crean permisos al autenticar.
+- [x] Solo el ámbito independiente se habilita por esta etapa.
 
 **Comprobación:** Crear consulta con sujeto ficticio; consultar con dos identidades. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -242,19 +248,21 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Bootstrap atómico; no alta pública ni modificación del escritorio.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** Se reutilizan los casos existentes y se conectan GET /v1/me, /v1/accounts, /v1/accounts/{account_id}, /v1/accounts/{account_id}/access, /v1/me/professional y /v1/me/devices. Probe de cuentas correcto con PostgreSQL/Keycloak ya activos: tres identidades, dos cuentas, alta/script/rollback/concurrencia existentes, lecturas HTTP sin permisos creados por autenticación, aislamiento, páginas sucesivas/vacías, errores 401/403/404/422, no-store/correlación y revocación vigente. Los registros de dispositivo y pertenencias aún son fixtures; su operación pertenece a T07. Suite completa: 63 pruebas correctas en 44.633 s, incluidos controles de estructura. uv build --offline y git diff --check correctos. Sin dependencias ni cambios físicos; no prueba HTTP separada del wheel ni consumidores. C03 no aceptado.
 
 ### T10: Gestionar invitaciones
 
-**Estado:** Todo. **Propietario:** accounts. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** accounts. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T07 comprobada y C03 aceptado; T08/T09 ya comprobadas en el orden revisado.
 
+**División de ejecución:** T10.1 añade esquemas/DAO y migración de invitaciones. T10.2 conecta crear/revocar invitación y estado de asistentes al recorrido atómico existente. T10.3 añade listas y aceptación dirigida al destinatario, sin requerir una pertenencia anterior. T10.4 prueba aislamiento, caducidad, respuesta perdida y carrera aceptación/revocación en PostgreSQL real. No se renumeran IDs ni se abre trabajo paralelo.
+
 **Aceptación:**
 
-- [ ] Invitación ligada a destinatario vence en 72 horas y se acepta una vez.
-- [ ] Solo propietario invita o cambia estado de asistentes.
-- [ ] Revocación y aceptación concurrentes dejan un único resultado autorizado.
+- [x] Invitación ligada a destinatario vence en 72 horas y se acepta una vez.
+- [x] Solo propietario invita o cambia estado de asistentes.
+- [x] Revocación y aceptación concurrentes dejan un único resultado autorizado.
 
 **Comprobación:** Aceptar con usuario correcto, ajeno, vencimiento y respuesta perdida. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -262,19 +270,23 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Membresía, recibo, época de acceso y cambios juntos; no correo ni Hub.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** Migración 20261026_02 y DAO de invitaciones, listas propias/por cuenta con estado efectivo y LIMIT/OFFSET, aceptación dirigida e idempotente. CreateInvitation/RevokeInvitation/SetMembershipStatus usan el recorrido de T07; aceptación interna no se admite en el lote público. Un grupo conserva invitación y pertenencia completas, junto con recibo, auditoría y época. Una aceptación rechazada sin pertenencia no crea una para satisfacer F41 ni guarda recibo de éxito. No hay alta de dispositivo implícita.
+
+71 pruebas correctas en 30.896 s y controles de estructura activos. test-support/team/check.py correcto con PostgreSQL/Keycloak reales: destinatario ajeno, 72 h, expiración efectiva, aceptación concurrente con un solo efecto, propietario/asistente, no transferencia de propiedad, cambios de pertenencia, revocar frente a aceptar, rollback integral con CHECK real y reintento, respuesta perdida tras commit en ASGI y recuperación. Probe de persistencia aplica/revierte/reaplica head de 13 tablas y prueba fallo de revisión sin DDL parcial. Build offline y git diff --check correctos. Servicios previos conservados, bases ficticias eliminadas. Sin nuevas dependencias, correo, Hub, consumidor ni aceptación de C04.
 
 ### T11: Gestionar cuenta y dispositivos autorizados
 
-**Estado:** Todo. **Propietario:** accounts. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** accounts. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T10 comprobada.
 
+**División de ejecución:** T11.1 añade cambios tipados de cuenta/política/estado/perfil y control de dispositivos al caso de aceptación. T11.2 conecta equipo y dispositivos de cuenta con proyecciones propias. T11.3 prueba permisos, versiones, recuperación administrativa, revocación entre cuentas y rollback. Esta etapa aún no tiene tablas de agenda/citas: no crear validadores vacíos ni acreditar su compatibilidad futura; sus tareas deben conectar esas restricciones antes de habilitarlas.
+
 **Aceptación:**
 
-- [ ] Propietario cambia datos y políticas sin desplazar citas existentes.
-- [ ] Dispositivo se registra por el actor comprobado y no se restaura a sí mismo tras revocación.
-- [ ] Cambiar cuenta o acceso actualiza versiones, época y descargas pertinentes.
+- [x] Propietario cambia datos y políticas sin desplazar citas existentes en el alcance actual; la compatibilidad con agenda/citas aún sin implementar se conserva como límite de sus tareas.
+- [x] Dispositivo se registra por el actor comprobado y no se restaura a sí mismo tras revocación.
+- [x] Cambiar cuenta o acceso actualiza versiones, época y registro de cambios; la descarga conserva su tarea pendiente.
 
 **Comprobación:** Revocar una instalación en una cuenta sin afectar las otras. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -282,19 +294,23 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** No confirma permisos locales; revalida referencias bajo coordinación por cuenta/profesional.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** UpdateAccountDetails/Policy/SetAccountStatus, UpdateProfessionalProfile y Revoke/RestoreAccountDevice reutilizan la aceptación atómica, versiones y proyecciones explícitas. El propietario puede reactivar cuenta inactiva desde dispositivo habilitado y recuperar su resultado; otras acciones quedan bloqueadas. Las identidades afectadas se bloquean en orden antes del control de cuenta; profesional antes del control al editar cuenta/perfil. Listas de miembros/dispositivos solo para propietario y profesionales para miembros, con DAO LIMIT/OFFSET y metadatos de authorization consumidos por casos públicos, sin repositorios ajenos.
+
+74 pruebas correctas en 38.592 s. Probe de equipo real correcto: cambios tipados, texto normalizado en huella, null/campo de identidad rechazados, zona desconocida, límites de política, versión obsoleta/NO_CHANGES, reactivación y resultado perdido consultable, aislamiento del mismo dispositivo entre dos cuentas, rechazo de autorrestauración y de restauración de dispositivo global revocado. Carrera real restauración local/revocación global termina sin bloqueo ni acceso con token revocado. Probe de credenciales correcto tras ampliar los bloqueos. Build y git diff --check correctos. No hay tablas de agenda/citas ni validación de compatibilidad con ellas en este punto; no se acredita ese recorrido futuro. Sin dependencias nuevas, consumidores, snapshot o descarga implementados. C04 no aceptado.
 
 ### T12: Registrar y consultar auditoría
 
-**Estado:** Todo. **Propietario:** audit. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** audit. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T11 comprobada.
 
+**División de ejecución:** T12.1 añade eventos de controles técnicos y consulta de auditoría por propietario, con filtros y paginación en DAO. T12.2 añade mantenimiento limitado de detalles de resultados vencidos, sin borrar recibos, journal ni auditoría. T12.3 comprueba correlación, ausencia de secretos, aislamiento, rechazo de permisos y mantenimiento repetible en PostgreSQL real; cierra documentación/pruebas y se detiene en C04.
+
 **Aceptación:**
 
-- [ ] Aceptaciones y controles de acceso guardan evidencia técnica sin cuerpos personales.
-- [ ] Solo propietario consulta auditoría de su cuenta.
-- [ ] Mantenimiento elimina solo artefactos temporales/resultados vencidos previstos.
+- [x] Aceptaciones y controles de acceso guardan evidencia técnica sin cuerpos personales.
+- [x] Solo propietario consulta auditoría de su cuenta.
+- [x] Mantenimiento elimina solo artefactos temporales/resultados vencidos previstos.
 
 **Comprobación:** Recorrer una operación por correlación y revisar errores/logs. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -302,19 +318,27 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Auditoría atómica con efecto; consulta y retención distintas de historia funcional.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** GET /v1/accounts/{account_id}/audit-events comprueba propietario/dispositivo/pertenencia/cuenta vigentes, filtra en DAO por fecha/acción/tipo/objeto y pagina con orden (occurredAt,id). El filtro de clave usa parámetro JSONB tipado. Invitaciones y auditoría serializan sus nuevos instantes en UTC con Z mediante la base existente. Alta administrativa, emisión, rotación y revocación guardan hechos mínimos en su transacción; no se registran secretos ni cuerpos. Las denegaciones HTTP 401/403/404 guardan correlación y solo actor/ámbito comprobados en una transacción propia; si falla su almacén, conservan el rechazo HTTP original sin acreditar persistencia del hecho durante esa caída. Las lecturas correctas no copian datos a auditoría.
+
+scripts/purge_expired_results.py exige MAINTENANCE_DATABASE_URI explícita y permiso UPDATE; selecciona la URI solo en su proceso y reutiliza la fábrica existente. Retira solo result_json/asigna purged_at de resultados vencidos, sin borrar claves, huellas, estados/versiones, recibos, journal o auditoría. No hay purga anticipada de snapshots aún inexistentes ni tarea periódica añadida.
+
+76 pruebas correctas en 48.992 s, incluidos 25 controles de estructura y tres generales sin excepciones nuevas. Los cinco probes de acceso/cuentas/sync/equipo/persistencia pasan con PostgreSQL 18.3 y Keycloak 26.8.1 reales. Equipo verifica aislamiento y filtros, correlación de denegación, consulta por propietario, ausencia de campos secretos, UTC, fallo CHECK de auditoría que revierte la rotación y mantenimiento en subprocess (rol operativo denegado; administrativo retira un resultado; repetición cero). Se conservan conteos de recibos/journal/auditoría por cuenta y huella del resultado retirado; consulta da 410 y otra huella sigue en conflicto. Fixtures antiguas usan reloj del DAO sustituido, sin cambiar PostgreSQL. Migraciones hasta 20261026_02 (13 tablas), reversión, reaplicación y fallo de revisión sin DDL parcial correctos.
+
+Build offline de sdist/wheel correcto; inspección de 117 entradas confirma componentes nuevos y ausencia de archivos privados. Sintaxis/espacios: 41 archivos Python y 14 Markdown; 68 enlaces locales revisados, con cinco destinos históricos ausentes ya conocidos. git diff --check correcto. Fábrica, dependencias, DAO base, esquema base, manifiesto, lockfile y create_practice.py conservados. Servicios previos conservados y solo bases ficticias verificadas/eliminadas. Sin commits, despliegues ni otros repositorios; se omite el test HTTP separado del wheel. No consumidores, TCP real, pacientes/agenda/citas, snapshot, descarga, SSE ni producción acreditados. La compatibilidad de cambios de zona con reservas reales se mantiene como límite para sus tareas. Detenido en C04, sin aceptar.
 
 ### T13: Registrar fichas borrador
 
-**Estado:** Todo. **Propietario:** patients. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** patients. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T12 comprobada y C04 aceptado.
 
+**División de ejecución (2026-10-26):** T13.1 añade esquemas de borrador/documento, modelos y migración física. T13.2 integra registro/edición/actividad con la aceptación existente y lecturas por cuenta. T13.3 activa los controles de estructura y comprueba aislamiento, versiones, concurrencia y rollback en PostgreSQL real. Una parte a la vez; T14 no comienza antes de comprobar T13.
+
 **Aceptación:**
 
-- [ ] Alta crea identidad estable, ficha y documentos declarados opcionales juntos.
-- [ ] Edición respeta versión y solo afecta a la ficha autorizada.
-- [ ] Listados y detalle filtran cuenta, actividad y completitud.
+- [x] Alta crea identidad estable, ficha y documentos declarados opcionales juntos.
+- [x] Edición respeta versión y solo afecta a la ficha autorizada.
+- [x] Listados y detalle filtran cuenta, actividad y completitud.
 
 **Comprobación:** Guardar borrador, editar desde dos versiones y buscar dentro de cuenta. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -322,19 +346,23 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Identidad global no concede datos globales; produce proyección autorizada por cuenta.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** RegisterPatient, UpdatePatientProfile y SetPatientProfileStatus usan la aceptación existente. Tres GET autorizados ofrecen ficha, lista y documentos, con q literal por nombre/documento, estado/completitud, LIMIT/OFFSET y total por cuenta. La revisión 20261026_03 crea identidad mínima, ficha compuesta y documentos con restricciones, unicidad solo verificada y conservación de identidad/constancias. No adjunta una identidad global existente ni fusiona documentos declarados coincidentes. phonenumbers 9.0.41 es la única dependencia nueva, prevista por el contrato; valida estructura/longitud y conserva ceros significativos. Las demás versiones se conservan.
+
+Probe test-support/patients/check.py correcto con PostgreSQL/Keycloak reales: propietario/asistente y dos cuentas, duplicado concurrente, edición desde dos versiones, búsqueda literal, datos ajenos ocultos, fechas futuras rechazadas, fallo CHECK en el segundo documento y fallo diferido del journal con rollback íntegro, reintento y respuesta perdida tras commit en ASGI. 86 pruebas correctas (48.949 s), incluidos cinco controles nuevos de estructura y cinco de validación. Persistencia aplica/revierte/reaplica head con 16 tablas; build offline y diff --check correctos. Solo bases ficticias aisladas; servicios previos conservados. Sin completar fichas, contactos, citas, consumidores o prueba HTTP del wheel; esas tareas siguen pendientes.
 
 ### T14: Gestionar contactos y vínculos
 
-**Estado:** Todo. **Propietario:** patients. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** patients. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T13 comprobada.
 
+**División de ejecución (2026-10-26):** T14.1 define contactos/vínculos y su migración. T14.2 añade seis acciones y cuatro lecturas al componente existente. T14.3 comprueba hermanos, límites de cuenta, versiones, vigencia y conservación con PostgreSQL real. T15 conserva la integridad diferida de completitud; T14 no habilita completar fichas.
+
 **Aceptación:**
 
-- [ ] Un contacto se reutiliza entre pacientes de una cuenta sin convertirse en usuario.
-- [ ] Claves compuestas impiden contactos o verificadores de otra cuenta.
-- [ ] Estado y vigencia no borran la relación ni conceden representación o acceso.
+- [x] Un contacto se reutiliza entre pacientes de una cuenta sin convertirse en usuario.
+- [x] Claves compuestas impiden contactos o verificadores de otra cuenta.
+- [x] Estado y vigencia no borran la relación ni conceden representación o acceso.
 
 **Comprobación:** Hermanos con responsable común; contacto ajeno y fin de vigencia. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -342,19 +370,23 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Control conjunto de completitud; vínculos unverified, sin Hub ni verificación legal.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** seis acciones y cuatro lecturas en patients; creación/edición/actividad de contactos y vínculos, con versiones, recibo y grupo atómicos. La revisión 20261026_04 crea las dos tablas con FK compuestas, vigencia, claves/constancias inmutables y permisos sin DELETE. Las lecturas resuelven nombres/teléfono vigentes; el journal conserva estados de entidades sin copiar sus nombres relacionados. No se crea usuario, paciente ni permiso por crear contacto o vínculo.
+
+Probe real de pacientes correcto: hermanos con contacto común, consulta en ambos sentidos, paginación, actualización compartida, cierre/reactivación con vigencia, contacto ajeno oculto y SQLSTATE 23503 de FK de contacto/verificador de otra cuenta. Una constancia verificada preparada solo como fixture administrativa se conserva al desactivar por API; la API no ofrece verificación. 88 pruebas correctas (50.378 s); migración aplicada/revertida/reaplicada con 18 tablas, build offline y diff --check correctos. T15 conserva completar fichas y la integridad diferida entre requisitos. Servicios previos conservados, solo bases ficticias y ningún consumidor ni despliegue.
 
 ### T15: Completar fichas y añadir documentos declarados
 
-**Estado:** Todo. **Propietario:** patients. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** patients. **Tamaño previsto:** M.
 
 **Entrada/dependencias:** T14 comprobada.
 
+**División de ejecución (2026-10-26):** T15.1 añade SetPatientCompletion y AddPatientIdentifier con la regla de identificación y un caso compartido de elegibilidad en fecha de cita. T15.2 protege retirada de requisitos antes de efectos e integridad diferida PostgreSQL de fichas/documentos/contactos/vínculos. T15.3 prueba adultos/menores, cambio de base sin cambiar identidad, pérdida de requisitos y concurrencia, y cierra C05 para revisión. No se añaden rutas de citas ni verificación.
+
 **Aceptación:**
 
-- [ ] Documento declarado basta para own_document sin inspección física.
-- [ ] Excepción menor se revalida por fecha de cita y responsable vigente.
-- [ ] Retirar un requisito exige otra base válida o paso explícito a borrador.
+- [x] Documento declarado basta para own_document sin inspección física.
+- [x] Excepción menor se revalida por fecha de cita y responsable vigente.
+- [x] Retirar un requisito exige otra base válida o paso explícito a borrador.
 
 **Comprobación:** Completar adulto/menor y retirar único contacto requerido. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -362,7 +394,11 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 
 **Transacción, datos y consumidores:** Sin fusión, verificación ni corrección global; conservación de intención y versiones.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** SetPatientCompletion y AddPatientIdentifier reutilizan la aceptación. own_document acepta declared sin inspección física; añadir documento y cambiar la base conserva patient_id. El caso booking_patient comprueba requisitos en el instante y día local de cita, incluyendo cumpleaños y fin exclusivo de vigencia, dentro de la futura transacción autorizada de Citas. Es un caso compartido probado directamente: T22 conserva conectarlo al alta real de cita, aún inexistente. Se documenta el corte administrativo del 29 de febrero, sin afirmar edad legal.
+
+Antes de escribir, los cambios de ficha/contacto/vínculo comprueban todos los dependientes completos y rechazan COMPLETENESS_CONFLICT sin efecto parcial. 20261026_05 añade integridad diferida coordinada por cuenta e identidad, también ante cambios SQL directos. El probe real comprueba adulto con declared, menor con responsable unverified, límite de edad en Caracas, expiración futura del responsable, retiro del único requisito rechazado, paso explícito a draft, y rollback al invalidar el único documento. Dos conexiones distintas retiran los teléfonos de dos responsables: un commit y un rechazo 23514, sin ficha complete inválida. Las rutas reautorizan una instalación nueva y una cuenta inactiva antes de leer o recuperar recibos.
+
+Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acceso/cuentas/sync/equipo/pacientes/persistencia), migraciones con upgrade/downgrade/reaplicación del head de 18 tablas y build offline correcto. Revisión de 54 Python y 14 Markdown; 68 enlaces locales sin nueva ausencia, cinco destinos históricos ausentes. Wheel de 130 entradas con componentes nuevos y sin archivos privados; diff --check correcto. Sin cambios a fábrica, DAO base, esquema base ni scripts de alta; única dependencia nueva phonenumbers 9.0.41. Bases ficticias eliminadas y servicios existentes conservados. Sin prueba HTTP del wheel, consumidores, cita real, snapshot/descarga/SSE, commits, despliegue u otros repositorios. Detenido en C05 para revisión, sin aceptar ni iniciar T16.
 
 ### T16: Gestionar catálogo propio
 
@@ -986,20 +1022,20 @@ T34.1 corrige reglas y arquitectura; T34.2 registra plan, tareas e índice. T35.
 
 ### C03: Identidad y aceptación técnica
 
-- [ ] T07–T09 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] T07–T09 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] Usuario acepta el 2026-10-26: «Continua, por favor». Habilita T10 → T11 → T12; C04 sigue pendiente.
 
 ### C04: Permisos y dos usuarios
 
-- [ ] T10–T12 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] T10–T12 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] Usuario acepta el 2026-10-26: «Aprobado, podemos continuar». Habilita T13 → T14 → T15; C05 conserva su revisión.
 
 ### C05: Pacientes y contactos
 
-- [ ] T13–T15 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] T13–T15 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### C06: Catálogo y horario habitual
@@ -1060,9 +1096,27 @@ T34.1 corrige reglas y arquitectura; T34.2 registra plan, tareas e índice. T35.
 
 - [x] T43–T45 comprobadas; sin infracciones ocultas ni módulos transitorios.
 - [x] Paginación, scripts, contrato, pruebas e integraciones documentados.
-- [ ] Usuario revisó y aceptó; permite retomar T09 y después T07, sin aceptar C03.
+- [x] Usuario revisó y aceptó el 2026-10-26: «Sí, continúa con el desarrollo. Por favor». Permite retomar T09 y después T07, sin aceptar C03.
 
 ## Registro de comprobaciones
+
+### T13 → T14 → T15 · 2026-10-26 · C05 para revisión
+
+- El usuario acepta C04 con «Aprobado, podemos continuar». Se trabaja una tarea a la vez, sin delegación y sin avanzar a T16.
+- Se añaden pacientes/contactos y completitud mediante la aceptación vigente. No se habilita verificación, identidad global arbitraria ni rutas de citas; la regla por fecha queda comprobada como caso compartido que T22 debe conectar.
+- Suite final: 91 pruebas correctas; seis probes reales, migraciones y build correctos. Evidencia y límites en T13–T15 y la guía de desarrollo. C05 requiere revisión expresa del usuario.
+
+### T10 → T11 → T12 · 2026-10-26 · C04 para revisión
+
+- El usuario acepta C03 con «Continua, por favor». Se trabaja una tarea a la vez, sin delegación y sin avanzar a T13.
+- Invitaciones/pertenencias y gestión de cuenta/perfil/dispositivos reutilizan la aceptación de T07. Auditoría de efectos/controles, consulta por propietario y mantenimiento limitado quedan comprobados. No se crean sesiones, renovación, sistema de comandos ni funciones de pacientes o agenda.
+- Suite final: 76 pruebas correctas. Cinco probes reales, migraciones, build/inspección del paquete y revisión de archivos correctos. Evidencia y límites detallados en T10–T12 y guía de desarrollo. C04 requiere revisión expresa del usuario.
+
+### T09 → T07 · 2026-10-26 · C03 para revisión
+
+- C15 aceptado por el usuario al pedir continuar con el desarrollo. Se ejecutan T09 y T07 en secuencia, sin delegación ni avance a T10.
+- T09 reutiliza alta y lecturas existentes; añade seis rutas HTTP propias y su prueba de aislamiento. T07 añade lote/resultado, registro de instalación propia y persistencia técnica atómica. Las acciones posteriores siguen sin implementar.
+- 71 pruebas correctas, cuatro probes reales correctos, build e inspección del paquete correctos. La evidencia completa y sus límites figuran en T09/T07 y la guía de desarrollo. C03 requiere aceptación expresa.
 
 ### Corrección T43–T45 · 2026-10-26 · C15 para revisión
 

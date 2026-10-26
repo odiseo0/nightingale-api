@@ -1,6 +1,6 @@
 # Planes y tareas
 
-Plan actual: [P-20261024-01-desktop-shared-api](P-20261024-01-desktop-shared-api/plan.md), **In progress**. Su [lista de control](P-20261024-01-desktop-shared-api/todo.md) conserva estados, evidencia y revisiones. C01, C02, C12, C13 y C14 aceptados. T43–T45 comprobadas; detenido en C15 para revisión, sin aceptar. T09 queda pendiente de retomar después de C15; T07 y C03 no están aceptados. No saltar las revisiones pendientes.
+Plan actual: [P-20261024-01-desktop-shared-api](P-20261024-01-desktop-shared-api/plan.md), **In progress**. Su [lista de control](P-20261024-01-desktop-shared-api/todo.md) conserva estados, evidencia y revisiones. C01–C04 y C12–C15 aceptados. T13–T15 comprobadas; detenido en C05 para revisión, sin aceptar. No avanzar a T16 antes de esa aceptación.
 
 El [plan anterior](P-20261021-01-api-foundation/plan.md) queda **Superseded** para ejecución. Conserva T24/C14 y toda la evidencia previa; sus tareas pendientes no se marcan terminadas. La tabla de sucesión del plan nuevo asigna el núcleo y conserva Hub, comunicaciones, espera, analítica y producción para etapas posteriores. El esquema sigue en [database-schema.md](../docs/database-schema.md); el borrador lógico permanece retirado.
 

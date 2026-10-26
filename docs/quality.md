@@ -1,6 +1,6 @@
 # Requisitos de calidad y estrategia de pruebas
 
-**Estado:** requisitos de producto aún por verificar. T03 comprobó proceso/configuración y parte de salud/recursos de Q14; [la guía de desarrollo](operations/development.md) registra sus pruebas y límites. **R** indica un requisito confirmado por el encargo/especificación; **P**, una técnica de prueba propuesta; **A**, una decisión abierta en [el registro](decisions.md).
+**Estado:** identidad, lecturas propias, aceptación técnica, equipo/cuenta/auditoría y pacientes/contactos T13–T15 comprobados para revisión C05. Servicios, agenda/citas, descarga y operación siguen pendientes. La [guía de desarrollo](operations/development.md) distingue pruebas locales, integración real PostgreSQL/Keycloak y límites de consumidores/operación. **R** indica un requisito confirmado por el encargo/especificación; **P**, una técnica de prueba propuesta; **A**, una decisión abierta en [el registro](decisions.md).
 
 ## Requisitos verificables
 

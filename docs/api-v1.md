@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.1. **Fecha:** 2026-10-26. **Estado:** corrección del [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md), para revisión C15. Sustituye nombres públicos y paginación del diseño 1.0 por decisión del usuario. Las cuatro rutas de credenciales de authorization usan esquemas camelCase y OpenAPI desde domain. Los casos de cuenta/sync y las lecturas page/shows no añaden endpoints. C13/C14 aceptados; C15 y C03 no aceptados. El catálogo restante no acredita implementación ni integración con el escritorio.
+**Versión de diseño:** 1.1. **Fecha:** 2026-10-26. **Estado:** C04 aceptado; T13–T15 para revisión C05 del [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md). Se implementan acceso, equipo/cuenta, auditoría y pacientes/contactos, incluidos documentos declarados y completitud. Los esquemas de domain generan sus modelos HTTP. Servicios, agenda/citas, snapshot, descarga y SSE conservan sus tareas; no se acredita integración con el escritorio. C05 no aceptado.
 
 Esta es la única fuente editable del diseño de transporte de esta etapa. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas, sin duplicarlos aquí. Los esquemas Pydantic de domain heredan del BaseModel del proyecto y producirán OpenAPI/JSON Schema; un generado identificará origen y versión y nunca se editará a mano. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -95,7 +95,7 @@ GET /openapi.json y GET /docs se habilitarán solo en desarrollo/prueba al exist
 | TokenRotationRequest | Objeto vacío. Nuevo secreto una vez; anterior revocado en la misma transacción. |
 | DeviceTokenIssued | tokenType=Bearer, accessToken, tokenId, deviceId, userId, issuedAt; sin fecha de vencimiento. Nunca se guarda accessToken en recibos o auditoría. |
 | InvitationAcceptRequest | operationId; identidad destinataria procede de token. |
-| InvitationAcceptanceResult | operationId,status,invitationId,accountId,membershipVersion; respuesta perdida recuperable bajo misma identidad sin nueva pertenencia. |
+| InvitationAcceptanceResult | operationId,status accepted/duplicate,invitationId,accountId,membershipVersion; respuesta perdida recuperable bajo misma identidad sin nueva pertenencia. Rechazo definitivo: 409 con ApiError; no crear pertenencia para guardar un rechazo inicial. |
 | AuthConfigResponse | issuer,publicClientId,audience,authorizationFlow=authorization_code,pkceMethod=S256. Sin clientSecret. |
 | CapabilitiesResponse | contractVersion=1,modelRevision,operationCatalog,onlineOnlyActions,maxBatchOperations,maxBodyBytes,maxOperationBytes,maxPageSize,syncRetentionDays=90,snapshotTtlSeconds=900,recoveryRequiredCodes,defaultAppointmentWindow. Solo capacidades implementadas al publicar versión. |
 | MeResponse | userId,displayName,status,oidcIssuer,oidcSubject propios y resumen de pertenencias; nunca token o credenciales. |
@@ -104,6 +104,8 @@ GET /openapi.json y GET /docs se habilitarán solo en desarrollo/prueba al exist
 | PaginatedResponse<T> | items y total (entero no negativo); esquema común existente. No incluye nextCursor ni hasMore. SnapshotPage usa la misma forma con SyncItem. |
 
 Los demás Response proyectan los campos administrativos del diccionario con su clave y versión. AccountSummary solo id,displayName,status y rol propio. MemberResponse no expone issuer/sub o tokens. ProfessionalResponse no expone credenciales. ServiceOfferResponse incluye clave compuesta, nombre de servicio, base, override, duración efectiva y versiones de servicio/oferta. PatientProfileResponse no incluye otras fichas; documentos/contactos se obtienen por sus rutas. PatientIdentifierResponse oculta verifiedByUserId global de otra cuenta; solo estado/instante si permitido. AccountDeviceResponse solo identificador, nombre, actividad/versión reportada y estado de autorización de esta cuenta, sin otras pertenencias.
+
+RelationshipResponse conserva el estado del vínculo para resultados/journal. PatientContactResponse añade a esa lectura patientFullName, contactFullName, phoneCode y phone vigentes de la misma cuenta; no copia documentos del contacto. Los nombres relacionados no se guardan como parte del estado sincronizado del vínculo. Las verificaciones preparadas por administración en pruebas solo acreditan conservación: no existe una acción pública para verificarlas.
 
 AppointmentResponse y AppointmentHistoryResponse conservan los snapshots y el actor funcional del diccionario; no incluyen intentos, tokens, SQL ni payload de otra operación. AvailabilityResponse contiene accountId,professionalId,serviceId,referenceDurationMinutes,requestedDurationMinutes y availableIntervals[{startsAt,endsAt}]; no reserva. AuditEventResponse contiene identificadores, acción/objeto, resultado, instante y correlación, sin cuerpos personales.
 
@@ -214,6 +216,7 @@ ApiError = {code,message,correlationId,details:[]}; details solo ubicaciones de 
 | 401 | AUTHENTICATION_REQUIRED / credencial inválida o revocada. |
 | 403 | PERMISSION_DENIED / dispositivo no habilitado o acción no permitida en ámbito conocido. |
 | 404 | NOT_FOUND para objeto no visible o inexistente; no revela otra cuenta. |
+| 409 | Rechazo de aceptación de invitación: INVALID_STATE_TRANSITION, NO_CHANGES o IDEMPOTENCY_CONFLICT. Los conflictos del lote conservan HTTP 200 y resultado por operación. |
 | 410 | CURSOR_EXPIRED, SNAPSHOT_EXPIRED, SNAPSHOT_SCOPE_CHANGED, RESULT_EXPIRED; recuperación explícita. |
 | 413 | REQUEST_TOO_LARGE, antes de efectos. |
 | 422 | VALIDATION_ERROR estructural antes de procesar lote. |

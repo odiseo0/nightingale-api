@@ -141,6 +141,14 @@ async def check_accounts(runtime, administrative, client, tokens):
     for credential in secrets:
         result = await call(runtime, cases.get_accounts, credential)
         assert isinstance(result, Ok) and result.value.total == 0
+    for installation in installations:
+        response = await client.get("/v1/accounts", headers=access.authorization(installation))
+        access.expect(response, 200)
+        assert response.json() == {"items": [], "total": 0}
+        response = await client.get("/v1/me", headers=access.authorization(installation))
+        access.expect(response, 200)
+        assert response.json()["userId"] == installation["userId"]
+        assert response.json()["accounts"] == {"items": [], "total": 0}
     before = await counts()
     denied = await call(runtime, cases.bootstrap_practice, data())
     assert isinstance(denied, Err) and isinstance(denied.error, AccessDenied)
@@ -162,13 +170,26 @@ async def check_accounts(runtime, administrative, client, tokens):
     own_access = await call(runtime, cases.get_access, secrets[0], practice.account_id)
     assert isinstance(own_access, Ok)
     assert own_access.value.role == "owner" and own_access.value.status == "registration_required"
-    assert own_access.value.permission_epoch == 1 and own_access.value.allowed_actions == []
+    assert own_access.value.permission_epoch == 1 and own_access.value.allowed_actions == ["RegisterAccountDevice"]
     hidden = await call(runtime, cases.get_account, secrets[2], practice.account_id)
     assert isinstance(hidden, Err) and isinstance(hidden.error, AccountNotFound)
     professional = await call(runtime, cases.get_professional, secrets[0])
     assert isinstance(professional, Ok) and professional.value.id == practice.professional_id
     missing_professional = await call(runtime, cases.get_professional, secrets[1])
     assert isinstance(missing_professional, Err) and isinstance(missing_professional.error, ProfessionalNotFound)
+    base = f"/v1/accounts/{practice.account_id}"
+    for path, installation, expected in (
+        (base, owner, 403), (base, outsider, 404),
+        (base + "/access", outsider, 404), ("/v1/me/professional", assistant, 404),
+    ):
+        response = await client.get(path, headers=access.authorization(installation))
+        access.expect(response, expected)
+    response = await client.get(base + "/access", headers=access.authorization(owner))
+    access.expect(response, 200)
+    assert response.json()["status"] == "registration_required"
+    response = await client.get("/v1/me/professional", headers=access.authorization(owner))
+    access.expect(response, 200)
+    assert response.json()["id"] == str(practice.professional_id)
 
     second = await call(administrative, cases.bootstrap_practice, data(2))
     assert isinstance(second, Ok)
@@ -211,6 +232,25 @@ async def check_accounts(runtime, administrative, client, tokens):
     assert isinstance(me, Ok) and me.value.accounts.total == 2
     assert me.value.oidc_subject == identities[0]["subject"]
     assert set(me.value.model_dump(by_alias=True)["accounts"]) == {"items", "total"}
+    pages = []
+    for page in (1, 2, 3):
+        response = await client.get(
+            f"/v1/accounts?page={page}&shows=1", headers=access.authorization(owner),
+        )
+        access.expect(response, 200)
+        assert response.headers["Cache-Control"] == "no-store"
+        assert UUID(response.headers["X-Correlation-ID"]).version == 7
+        assert response.json()["total"] == 2
+        pages.append(response.json()["items"])
+    assert [pages[0][0]["id"], pages[1][0]["id"]] == sorted([str(practice.account_id), str(other_account)])
+    assert pages[2] == []
+    for installation in (owner, assistant):
+        response = await client.get(base, headers=access.authorization(installation))
+        access.expect(response, 200)
+        assert response.json()["id"] == str(practice.account_id)
+        assert set(response.json()) == set(own.value.model_dump(by_alias=True))
+    response = await client.get(f"/v1/accounts/{other_account}", headers=access.authorization(assistant))
+    access.expect(response, 404)
 
     await access.issue(client, tokens[0]["access_token"])
     devices = await call(runtime, get_devices, secrets[0], page=1, shows=1)
@@ -219,6 +259,23 @@ async def check_accounts(runtime, administrative, client, tokens):
     assert devices.value.total == next_devices.value.total == 2
     assert devices.value.items[0].id != next_devices.value.items[0].id
     assert all(str(row.user_id) == owner["userId"] for row in devices.value.items + next_devices.value.items)
+    for installation, total in ((owner, 2), (assistant, 1), (outsider, 1)):
+        response = await client.get("/v1/me/devices?shows=1", headers=access.authorization(installation))
+        access.expect(response, 200)
+        assert response.json()["total"] == total
+        assert all(row["userId"] == installation["userId"] for row in response.json()["items"])
+        assert not {"tokenHash", "accessToken", "oidcSubject"} & set(response.json()["items"][0])
+    for path in ("/v1/accounts", "/v1/me/devices"):
+        for query in ("page=0", "shows=501", "cursor=fixture", "limit=1", "page=true"):
+            response = await client.get(path + "?" + query, headers=access.authorization(owner))
+            access.expect(response, 422)
+    for path in ("/v1/me", "/v1/me/professional", base, base + "/access"):
+        response = await client.get(path + "?unknown=fixture", headers=access.authorization(owner))
+        access.expect(response, 422)
+    for path in ("/v1/me", "/v1/me/professional", "/v1/accounts", "/v1/me/devices", base, base + "/access"):
+        response = await client.get(path)
+        access.expect(response, 401)
+        assert response.headers["WWW-Authenticate"] == "Bearer"
 
     async with administrative() as db:
         async with db.begin():
@@ -243,6 +300,16 @@ async def check_accounts(runtime, administrative, client, tokens):
     assert isinstance(state, Ok) and state.value.status == "revoked" and state.value.permission_epoch == 2
     inactive = await call(runtime, cases.get_access, secrets[2], other_account)
     assert isinstance(inactive, Ok) and inactive.value.status == "inactive"
+    response = await client.get(base, headers=access.authorization(assistant))
+    access.expect(response, 403)
+    response = await client.get(base + "/access", headers=access.authorization(assistant))
+    access.expect(response, 200)
+    assert response.json()["status"] == "revoked" and response.json()["permissionEpoch"] == 2
+    response = await client.get(f"/v1/accounts/{other_account}", headers=access.authorization(outsider))
+    access.expect(response, 200)
+    assert response.json()["status"] == "inactive"
+    response = await client.get(f"/v1/accounts/{other_account}", headers=access.authorization(owner))
+    access.expect(response, 403)
 
     async with runtime() as db:
         cached_head = await db.get(AccountSyncHead, practice.account_id)
@@ -284,6 +351,9 @@ async def check_accounts(runtime, administrative, client, tokens):
     access.expect(response, 204)
     invalid = await call(runtime, cases.get_accounts, secrets[0])
     assert isinstance(invalid, Err) and isinstance(invalid.error, InvalidCredential)
+    for path in ("/v1/me", "/v1/accounts", "/v1/me/devices", base + "/access"):
+        response = await client.get(path, headers=access.authorization(owner))
+        access.expect(response, 401)
 
 
 async def main():
@@ -293,7 +363,7 @@ async def main():
     engine = None
     try:
         await postgres.prepare_database()
-        result = postgres.migrate("upgrade", "20261025_02")
+        result = postgres.migrate("upgrade", "head")
         assert result.returncode == 0, result.stderr
         with TemporaryDirectory(prefix="accounts-", dir=ROOT / ".tmp") as temporary:
             for name in list(os.environ):

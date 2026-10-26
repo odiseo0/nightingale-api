@@ -111,22 +111,31 @@ El DAO existente conserva commit=True por defecto. Los casos de aplicación deli
 
 Esto prueba la base técnica con filas ficticias. No demuestra todavía autorización, coordinación de permisos de varias cuentas, orden confirmado del Change Log, idempotencia ni dos procesos de API: corresponden a los casos siguientes y a T32. Los comandos de migración se ejecutan desde este repositorio; no se acredita distribuir ni ejecutar migraciones desde un wheel instalado.
 
-## Acceso y cuentas en C15
+## Acceso, cuentas, equipo, auditoría y pacientes para C05
 
 Con PostgreSQL Test y Keycloak Test ya activos:
 
 ```powershell
 .\.venv\Scripts\python.exe test-support/access/check.py
 .\.venv\Scripts\python.exe test-support/accounts/check.py
+.\.venv\Scripts\python.exe test-support/sync/check.py
+.\.venv\Scripts\python.exe test-support/team/check.py
+.\.venv\Scripts\python.exe test-support/patients/check.py
 ```
 
-El probe de acceso limita su base aleatoria a la revisión 20261025_01 y comprueba las cuatro rutas reales de credenciales. El de cuentas aplica la revisión 20261025_02 ya existente en otra base aleatoria y llama a los casos corregidos; las lecturas de cuentas aún no tienen endpoints. Ambos validan el clúster y eliminan sus bases al terminar. El probe general de persistencia sigue el head 20261025_02 y sus nueve tablas.
+Los cinco probes aplican el head 20261026_05 en bases aleatorias distintas: dieciocho tablas, incluidas las cinco de pacientes/contactos. Acceso comprueba credenciales y su auditoría; cuentas prueba alta/lecturas/script; sync conserva sus pruebas de idempotencia/rollback; equipo usa invitaciones, pertenencias y dispositivos reales y prueba cuenta/perfil, aislamiento y auditoría; pacientes prueba sus recorridos y completitud. Todos validan el clúster y eliminan solo su base. El sexto probe, persistencia, comprueba upgrade/downgrade/reaplicación y fallo de revisión sin DDL parcial.
 
 Cuentas comprueba alta administrativa atómica, rechazo al rol operativo, duplicado concurrente, rollback real tras fallo CHECK en el head, aislamiento por pertenencia, cuenta inactiva, dispositivos no registrados/revocados y paginación con total autorizado. También retiene un head en una sesión mientras otra conexión cambia la época y comprueba su refresco. Ejecuta el script de alta en un proceso hijo: éxito, duplicado, rol operativo denegado, zona inválida y fallos de conexión sin secretos. Usa OIDC real para identificar a los actores; no guarda ni imprime tokens. Las pertenencias y autorizaciones de dispositivo se preparan como fixtures SQL explícitos; no acreditan las futuras operaciones de invitación/registro.
 
-La zona se contrasta con pg_timezone_names en el DAO antes de escribir; coincide con la restricción del esquema. No requiere instalar tzdata en Python. No se crean nuevas revisiones ni se aplica nada en una base personal. Los scripts no inician ni detienen servicios por su cuenta.
+Sync comprueba autorización vigente, versiones, huella canónica y rechazo seguro, recibos por actor/cuenta, duplicado concurrente, respuesta perdida tras commit en ASGI, rollback inmediato/diferido y reintento. Comprueba lotes con fallo temporal, dependencia temporal e independiente; espera un bloqueo PostgreSQL real antes de releer la revocación. Prepara un recibo ficticio antiguo para probar 410 y conservación de clave/huella tras purgar detalles; no cambia el reloj del servicio. Sus pertenencias son fixtures. Equipo usa la aceptación real de invitación y comprueba que no registra una instalación por deducción; también prueba la consulta de auditoría y su correlación, el fallo de auditoría que revierte una rotación y el mantenimiento administrativo repetible.
+
+La zona se contrasta con pg_timezone_names en el DAO antes de escribir; coincide con la restricción del esquema. No requiere instalar tzdata en Python. La migración nueva se aplica solo en bases ficticias; no se aplica nada en una base personal. Los scripts no inician ni detienen servicios por su cuenta.
+
+Pacientes comprueba borradores/documentos, versiones y búsqueda por cuenta, contactos compartidos, FK de cuenta, conservación de constancias y completitud con documentos declarados. Dos conexiones reales intentan retirar los dos teléfonos responsables: solo una confirma. El caso compartido de elegibilidad se prueba en la fecha local de una futura cita, sin afirmar que las rutas de citas estén implementadas. Tres migraciones nuevas llevan el head a 20261026_05 con 18 tablas; el probe de persistencia aplica/revierte/reaplica ese head.
 
 ## Alta administrativa
+
+El mantenimiento usa otro flujo pequeño: `scripts/purge_expired_results.py`, sin subcomandos. Exige `MAINTENANCE_DATABASE_URI` administrativa explícita y no toma la URI de ejecución como sustituto. Retira solo detalles de resultados vencidos; conserva recibos mínimos, journal y auditoría. Debe ejecutarse con este repositorio en PYTHONPATH, igual que el alta. No lo ejecuta el servidor ni un proceso periódico de esta entrega.
 
 Desde la raíz, prepara un JSON local con el esquema BootstrapPracticeInput de accounts. Ejemplo solo con datos ficticios:
 

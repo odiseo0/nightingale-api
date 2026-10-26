@@ -2,6 +2,31 @@
 
 **Inspección inicial T01:** 2026-10-21. Este documento conserva la procedencia y evidencia de esa entrega. Estado y comprobaciones posteriores de T03: [guía de desarrollo](operations/development.md).
 
+## Fuentes técnicas de T09/T07 · 2026-10-26
+
+Manifiesto y uv.lock: FastAPI 0.159.1, Pydantic 2.14.1, SQLAlchemy 2.1.6, HTTPX 0.28.1 y Alembic 1.20.1; no se añaden ni actualizan dependencias.
+
+- [FastAPI: modelos de parámetros](https://fastapi.tiangolo.com/tutorial/query-param-models/#query-parameters-with-a-pydantic-model) y [rechazo de parámetros extra](https://fastapi.tiangolo.com/tutorial/query-param-models/#forbid-extra-query-parameters): Annotated[PageQuery, Query()] usa el esquema existente. La guía declara soporte desde 0.115.0; se comprueba en 0.159.1 con HTTP real por ASGI.
+- [Pydantic: validadores de modelo](https://docs.pydantic.dev/latest/concepts/validators/#model-validators): valida cantidad, IDs repetidos y orden de dependencias antes de efectos. El esquema conserva los campos opcionales normalizados; desactiva strip de texto para no alterar el payload inválido antes de su huella. Las pruebas usan 2.14.1.
+- [SQLAlchemy 2.1: refrescar filas](https://docs.sqlalchemy.org/en/21/orm/queryguide/api.html#populate-existing) y [AsyncSession.begin](https://docs.sqlalchemy.org/en/21/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncSession.begin): bloqueo/refresco en DAO y una transacción sobre la sesión existente. La documentación identifica la versión 2.1.6. El soporte traduce DBAPIError tras rollback, incluidos fallos diferidos al confirmar; conserva errores de programación y cancelación.
+- [PostgreSQL 18: bloqueos de fila](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS): identidad, control de cuenta, filas de negocio y recibo mantienen el orden acordado. El probe observa espera mediante pg_blocking_pids antes de releer permiso. [Triggers de restricción](https://www.postgresql.org/docs/18/sql-createtrigger.html) y [restricciones](https://www.postgresql.org/docs/18/ddl-constraints.html) sustentan los grupos completos, FK y evidencia atómica. Se prueba con PostgreSQL 18.3 local, sin actualizarlo.
+
+Las fuentes apoyan el uso de las herramientas; no aceptan C03 ni prueban consumidores, TCP o producción. Evidencia y límites en la lista de control y la guía de desarrollo.
+
+## Fuentes técnicas de T10–T12 · 2026-10-26
+
+Se conservan FastAPI 0.159.1, Pydantic 2.14.1, SQLAlchemy 2.1.6 y Alembic 1.20.1 del manifiesto/lockfile. No se añade ni actualiza una herramienta. Las listas reutilizan [modelos de consulta y rechazo de extras](https://fastapi.tiangolo.com/tutorial/query-param-models/#forbid-extra-query-parameters). Cambios de fila y mantenimiento usan [UPDATE con condiciones explícitas](https://docs.sqlalchemy.org/en/21/orm/queryguide/dml.html#orm-update-and-delete-with-custom-where-criteria) dentro de la transacción existente. El filtro de objeto usa un parámetro tipado [JSONB](https://docs.sqlalchemy.org/en/21/dialects/postgresql.html#sqlalchemy.dialects.postgresql.JSONB), para evitar compararlo con texto SQL.
+
+El [orden de bloqueos de PostgreSQL 18](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS) sustenta las carreras de aceptación/revocación y restauración local/revocación global. El acceso sigue identificando con issuer/subject exactos; la autorización pertenece a las filas vigentes. Los timestamps de cliente no conceden permiso ni fijan vencimiento. La evidencia procede de PostgreSQL 18.3/Keycloak 26.8.1 reales y de ASGI, no de operación en producción ni consumidores.
+
+## Fuentes técnicas de T13–T15 · 2026-10-26
+
+Se conservan FastAPI 0.159.1, Pydantic 2.14.1, SQLAlchemy 2.1.6 y Alembic 1.20.1, leídos en manifiesto/lockfile. Se añade solo phonenumbers 9.0.41, exigida por api-v1 para validar estructura y longitud posible; no prueba titularidad ni existencia. [Documentación del paquete](https://daviddrysdale.github.io/python-phonenumbers/phonenumbers.phonenumberutil.html#national_significant_number): parse con prefijo explícito, is_possible_number y national_significant_number conservan ceros significativos. pycountry 26.2.16 ya existente comprueba países asignados. No se aplica normalización nacional de documentos aún sin aprobar.
+
+Las consultas reutilizan [modelos Query de FastAPI](https://fastapi.tiangolo.com/tutorial/query-param-models/#forbid-extra-query-parameters) y [validadores de modelo de Pydantic](https://docs.pydantic.dev/latest/concepts/validators/#model-validators). La búsqueda usa [icontains con autoescape en SQLAlchemy 2.1](https://docs.sqlalchemy.org/en/21/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement.icontains): porcentajes y guiones bajos son texto literal. Los [bloqueos de transacción de PostgreSQL 18](https://www.postgresql.org/docs/18/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS) serializan IDs nuevos de documentos entre cuentas; un conflicto de UUID nunca vincula otra identidad. Las [restricciones y triggers](https://www.postgresql.org/docs/18/sql-createtrigger.html) protegen claves, versiones y constancias. Evidencia y límites por tarea en la lista de control.
+
+Los [serializadores de campo de Pydantic](https://docs.pydantic.dev/latest/concepts/serialization/#field-serializers) usan when_used="json" para los extremos de vigencia: las reglas conservan datetime dentro de Python y producen UTC con Z al transportar datos. El control diferido de completitud bloquea también el control por cuenta y la identidad antes de leer el estado final; las pruebas reales con dos conexiones demuestran el rechazo de la retirada simultánea de todos los teléfonos responsables. Esa prueba no acredita todavía una reserva de cita o el consumidor Rust.
+
 ## Fuentes del repositorio
 
 **Actualización del 2026-10-24:** [database-schema.md](database-schema.md) es la única fuente vigente del diseño de datos por instrucción del usuario, registrada en D08. El borrador lógico anterior queda retirado. Las revisiones de documentación, propuestas y pendientes actuales figuran en el propio esquema; los registros siguientes conservan la procedencia histórica.

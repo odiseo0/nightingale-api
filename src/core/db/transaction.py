@@ -4,6 +4,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+from sqlalchemy.exc import DBAPIError
+
+from .dao import DAOError
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,5 +17,10 @@ async def transaction(db: AsyncSession) -> AsyncGenerator[None]:
     """Own one transaction on the given session; DAO calls must use commit=False."""
     # begin commits on success and rolls back on error; it rejects nested scopes.
     # https://docs.sqlalchemy.org/en/21/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncSession.begin
-    async with db.begin():
-        yield
+    try:
+        async with db.begin():
+            yield
+    except DBAPIError as error:
+        # Include failures at commit (for example, deferred constraints) in the
+        # same technical error boundary as DAO calls, after begin rolls back.
+        raise DAOError from error

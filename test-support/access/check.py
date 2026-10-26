@@ -195,7 +195,7 @@ async def main():
     tokens = [provider_tokens(user) for user in realm["users"]]
     try:
         await postgres.prepare_database()
-        result = postgres.migrate("upgrade", "20261025_01")
+        result = postgres.migrate("upgrade", "head")
         assert result.returncode == 0, "Access migrations failed"
         with TemporaryDirectory(prefix="access-", dir=ROOT / ".tmp") as temporary:
             directory = Path(temporary).resolve()

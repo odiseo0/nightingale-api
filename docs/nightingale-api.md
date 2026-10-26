@@ -2,7 +2,7 @@
 
 **Versión:** 0.4
 **Fecha:** 2026-10-26
-**Estado:** alcance acordado; D09/D10 y el plan sucesor concretan la primera etapa. C01/C02/C12/C13/C14 aceptados. La corrección T34–T45 queda para revisión en C15: componentes separados, alta atómica, lecturas propias con LIMIT/OFFSET, cursores de página retirados y script pequeño de alta. Solo las cuatro rutas de credenciales están conectadas por HTTP; T09 conserva trabajo parcial sin darlo por terminado. C15 y C03 no están aceptados. No se acredita integración con consumidores.
+**Estado:** C01–C04 y C12–C15 aceptados. T13–T15 quedan para revisión C05: fichas borrador, documentos declarados, contactos/vínculos por cuenta y completitud protegida. Se conservan credenciales, equipo, auditoría, alta administrativa y aceptación atómica. Servicios, agenda/citas, snapshot, descarga, SSE y consumidores siguen pendientes.
 **Decisión:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional).
 
 ## 1. Propósito y tecnología

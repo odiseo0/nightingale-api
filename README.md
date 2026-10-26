@@ -2,7 +2,7 @@
 
 API de autorización, aceptación del estado compartido y sincronización de Nightingale. Python y FastAPI; PostgreSQL operativo privado. Este repositorio también tendrá los módulos y workers de recordatorios, entregas, integración con n8n e indicadores básicos.
 
-**Estado al 2026-10-26:** C01/C02/C12/C13/C14 aceptados. La corrección T34–T45 queda para revisión en C15. authorization, accounts y sync siguen la estructura acordada; se retiran los cursores de página y la CLI, y el alta usa [scripts/create_practice.py](scripts/create_practice.py). Las rutas HTTP siguen siendo las cuatro de credenciales; las lecturas de cuenta aún no tienen endpoints. T09 y C03 siguen pendientes. El [contrato 1.1](docs/api-v1.md) fija camelCase y page/shows. Sin nuevas dependencias ni cambios físicos. Evidencia y límites en la [lista de control](tasks/P-20261024-01-desktop-shared-api/todo.md).
+**Estado al 2026-10-26:** C04 aceptado; T13–T15 comprobadas para revisión C05. Hay fichas borrador, documentos declarados, contactos reutilizables y vínculos por cuenta, con completitud protegida en PostgreSQL. Se conservan credenciales, equipo, auditoría, aceptación atómica y alta mediante [scripts/create_practice.py](scripts/create_practice.py). Se añade phonenumbers 9.0.41; las migraciones hasta 20261026_05 se prueban solo en bases ficticias aisladas. Servicios, agenda/citas, snapshot, descarga, SSE y consumidores siguen pendientes. Evidencia y límites en la [lista de control](tasks/P-20261024-01-desktop-shared-api/todo.md).
 
 El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient Hub tiene su web, backend y datos propios; usa esta API para consultar y cambiar citas autorizadas. Ninguno recibe acceso SQL al PostgreSQL operativo.
 
@@ -17,7 +17,7 @@ El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient 
 | [Arquitectura](docs/architecture.md) | Componentes, datos, dependencias y flujos propuestos |
 | [Contratos](docs/contracts.md) | Propiedad, criterios de diseño y acuerdos por cerrar |
 | [Contrato de diseño HTTP v1](docs/api-v1.md) | Rutas, operaciones, modelos públicos, permisos y recuperación de esta etapa |
-| [Esquema físico de diseño](docs/database-schema.md) | Única fuente del modelo; ampliación 1.0 para revisión C01, sin SQL ejecutado |
+| [Esquema físico de diseño](docs/database-schema.md) | Única fuente del modelo; implementación parcial en migraciones y pruebas aisladas |
 | [Calidad y pruebas](docs/quality.md) | Requisitos verificables y pruebas futuras |
 | [Decisiones](docs/decisions.md) | Qué está confirmado, propuesto o pendiente |
 | [Diseño de acceso](docs/access-design.md) | OIDC de emisión y token API sin vencimiento/revocable; Hub posterior aún en revisión |

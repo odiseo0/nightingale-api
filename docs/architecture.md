@@ -1,6 +1,6 @@
 # Arquitectura de API
 
-**Actualizada:** 2026-10-26. **Estado:** estructura acordada por el usuario; T34–T45 corrigen su implementación. Los límites funcionales proceden de [la especificación](nightingale-api.md). No crear carpetas sin uso concreto.
+**Actualizada:** 2026-10-26. **Estado:** C01–C04 y C12–C15 aceptados. T13–T15 añaden el componente patients para revisión C05: fichas/documentos, contactos/vínculos y completitud, coordinados con la aceptación existente. Los límites funcionales proceden de [la especificación](nightingale-api.md). No crear carpetas sin uso concreto.
 
 ## Tres proyectos
 

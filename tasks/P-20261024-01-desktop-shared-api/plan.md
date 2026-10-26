@@ -1,6 +1,6 @@
 # P-20261024-01-desktop-shared-api: API compartida para escritorio
 
-**Checkpoint actual:** C14 aceptado por el usuario al decir «Todo bien». T43–T45 comprobadas; detenido en C15 para revisión. C15 y C03 no están aceptados. C02 conserva su aceptación y T08 su evidencia histórica; T09 se retoma después de C15.
+**Checkpoint actual:** C04 aceptado por el usuario el 2026-10-26: «Aprobado, podemos continuar». T13 → T14 → T15 comprobadas en secuencia; detenido en C05 para revisión, sin aceptar. No avanzar a T16. Las aceptaciones y la evidencia anteriores se conservan.
 
 **Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-26. **Lista:** [todo.md](todo.md).
 
@@ -92,20 +92,20 @@ La corrección del 2026-10-26 interrumpe T09: T34–T36 → C12 → T37–T39 �
 **C02: Base ejecutable y entorno.** Detenerse para revisión.
 
 - [x] T08: Emitir credenciales de dispositivo.
-- [ ] T09: Habilitar una consulta independiente.
-- [ ] T07: Aceptar operaciones con idempotencia.
+- [x] T09: Habilitar una consulta independiente.
+- [x] T07: Aceptar operaciones con idempotencia.
 
 **C03: Identidad y aceptación técnica.** Detenerse para revisión.
 
-- [ ] T10: Gestionar invitaciones.
-- [ ] T11: Gestionar cuenta y dispositivos autorizados.
-- [ ] T12: Registrar y consultar auditoría.
+- [x] T10: Gestionar invitaciones.
+- [x] T11: Gestionar cuenta y dispositivos autorizados.
+- [x] T12: Registrar y consultar auditoría.
 
 **C04: Permisos y dos usuarios.** Detenerse para revisión.
 
-- [ ] T13: Registrar fichas borrador.
-- [ ] T14: Gestionar contactos y vínculos.
-- [ ] T15: Completar fichas y añadir documentos declarados.
+- [x] T13: Registrar fichas borrador.
+- [x] T14: Gestionar contactos y vínculos.
+- [x] T15: Completar fichas y añadir documentos declarados.
 
 **C05: Pacientes y contactos.** Detenerse para revisión.
 

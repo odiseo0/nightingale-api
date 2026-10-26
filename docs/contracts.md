@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado al 2026-10-26:** propiedad y principios vigentes. El [contrato de diseño HTTP v1](api-v1.md), revisión 1.1, incorpora JSON camelCase, esquemas en domain y listas con page/shows e items/total. Existen cuatro rutas de credenciales; los casos y lecturas de accounts/sync aún no tienen endpoints. C12/C13/C14 aceptados; corrección para revisión en C15, sin aceptar C15 ni C03. El catálogo restante, clientes generados e integración de consumidores siguen pendientes.
+**Estado al 2026-10-26:** C04 aceptado; T13–T15 para revisión C05. El [contrato de diseño HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. patients posee identidad mínima, fichas/documentos y contactos/vínculos; accounts conserva permisos, sync coordina recibos/grupos y audit conserva hechos. Las aceptaciones no registran un dispositivo por deducción. Servicios, agenda/citas, clientes generados e integración de consumidores siguen pendientes.
 
 ## Una fuente por contrato
 

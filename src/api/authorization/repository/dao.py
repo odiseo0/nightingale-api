@@ -15,6 +15,15 @@ from .models import AppUser, Device, DeviceToken
 
 
 class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
+    async def lock_identified(self, db: AsyncSession, user_ids: list[UUID]) -> None:
+        await db.scalars(
+            select(self.model).where(self.model.id.in_(user_ids)).order_by(self.model.id)
+            .with_for_update().execution_options(populate_existing=True)
+        )
+
+    async def get_identified(self, db: AsyncSession, user_ids: list[UUID]) -> list[AppUser]:
+        return list((await db.scalars(select(self.model).where(self.model.id.in_(user_ids)))).all())
+
     async def get_server_time(self, db: AsyncSession) -> datetime:
         return await db.scalar(select(func.clock_timestamp()))
 
@@ -63,6 +72,9 @@ class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
 
 
 class DeviceDAO(DAO[Device, BaseModel, BaseModel]):
+    async def get_identified(self, db: AsyncSession, device_ids: list[UUID]) -> list[Device]:
+        return list((await db.scalars(select(self.model).where(self.model.id.in_(device_ids)))).all())
+
     async def get_owned_for_update(
         self, db: AsyncSession, device_id: UUID, user_id: UUID,
     ) -> Device | EmptyType:

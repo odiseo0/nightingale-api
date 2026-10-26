@@ -20,3 +20,24 @@ class ProfessionalNotFound:
 @dataclass(frozen=True, slots=True)
 class UnknownTimeZone:
     name: str
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceVersionConflict:
+    version: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceAlreadyRegistered:
+    version: int
+
+
+@dataclass(frozen=True, slots=True)
+class AccountObjectNotFound:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class AccountRuleError:
+    code: str
+    version: int | None = None

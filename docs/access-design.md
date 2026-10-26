@@ -1,6 +1,6 @@
 # T04 · Identidad, permisos y alcance del Hub
 
-**Estado al 2026-10-26:** el acuerdo de escritorio se concreta por el plan sucesor aprobado y D09/D10; el [contrato v1](api-v1.md) posee su formato. C12/C13/C14 aceptados; corrección para revisión en C15. El alta administrativa atómica y las lecturas de cuenta usan casos de uso, sin endpoints nuevos. Las cuatro rutas de credenciales usan authorization con integración real Keycloak/PostgreSQL correcta. Keycloak permite obtener un token opaco por usuario/dispositivo, sin vencimiento y revocable en API. Sin sesiones ni renovación de API. C15 y C03 no están aceptados. Hub sigue excluido.
+**Estado al 2026-10-26:** C04 aceptado; T13–T15 para revisión C05. El [contrato v1](api-v1.md) conserva Keycloak para emitir token opaco sin vencimiento, revocable en API y sin sesiones/renovación propias. Miembros activos con instalación habilitada gestionan pacientes/contactos de su cuenta; una identidad o declaración documental no concede acceso a otras fichas. Solo propietario consulta auditoría de su cuenta. No se registra instalación al aceptar invitación ni se restaura una autorización desde el dispositivo revocado. Hub y consumidores siguen pendientes.
 
 ## Acuerdo vigente de la primera etapa
 
