@@ -34,6 +34,10 @@ from src.api.accounts.domain.errors import (
     DeviceAlreadyRegistered,
     DeviceVersionConflict,
 )
+from src.api.appointments.application.appointments_cases import (
+    apply_appointment_operation,
+)
+from src.api.appointments.application.schedule_changes import apply_schedule_change
 from src.api.audit.application.audit_cases import record_operation
 from src.api.audit.domain.audit import OperationAudit
 from src.api.authorization.application.authorization_cases import authenticate
@@ -44,8 +48,9 @@ from src.api.patients.application.contacts_cases import (
 from src.api.patients.application.patients_cases import (
     apply_patient_operation,
 )
-from src.api.schedule.application.schedule_cases import (
-    apply_rule_operation,
+from src.api.schedule.application.blocks_cases import (
+    block_permission,
+    block_projection_accounts,
 )
 from src.api.services.application.offers_cases import (
     apply_offer_operation,
@@ -58,7 +63,10 @@ from src.api.services.application.services_cases import (
 from src.api.services.domain.offers import ServiceOfferResponse
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
 from src.api.sync.domain.operations import (
+    APPOINTMENT_SCHEMAS,
+    BLOCK_SCHEMAS,
     CONTACT_SCHEMAS,
+    EXCEPTION_SCHEMAS,
     OFFER_SCHEMAS,
     RULE_SCHEMAS,
     SERVICE_SCHEMAS,
@@ -120,6 +128,7 @@ async def authorized_context(
     catalog: bool = False,
     entity_key=None,
     own_service: bool = False,
+    blocks: bool = False,
 ) -> Result[
     tuple[AccountContext, AccountSyncHead],
     InvalidCredential | AccountNotFound | AccountObjectNotFound | AccessDenied,
@@ -143,13 +152,17 @@ async def authorized_context(
     # Identity first, then account control, business rows and receipt. Refresh
     # after waiting: another writer may have changed this account's access.
     # https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS
-    if professional or catalog:
+    if professional or catalog or blocks:
         await lock_professional(db, account_id)
 
     if catalog:
         targets = await service_projection_accounts(db, actor, account_id, entity_key)
 
         for target in targets:
+            await dao_heads.lock_account(db, target)
+
+    if blocks:
+        for target in await block_projection_accounts(db, actor, account_id):
             await dao_heads.lock_account(db, target)
 
     head = await dao_heads.lock_account(db, account_id)
@@ -235,6 +248,8 @@ async def accept_operation(
             and operation.action in ("RevokeAccountDevice", "RestoreAccountDevice")
             else None,
             professional=operation.action in RULE_SCHEMAS
+            or operation.action in APPOINTMENT_SCHEMAS
+            or operation.action in EXCEPTION_SCHEMAS
             or operation.action in OFFER_SCHEMAS
             or operation.action
             in ("UpdateAccountDetails", "UpdateProfessionalProfile"),
@@ -242,6 +257,7 @@ async def accept_operation(
             entity_key=operation.entity_key,
             own_service=operation.action in SERVICE_SCHEMAS
             or operation.action in OFFER_SCHEMAS,
+            blocks=operation.action in BLOCK_SCHEMAS,
         )
 
         match scope:
@@ -252,6 +268,12 @@ async def accept_operation(
 
         actor = context.actor
         account_id = context.account.id
+
+        if operation.action in BLOCK_SCHEMAS and isinstance(operation.entity_key, UUID):
+            permission = await block_permission(db, context, operation.entity_key)
+
+            if isinstance(permission, Err):
+                return permission
 
         if (
             operation.action in SERVICE_SCHEMAS
@@ -370,9 +392,21 @@ async def accept_operation(
         if operation.action in RULE_SCHEMAS:
             entity_type = "schedule_rule"
 
+        if operation.action in EXCEPTION_SCHEMAS:
+            entity_type = "schedule_exception"
+
+        if operation.action in BLOCK_SCHEMAS:
+            entity_type = "schedule_block"
+
+        if operation.action in APPOINTMENT_SCHEMAS:
+            entity_type = "appointment"
+
         if result is None:
             if (
                 operation.action in RULE_SCHEMAS
+                or operation.action in EXCEPTION_SCHEMAS
+                or operation.action in BLOCK_SCHEMAS
+                or operation.action in APPOINTMENT_SCHEMAS
                 or operation.action in OFFER_SCHEMAS
                 or operation.action in SERVICE_SCHEMAS
                 or operation.action in CONTACT_SCHEMAS
@@ -395,8 +429,22 @@ async def accept_operation(
                 )
                 or internal_invitation
             ):
-                if operation.action in RULE_SCHEMAS:
-                    effect = await apply_rule_operation(
+                if operation.action in APPOINTMENT_SCHEMAS:
+                    effect = await apply_appointment_operation(
+                        db,
+                        context,
+                        operation.action,
+                        operation.entity_key,
+                        operation.expected_version,
+                        payload,
+                    )
+                elif (
+                    operation.action in BLOCK_SCHEMAS
+                    or operation.action in EXCEPTION_SCHEMAS
+                    or operation.action in RULE_SCHEMAS
+                    or operation.action == "UpdateAccountDetails"
+                ):
+                    effect = await apply_schedule_change(
                         db,
                         context,
                         operation.action,
@@ -804,6 +852,12 @@ async def get_operation(
 
             if isinstance(permission, Err):
                 return permission
+
+        if receipt.action in BLOCK_SCHEMAS and isinstance(receipt.entity_key, str):
+            permission = await block_permission(db, context, UUID(receipt.entity_key))
+
+            if isinstance(permission, Err):
+                return Err(AccessDenied())
 
         now = await dao_heads.get_server_time(db)
 

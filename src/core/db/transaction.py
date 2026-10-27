@@ -24,3 +24,12 @@ async def transaction(db: AsyncSession) -> AsyncGenerator[None]:
         # Include failures at commit (for example, deferred constraints) in the
         # same technical error boundary as DAO calls, after begin rolls back.
         raise DAOError from error
+
+
+@asynccontextmanager
+async def savepoint(db: AsyncSession) -> AsyncGenerator[None]:
+    """Revert a guarded effect without committing or replacing its transaction."""
+    # Releasing a savepoint does not commit the outer operation.
+    # https://docs.sqlalchemy.org/en/21/orm/session_transaction.html#using-savepoint
+    async with db.begin_nested():
+        yield

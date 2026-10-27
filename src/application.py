@@ -6,6 +6,9 @@ from starlette.exceptions import HTTPException
 
 from src.api.accounts.infrastructure.accounts_api import router as accounts_router
 from src.api.accounts.infrastructure.invitations_api import router as invitations_router
+from src.api.appointments.infrastructure.appointments_api import (
+    router as appointments_router,
+)
 from src.api.audit.infrastructure.audit_api import router as audit_router
 from src.api.authorization.infrastructure.authorization_api import (
     router as authorization_router,
@@ -48,6 +51,7 @@ app.include_router(patients_router)
 app.include_router(contacts_router)
 app.include_router(services_router)
 app.include_router(schedule_router)
+app.include_router(appointments_router)
 
 
 @app.get("/")

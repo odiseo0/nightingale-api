@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.1. **Fecha:** 2026-10-26. **Estado:** C05 aceptado; T16–T18 y correcciones T46–T57 comprobadas para revisión C06 del [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md), sin aceptar C06. Se añaden catálogo privado, ofertas y reglas semanales a acceso, equipo/cuenta, auditoría y pacientes/contactos. Los esquemas de domain generan sus modelos HTTP. Excepciones, bloqueos, disponibilidad, citas, snapshot, descarga y SSE conservan sus tareas; no se acredita integración con el escritorio.
+**Versión de diseño:** 1.1. **Fecha:** 2026-10-27. **Estado:** C06 aceptado; T19–T27 comprobadas en el [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md). C09 listo para revisión, sin marcar aceptación de C07–C09. Agenda y ciclo de citas operativos en pruebas aisladas, con ocupación global e historia inmutable. Snapshot, descarga y SSE siguen pendientes; no se acredita integración con el escritorio ni operación en producción.
 
 Esta es la única fuente editable del diseño de transporte de esta etapa. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas, sin duplicarlos aquí. Los esquemas Pydantic de domain heredan del BaseModel del proyecto y producirán OpenAPI/JSON Schema; un generado identificará origen y versión y nunca se editará a mano. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -110,6 +110,8 @@ RelationshipResponse conserva el estado del vínculo para resultados/journal. Pa
 Los modelos implementados de [servicios](../src/api/services/domain/services.py), [ofertas](../src/api/services/domain/offers.py) y [reglas semanales](../src/api/schedule/domain/schedule.py) son la fuente de sus esquemas generados. La oferta conserva su versión propia y serviceVersion: un cambio de catálogo actualiza la proyección y serviceVersion sin cambiar el ajuste, estado o versión propia de otra oferta. El resultado de catálogo es privado; el grupo de cada cuenta publica solo sus ofertas para members. El cálculo semanal devuelve tramos locales unidos, con fecha y zona de cuenta; no es disponibilidad completa ni reserva.
 
 AppointmentResponse y AppointmentHistoryResponse conservan los snapshots y el actor funcional del diccionario; no incluyen intentos, tokens, SQL ni payload de otra operación. AvailabilityResponse contiene accountId,professionalId,serviceId,referenceDurationMinutes,requestedDurationMinutes y availableIntervals[{startsAt,endsAt}]; no reserva. AuditEventResponse contiene identificadores, acción/objeto, resultado, instante y correlación, sin cuerpos personales.
+
+Los modelos de [agenda](../src/api/schedule/domain/schedule.py) y [citas](../src/api/appointments/domain/appointments.py) generan ahora sus respuestas y esquemas. Bloques globales muestran reasonCode nulo al asistente y en el journal de miembros; solo el profesional propio lo lee en GET/resultado. Disponibilidad resta ocupación real de todas las cuentas sin devolver sus datos, ajusta extremos a minutos y devuelve 422 ante extremos locales ambiguos/inexistentes. Consultar no reserva. Reprogramar conserva los nueve snapshots y la duración real, aunque cambien catálogo, dirección o zona vigentes.
 
 ### 4.2 Filtros y orden
 

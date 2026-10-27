@@ -399,6 +399,13 @@ async def get_access(
                         "CreateContactPerson", "UpdateContactPerson", "SetContactPersonStatus",
                         "CreatePatientContactRelationship", "UpdatePatientContactRelationship", "SetPatientContactRelationshipStatus",
                         "CreateScheduleRule", "UpdateScheduleRule", "SetScheduleRuleStatus",
+                        "CreateScheduleException", "UpdateScheduleException", "SetScheduleExceptionStatus",
+                        "CreateScheduleBlock", "UpdateScheduleBlock", "SetScheduleBlockStatus",
+                        "CreateAppointment",
+                        "ConfirmAppointment",
+                        "RescheduleAppointment",
+                        "CancelAppointment",
+                        "CompleteAppointment", "MarkAppointmentNoShow",
                     ]
                     if state == "active"
                     else []

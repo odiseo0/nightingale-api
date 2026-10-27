@@ -28,6 +28,13 @@ from src.api.accounts.domain.accounts import (
     ProfessionalPayload,
     ProfessionalResponse,
 )
+from src.api.appointments.domain.appointments import (
+    AppointmentInterval,
+    AppointmentReasonPayload,
+    AppointmentResponse,
+    CreateAppointmentPayload,
+    EmptyAppointmentPayload,
+)
 from src.api.patients.domain.contacts import (
     CONTACT_SCHEMAS,
     ContactResponse,
@@ -43,7 +50,13 @@ from src.api.patients.domain.patients import (
     RegisterPatientPayload,
 )
 from src.api.schedule.domain.schedule import (
+    CreateScheduleBlockPayload,
+    CreateScheduleExceptionPayload,
     CreateScheduleRulePayload,
+    ScheduleBlockPatch,
+    ScheduleBlockResponse,
+    ScheduleExceptionPatch,
+    ScheduleExceptionResponse,
     ScheduleRulePatch,
     ScheduleRuleResponse,
     ScheduleRuleStatusPayload,
@@ -77,6 +90,24 @@ RULE_SCHEMAS: dict[str, type[BaseModel]] = {
     "UpdateScheduleRule": ScheduleRulePatch,
     "SetScheduleRuleStatus": ScheduleRuleStatusPayload,
 }
+EXCEPTION_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateScheduleException": CreateScheduleExceptionPayload,
+    "UpdateScheduleException": ScheduleExceptionPatch,
+    "SetScheduleExceptionStatus": ScheduleRuleStatusPayload,
+}
+BLOCK_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateScheduleBlock": CreateScheduleBlockPayload,
+    "UpdateScheduleBlock": ScheduleBlockPatch,
+    "SetScheduleBlockStatus": ScheduleRuleStatusPayload,
+}
+APPOINTMENT_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateAppointment": CreateAppointmentPayload,
+    "ConfirmAppointment": EmptyAppointmentPayload,
+    "RescheduleAppointment": AppointmentInterval,
+    "CancelAppointment": AppointmentReasonPayload,
+    "CompleteAppointment": AppointmentReasonPayload,
+    "MarkAppointmentNoShow": AppointmentReasonPayload,
+}
 
 OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateInvitation": CreateInvitationPayload,
@@ -94,6 +125,9 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     **SERVICE_SCHEMAS,
     **OFFER_SCHEMAS,
     **RULE_SCHEMAS,
+    **EXCEPTION_SCHEMAS,
+    **BLOCK_SCHEMAS,
+    **APPOINTMENT_SCHEMAS,
 }
 
 EMPTY_PAYLOAD_ACTIONS = {
@@ -202,6 +236,9 @@ type OperationState = (
     | ServiceResponse
     | ServiceOfferResponse
     | ScheduleRuleResponse
+    | ScheduleExceptionResponse
+    | ScheduleBlockResponse
+    | AppointmentResponse
 )
 
 

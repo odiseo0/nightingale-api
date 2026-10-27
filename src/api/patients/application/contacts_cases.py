@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -18,12 +19,10 @@ from src.api.patients.application.patients_cases import profile_satisfies
 from src.api.patients.domain.contacts import (
     CONTACT_SCHEMAS,
     ContactData,
-    ContactPatch,
     ContactQuery,
     ContactResponse,
     PatientContactResponse,
     RelationshipData,
-    RelationshipPatch,
     RelationshipQuery,
     RelationshipResponse,
 )
@@ -44,6 +43,41 @@ from src.core.utils.utils import Empty
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def booking_responsible(
+    db: AsyncSession,
+    context: AccountContext,
+    patient_id: UUID,
+    contact_id: UUID | None,
+    instant: datetime,
+    *,
+    required: bool,
+) -> Result[None, AccountObjectNotFound | AccountRuleError]:
+    if contact_id is None:
+        return Err(AccountRuleError("COMPLETENESS_CONFLICT")) if required else Ok(None)
+
+    link = await dao_relationships.scoped(
+        db, context.account.id, patient_id, contact_id
+    )
+    contact = await dao_contacts.scoped(db, context.account.id, contact_id)
+
+    if link is Empty or contact is Empty:
+        return Err(AccountObjectNotFound())
+
+    if (
+        link.status != "active"
+        or contact.status != "active"
+        or not link.is_responsible_contact
+        or link.valid_from > instant
+        or link.valid_until is not None
+        and instant >= link.valid_until
+        or contact.phone_code is None
+        or contact.phone is None
+    ):
+        return Err(AccountRuleError("COMPLETENESS_CONFLICT"))
+
+    return Ok(None)
 
 
 async def apply_contact_operation(

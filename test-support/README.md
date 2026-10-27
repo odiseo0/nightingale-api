@@ -111,7 +111,19 @@ El DAO existente conserva commit=True por defecto. Los casos de aplicación deli
 
 Esto prueba la base técnica con filas ficticias. No demuestra todavía autorización, coordinación de permisos de varias cuentas, orden confirmado del Change Log, idempotencia ni dos procesos de API: corresponden a los casos siguientes y a T32. Los comandos de migración se ejecutan desde este repositorio; no se acredita distribuir ni ejecutar migraciones desde un wheel instalado.
 
-## Acceso, cuentas, equipo, pacientes, servicios y agenda para C06
+## Citas y cierre C09 · 2026-10-27
+
+El head actual es 20261027_04: 25 tablas y btree_gist en el esquema dedicado. El probe de persistencia aplica, revierte y reaplica; no usa una base personal ni instala una extensión fuera de la base ficticia. Los ocho probes del bloque siguiente siguen disponibles y se añade:
+
+```powershell
+.\.venv\Scripts\python.exe test-support/appointments/check.py
+```
+
+Comprueba creación con documento declarado, menor con responsable, versión/duplicado, confirmación, reprogramación, cancelación, asistencia y ausencia con reloj controlado. Prueba ocupación global con citas reales, espera y exclusión entre dos cuentas, carrera reserva/bloqueo, cambios de agenda incompatibles y rollback entre cita/historia. Intenta huecos, historia futura, cambio de snapshots y reescritura/borrado SQL. La segunda cuenta clinic es solo fixture; sus rutas HTTP siguen fuera de alcance. No se guardan tokens ni datos reales.
+
+Los nueve probes se ejecutaron en orden con PostgreSQL Test y Keycloak Test existentes. Cada uno valida el clúster y elimina su base aleatoria. Suite/build/analizador y límites en [T27/C09](../tasks/P-20261024-01-desktop-shared-api/todo.md#t27-proteger-historia-funcional). No hay HTTP separado del wheel. T32 conserva pruebas de dos procesos/SSE y consumidores.
+
+## Registro histórico de acceso, cuentas, equipo, pacientes, servicios y agenda para C06
 
 Con PostgreSQL Test y Keycloak Test ya activos:
 

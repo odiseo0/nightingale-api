@@ -1,12 +1,30 @@
 # Desarrollo de la base de proceso
 
+## T19–T27 comprobadas para revisión C09 · 2026-10-27
+
+Agenda y ciclo de citas usan la misma aceptación: versiones, recibo, auditoría, historia y journal atómicos. La disponibilidad resta ocupación real global; consultar no reserva. Crear exige elegibilidad vigente y oferta activa. Confirmar conserva el intervalo; reprogramar conserva duración/datos acordados y retira confirmación; cancelar libera ocupación; completar/ausencia conservan reserva histórica. La ausencia exige acción expresa e inicio más margen vigente. Cambios de agenda o zona incompatibles se revierten y conservan su recibo de conflicto.
+
+131 pruebas correctas en 54.805 s y nueve probes reales correctos, incluido [citas](../../test-support/appointments/check.py). Head 20261027_04: 25 tablas y btree_gist, aplicación/reversión/reaplicación y fallo DDL con rollback. Historia rechaza huecos, versiones futuras, diferencias de estado/snapshots, transición inválida y reescritura/borrado. Carreras de reservas y bloques observadas mediante pg_blocking_pids; exclusión real entre dos cuentas con conexiones distintas. La segunda cuenta clinic existe solo como fixture SQL; no se expone gestión de clínicas.
+
+Build offline e inspección correctos: wheel de 166 entradas/106 fuentes idénticas, sdist de 167 entradas, sin archivos privados. OpenAPI local de evidencia: 39 rutas/57 esquemas de componentes, con origen/versión. Analizador Zed 1.40.2: 16 errores previos, ninguno nuevo en citas/agenda; no se afirma cierre estático global. git diff --check correcto. Solo tzdata==2026.5 añade datos IANA para Windows; ninguna versión anterior cambia. Servicios existentes y cambios del usuario conservados. Sin HTTP separado del wheel, commits ni despliegue.
+
+[T27/C09](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t27-proteger-historia-funcional) conserva evidencia y límites. C09 espera revisión expresa; T28–T33 continúan Todo. Snapshot, descarga, SSE, dos procesos de API, consumidores Rust/Hub y operación siguen pendientes. Los apartados siguientes son registros históricos.
+
+## T19–T21 comprobadas para C07 · 2026-10-27
+
+Agenda añade excepciones diarias, bloques globales o limitados y disponibilidad derivada. La consulta combina reglas/excepciones y resta bloques; ofrece rangos UTC con fin exclusivo, duración válida y precisión de minuto. No persiste huecos ni reserva al consultar. T22 debe conectar ocupación real y rechazo coordinado de cambios incompatibles antes de aceptar citas.
+
+tzdata==2026.5 aporta datos IANA para zoneinfo en Windows; ninguna versión previa del lockfile cambia. La biblioteca estándar comprueba ambos folds y rechaza horas ambiguas/inexistentes; un día completo puede durar 23 o 25 horas. El motivo global solo se muestra al profesional propio; el journal para miembros lo omite mediante reasonCode nulo. Los servicios PostgreSQL/Keycloak existentes siguen activos.
+
+121 pruebas correctas en 53.172 s; ocho probes reales correctos, head 20261027_02 aplicado/revertido/reaplicado con 23 tablas y fallo de revisión sin DDL parcial. Build offline e inspección: wheel de 155 entradas con 100 fuentes idénticas, sdist de 156 entradas, sin archivos privados. Analizador real de Zed: 16 errores previos, ninguno nuevo en agenda. git diff --check correcto. No se ejecuta HTTP separado del wheel. [Evidencia y límites](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t21-consultar-disponibilidad); C07 no se marca aceptado. El usuario permite continuar hasta C09. Los apartados siguientes conservan evidencia histórica.
+
 ## T55–T57 comprobadas para revisión C06 · 2026-10-26
 
 Las lecturas HTTP de catálogo, ofertas y reglas devuelven dicts con campos explícitos y response_model en sus rutas. Recibos y journal conservan validación y serialización antes del commit; una proyección inválida en la segunda cuenta revierte toda la operación y permite reintentar. Los modelos de propuesta, intervalos y referencia interna se conservan.
 
 112 pruebas correctas en 52.924 s, ocho probes PostgreSQL/Keycloak reales, migraciones up/down/reaplicación, build offline e inspección del paquete correctos. OpenAPI completo y 72 esquemas JSON conservados; 48 huellas previas siguen iguales. Wheel de 152 entradas y 97 fuentes idénticas al árbol actual, sin archivos privados. Servicios existentes conservados.
 
-El analizador de Zed mantiene 16 errores documentados, seis por el soporte de sentinel y diez de código previo; no se afirma una comprobación estática global correcta. El [cierre T57](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t57-cerrar-la-corrección-y-ajustar-la-evidencia-de-c06) conserva evidencia, fuentes y límites. Las reservas reales siguen pendientes de T22/T32. C06 espera aceptación expresa; T19 no se inicia. Los apartados siguientes conservan evidencia histórica.
+El analizador de Zed mantiene 16 errores documentados, seis por el soporte de sentinel y diez de código previo; no se afirma una comprobación estática global correcta. El [cierre T57](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t57-cerrar-la-corrección-y-ajustar-la-evidencia-de-c06) conserva evidencia, fuentes y límites. Las reservas reales siguen pendientes de T22/T32. El usuario aceptó C06 el 2026-10-27 y cerró esta revisión; T19 queda pendiente, sin iniciar. Los apartados siguientes conservan evidencia histórica.
 
 ## T52–T54 para revisión C18 · 2026-10-26
 

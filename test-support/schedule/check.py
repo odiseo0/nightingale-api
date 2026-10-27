@@ -172,7 +172,195 @@ async def check_schedule(runtime, administrative, client, tokens):
     assert sorted(item["status"] for item in results) == ["accepted","rejected"]
     assert next(item for item in results if item["status"] == "rejected")["error"]["code"] == "INVALID_STATE_TRANSITION"
 
+    # A daily exception replaces all weekly intervals and retains its row on reopening.
+    from src.api.schedule.application.exceptions_cases import daily_day
+
+    exception = uuid7()
+    closed = envelope("CreateScheduleException", exception, {
+        "professionalId": str(professional), "localDate": "2026-10-26", "kind": "closed",
+    })
+    results = await asyncio.gather(submit(closed), submit(closed))
+    assert sorted(item["status"] for item in results) == ["accepted", "duplicate"]
+    async def daily():
+        async with runtime() as db, transaction(db):
+            scope = await get_account_context(db, owner["accessToken"], account_id, True)
+            result = await daily_day(db, scope.value, professional, date(2026,10,26))
+            assert isinstance(result, Ok)
+            return [(i.local_start_minute,i.local_end_minute) for i in result.value.intervals]
+
+    async def exceptions(path="", actor=owner, account=base, status=200):
+        response = await client.get(account + "/schedule/exceptions" + path, headers=access.authorization(actor))
+        access.expect(response, status)
+        return response.json()
+
+    assert await daily() == []
+    assert (await submit({**closed,"payload":{**closed["payload"],"localStartMinute":None,"localEndMinute":None}}))["status"] == "duplicate"
+    assert (await submit(envelope("CreateScheduleException",uuid7(),closed["payload"])))["error"]["code"] == "INVALID_STATE_TRANSITION"
+    assert (await submit(envelope("UpdateScheduleException",exception,{"kind":"replacement"},1)))["error"]["code"] == "VALIDATION_ERROR"
+    assert (await submit(envelope("UpdateScheduleException",exception,{"kind":"replacement","localStartMinute":960,"localEndMinute":1440},1),assistant))["status"] == "accepted"
+    assert await daily() == [(960,1440)]
+    assert (await submit(envelope("UpdateScheduleException",exception,{"kind":"closed"},2)))["error"]["code"] == "VALIDATION_ERROR"
+    assert (await submit(envelope("UpdateScheduleException",exception,{"localStartMinute":None},2)))["error"]["code"] == "VALIDATION_ERROR"
+    assert (await submit(envelope("SetScheduleExceptionStatus",exception,{"status":"inactive"},1)))["error"]["code"] == "VERSION_CONFLICT"
+    query = "?fromDate=2026-10-26&untilDate=2026-10-26"
+    assert (await exceptions(query,assistant))["total"] == 1
+    assert (await exceptions(query+"&page=2&shows=1"))["items"] == []
+    await exceptions(status=422)
+    await exceptions("?fromDate=2026-01-01&untilDate=2027-01-02",status=422)
+    await exceptions(f"/{exception}",outsider,other_base,status=404)
+    await submit(envelope("UpdateScheduleException",exception,{"kind":"closed","localStartMinute":None,"localEndMinute":None},2),outsider,other_base,status=404)
+
+    before = await counts()
+    reopening = envelope("SetScheduleExceptionStatus",exception,{"status":"inactive"},2)
+    with patch.object(dao_changes,"append",side_effect=incomplete):
+        assert (await submit(reopening))["status"] == "retryable_failure"
+    assert await counts() == before
+    assert await daily() == [(960,1440)]
+    assert (await submit(reopening,assistant))["status"] == "accepted"
+    assert await daily() == [(480,780)]
+    assert (await exceptions(f"/{exception}"))["status"] == "inactive"
+    assert (await exceptions(query))["total"] == 1
+    assert (await submit(envelope("CreateScheduleException",uuid7(),closed["payload"])))["error"]["code"] == "INVALID_STATE_TRANSITION"
+    assert (await submit(envelope("SetScheduleExceptionStatus",exception,{"status":"active"},3)))["status"] == "accepted"
+    assert (await submit(envelope("UpdateScheduleException",exception,{"kind":"closed","localStartMinute":None,"localEndMinute":None},4)))["status"] == "accepted"
+    assert await daily() == []
+
+    # SQL must enforce the conditional shape too, including NULL handling.
+    for start, end in ((None,None),(0,None),(None,60),(60,60)):
+        try:
+            async with administrative() as db, db.begin():
+                await db.execute(text("""
+                    INSERT INTO nightingale.schedule_exceptions
+                        (id,account_id,professional_id,local_date,kind,local_start_minute,local_end_minute,created_at,updated_at)
+                    VALUES (:id,:account,:professional,'2026-10-28','replacement',:start,:end,now(),now())
+                """),{"id":uuid7(),"account":account_id,"professional":professional,"start":start,"end":end})
+        except DBAPIError as error:
+            assert error.orig.sqlstate == "23514"
+        else:
+            raise AssertionError("SQL accepted an invalid replacement")
+
+    competitors = {**closed["payload"],"localDate":"2026-10-29"}
+    results = await asyncio.gather(submit(envelope("CreateScheduleException",uuid7(),competitors)),submit(envelope("CreateScheduleException",uuid7(),competitors),assistant))
+    assert sorted(item["status"] for item in results) == ["accepted","rejected"]
+    # Second account is a SQL fixture, not a new clinic management feature.
+    second = uuid7()
+    async with administrative() as db, db.begin():
+        await db.execute(text("""
+            INSERT INTO nightingale.accounts
+                (id,kind,owner_user_id,display_name,time_zone,location_name,location_address,location_country,location_state,location_city,created_at,updated_at)
+            SELECT :second,'clinic',:owner,'Fixture second account',time_zone,location_name,location_address,location_country,location_state,location_city,clock_timestamp(),clock_timestamp()
+            FROM nightingale.accounts WHERE id=:source
+        """), {"second":second,"owner":UUID(outsider["userId"]),"source":account_id})
+        for actor in (owner,outsider):
+            await db.execute(text("INSERT INTO nightingale.account_memberships(account_id,user_id,created_at,updated_at) VALUES (:account,:user,clock_timestamp(),clock_timestamp())"),{"account":second,"user":UUID(actor["userId"])})
+        await db.execute(text("INSERT INTO nightingale.account_professionals(account_id,professional_id,user_id,created_at,updated_at) VALUES (:account,:professional,:user,clock_timestamp(),clock_timestamp())"),{"account":second,"professional":professional,"user":UUID(owner["userId"])})
+        await db.execute(text("INSERT INTO nightingale.account_sync_heads(account_id,created_at,updated_at) VALUES (:account,clock_timestamp(),clock_timestamp())"),{"account":second})
+    second_base = f"/v1/accounts/{second}"
+
+    global_id, limited_id = uuid7(), uuid7()
+    block_payload = {"professionalId":str(professional),"accountId":None,"startsAt":"2026-10-27T08:00:00-04:00","endsAt":"2026-10-27T10:00:00-04:00","reasonCode":"vacation"}
+    global_op = envelope("CreateScheduleBlock",global_id,block_payload)
+    await submit(global_op,assistant,status=404)
+    results = await asyncio.gather(submit(global_op),submit(global_op))
+    assert sorted(item["status"] for item in results) == ["accepted","duplicate"]
+    assert (await submit({**global_op,"payload":{**block_payload,"startsAt":"2026-10-27T12:00:00Z","endsAt":"2026-10-27T14:00:00Z"}}))["status"] == "duplicate"
+    assert (await submit(envelope("CreateScheduleBlock",limited_id,{**block_payload,"accountId":str(account_id),"reasonCode":"administrative"}),assistant))["status"] == "accepted"
+    block_query = "?from=2026-10-27T12:30:00Z&until=2026-10-27T13:00:00Z"
+    async def blocks(path=block_query, actor=owner, account=base, status=200):
+        response = await client.get(account+"/schedule/blocks"+path,headers=access.authorization(actor))
+        access.expect(response,status)
+        return response.json()
+    assert (await blocks())["total"] == 2
+    assert (await blocks(block_query+"&page=3&shows=1"))["items"] == []
+    assert (await blocks(f"/{global_id}",assistant))["reasonCode"] is None
+    assert (await blocks(f"/{global_id}"))["reasonCode"] == "vacation"
+    assert (await blocks(f"/{limited_id}",assistant))["reasonCode"] == "administrative"
+    from src.api.schedule.repository.dao import dao_blocks
+    from src.api.schedule.domain.schedule import ScheduleBlockQuery
+    async with runtime() as db:
+        rows, total = await dao_blocks.page(db, second, ScheduleBlockQuery.model_validate({
+            "from":"2026-10-27T12:30:00Z","until":"2026-10-27T13:00:00Z",
+        }))
+        assert total == 1 and rows[0].id == global_id
+    await blocks(actor=outsider,account=second_base,status=404)
+    await blocks(f"/{limited_id}",outsider,second_base,status=404)
+    await blocks(f"/{global_id}",outsider,other_base,status=404)
+    await blocks("",status=422)
+    await blocks("?from=2026-10-27T14:00:00Z&until=2026-10-27T14:00:00Z",status=422)
+    assert (await blocks("?from=2026-10-27T14:00:00Z&until=2026-10-27T15:00:00Z"))["total"] == 0
+    await submit(envelope("UpdateScheduleBlock",global_id,{"reasonCode":"unavailable"},1),assistant,status=404)
+    for invalid in ({"endsAt":"2026-10-27T12:00:00Z"},{"startsAt":None},{"accountId":str(account_id)}):
+        assert (await submit(envelope("UpdateScheduleBlock",global_id,invalid,1)))["error"]["code"] == "VALIDATION_ERROR"
+    async with administrative() as db:
+        projections = (await db.execute(text("SELECT account_id,projection_json FROM nightingale.change_log WHERE entity_type='schedule_block' AND entity_key=to_jsonb(CAST(:id AS text))"),{"id":str(global_id)})).all()
+        assert {row.account_id for row in projections} == {account_id,second}
+        assert all(row.projection_json["reasonCode"] is None for row in projections)
+
+    changing = envelope("UpdateScheduleBlock",global_id,{"endsAt":"2026-10-27T15:00:00Z"},1)
+    async def fail_second(db,values,**kwargs):
+        if values["account_id"] == second:
+            values = {**values,"group_size":values["group_size"]+1}
+        return await original_append(db,values,**kwargs)
+    before = await counts()
+    with patch.object(dao_changes,"append",side_effect=fail_second):
+        assert (await submit(changing))["status"] == "retryable_failure"
+    assert await counts() == before
+    assert (await blocks(f"/{global_id}"))["version"] == 1
+    assert (await submit(changing))["status"] == "accepted"
+    assert (await submit(envelope("SetScheduleBlockStatus",global_id,{"status":"inactive"},2)))["status"] == "accepted"
+    assert (await blocks(f"/{global_id}"))["status"] == "inactive"
+    assert (await blocks(block_query+"&status=active"))["total"] == 1
+    # Controlled intervals prove the local guard only; T22 supplies real bookings.
+    from src.api.schedule.application.blocks_cases import apply_block_operation
+    from src.api.schedule.domain.schedule import AbsoluteInterval, CreateScheduleBlockPayload
+    before = await counts()
+    async with runtime() as db, transaction(db):
+        scope = await authorized_context(db,owner["accessToken"],account_id,blocks=True)
+        effect = await apply_block_operation(
+            db,scope.value[0],"CreateScheduleBlock",uuid7(),0,
+            CreateScheduleBlockPayload.model_validate(block_payload),
+            required_intervals=(AbsoluteInterval(startsAt="2026-10-27T13:00:00Z",endsAt="2026-10-27T13:30:00Z"),),
+        )
+        assert isinstance(effect,Err) and effect.error.code == "SLOT_UNAVAILABLE"
+    assert await counts() == before
+    service_id = uuid7()
+    assert (await submit(envelope("CreateService",service_id,{"professionalId":str(professional),"name":"Fixture service","defaultDurationMinutes":30})))["status"] == "accepted"
+    offer = {"professionalId":str(professional),"serviceId":str(service_id)}
+    offer_op = {**envelope("OfferService",service_id,{}),"entityKey":offer}
+    assert (await submit(offer_op))["status"] == "accepted"
+    async def availability(start="2026-10-27T04:00:00Z",end="2026-10-28T04:00:00Z",duration=None,actor=owner,status=200):
+        params = {"professionalId":str(professional),"serviceId":str(service_id),"from":start,"until":end}
+        if duration is not None:
+            params["durationMinutes"] = str(duration)
+        response = await client.get(base+"/availability",params=params,headers=access.authorization(actor))
+        access.expect(response,status)
+        return response.json()
+    before = await counts()
+    value = await availability(actor=assistant)
+    assert value["referenceDurationMinutes"] == value["requestedDurationMinutes"] == 30
+    assert value["availableIntervals"] == [{"startsAt":"2026-10-27T14:00:00Z","endsAt":"2026-10-27T16:00:00Z"}]
+    assert (await availability(duration=121))["availableIntervals"] == []
+    assert (await availability(duration=45))["requestedDurationMinutes"] == 45
+    assert await counts() == before
+    assert (await submit(envelope("SetScheduleBlockStatus",global_id,{"status":"active"},3)))["status"] == "accepted"
+    assert (await availability())["availableIntervals"] == [{"startsAt":"2026-10-27T15:00:00Z","endsAt":"2026-10-27T16:00:00Z"}]
+    assert (await availability("2026-10-26T04:00:00Z","2026-10-27T04:00:00Z"))["availableIntervals"] == []
+    await availability(duration=0,status=422)
+    await availability("2026-10-01T00:00:00Z","2026-11-01T00:01:00Z",status=422)
+    await availability(actor=outsider,status=404)
+
+    assert (await submit(envelope("UpdateAccountDetails",account_id,{"timeZone":"America/New_York"},1)))["status"] == "accepted"
+    assert (await submit(envelope("CreateScheduleRule",uuid7(),{**payload,"isoWeekday":7,"localStartMinute":60,"localEndMinute":120})))["status"] == "accepted"
+    await availability("2026-11-01T04:00:00Z","2026-11-02T05:00:00Z",status=422)
+    assert (await submit(envelope("CreateScheduleException",uuid7(),{"professionalId":str(professional),"localDate":"2026-11-01","kind":"replacement","localStartMinute":0,"localEndMinute":1440})))["status"] == "accepted"
+    assert (await availability("2026-11-01T04:00:00Z","2026-11-02T05:00:00Z"))["availableIntervals"] == [{"startsAt":"2026-11-01T04:00:00Z","endsAt":"2026-11-02T05:00:00Z"}]
+    assert (await submit(envelope("CreateScheduleException",uuid7(),{"professionalId":str(professional),"localDate":"2027-03-14","kind":"replacement","localStartMinute":150,"localEndMinute":240})))["status"] == "accepted"
+    await availability("2027-03-14T05:00:00Z","2027-03-15T04:00:00Z",status=422)
     await submit(envelope("RevokeAccountDevice",assistant["deviceId"],{},1))
+    await availability(actor=assistant,status=403)
+    await blocks(actor=assistant,status=403)
+    await exceptions(query,assistant,status=403)
+    await submit(closed,assistant,status=403)
     await submit(first,assistant,status=403)
     await get(actor=assistant,status=403)
 

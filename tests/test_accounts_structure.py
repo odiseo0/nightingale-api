@@ -36,4 +36,9 @@ class ServicesStructureTests(structure.AuthorizationStructureTests):
 
 class ScheduleStructureTests(structure.AuthorizationStructureTests):
     component = structure.ROOT / "src/api/schedule"
-    dao_names = {"ScheduleRuleDAO"}
+    dao_names = {"ScheduleRuleDAO", "ScheduleExceptionDAO", "ScheduleBlockDAO"}
+
+
+class AppointmentsStructureTests(structure.AuthorizationStructureTests):
+    component = structure.ROOT / "src/api/appointments"
+    dao_names = {"AppointmentDAO", "AppointmentHistoryDAO"}

@@ -1,8 +1,8 @@
 # Esquema de base de datos de Nightingale
 
 **Versión:** 1.0, ampliación documental del plan compartido aprobado; C01 aceptado.\
-**Fecha:** 2026-10-24.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; la ampliación 1.0 corresponde a T03/C01 aceptados del plan sucesor. C05 aceptado. T16–T18 añaden services, professional_services y schedule_rules al núcleo existente: migraciones hasta 20261026_08, con 21 tablas, probadas solo en bases ficticias aisladas. C06 queda para revisión, sin aceptar. Las tablas de citas aún no existen; este diseño no acredita implementación completa.\
+**Fecha:** 2026-10-27.\
+**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C06 aceptado. T19–T27 añaden excepciones, bloques, citas e historia: migraciones hasta 20261027_04, con 25 tablas y btree_gist, probadas solo en bases ficticias aisladas. C09 listo para revisión, sin marcar aceptación de C07–C09. Snapshot/descarga y el resto del diseño siguen pendientes; no se acredita implementación completa.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.

@@ -1,6 +1,37 @@
 # Fuentes, diferencias y revisión documental
 
+## Fuentes técnicas de T23–T27 · 2026-10-27
+
+Se reutilizan las versiones de T22. Confirmación, reprogramación y estados terminales usan las transacciones y actualización ORM ya contrastadas con SQLAlchemy 2.1.6. El reloj procede del DAO y el margen de la cuenta releída; el cliente no fija el instante funcional. No hay nueva dependencia ni acción fuera del catálogo aprobado.
+
+[PostgreSQL 18: constraint triggers](https://www.postgresql.org/docs/18/sql-createtrigger.html) y [SET CONSTRAINTS](https://www.postgresql.org/docs/18/sql-set-constraints.html) permiten comprobar la secuencia y la igualdad con el estado final al commit. La revisión 20261027_04 comprueba también las filas anteriores al migrar, impide UPDATE/DELETE de historia y conserva los permisos SELECT/INSERT del rol operativo. La función compara cada entrada nueva con su predecesora; no aplica el margen vigente a ausencias históricas después de una edición de política. El margen se comprueba en la aceptación de la acción y la prueba usa un reloj controlado.
+
+## Fuentes técnicas de T22 · 2026-10-27
+
+Sin versiones ni dependencias Python nuevas. [PostgreSQL 18: exclusión de rangos](https://www.postgresql.org/docs/18/rangetypes.html#RANGETYPES-CONSTRAINT) y [btree_gist](https://www.postgresql.org/docs/18/btree-gist.html) sustentan la exclusión por profesional con tstzrange [inicio,fin). La revisión 20261027_03 posee btree_gist en el esquema dedicado y lo retira al revertir; no reutiliza ni elimina una extensión externa preexistente. La identidad de migraciones tiene CREATE sobre su base de prueba; el rol operativo no instala extensiones.
+
+[SQLAlchemy 2.1.6: SAVEPOINT](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html#using-savepoint): begin_nested sobre la misma sesión revierte la propuesta incompatible sin confirmar la transacción exterior. El recibo de conflicto, auditoría y cambio válido se conservan con las reglas de aceptación existentes. La coordinación por profesional precede a los controles de cuenta. [PostgreSQL 18: FK diferida](https://www.postgresql.org/docs/18/ddl-constraints.html#DDL-CONSTRAINTS-FK) obliga a guardar cita y versión histórica juntas; T27 completa secuencia e igualdad. La evidencia real figura en T22, no se infiere solo de estas fuentes.
+
 **Inspección inicial T01:** 2026-10-21. Este documento conserva la procedencia y evidencia de esa entrega. Estado y comprobaciones posteriores de T03: [guía de desarrollo](operations/development.md).
+
+## Fuentes técnicas de T19 · 2026-10-27
+
+Manifiesto y lockfile conservan SQLAlchemy 2.1.6, Pydantic 2.14.1, FastAPI 0.159.1 y Alembic 1.20.1. PostgreSQL de prueba sigue en 18.3. No se añaden dependencias.
+
+- [SQLAlchemy 2.1.6: selección ORM](https://docs.sqlalchemy.org/en/21/orm/queryguide/select.html#selecting-orm-entities): select/scalars, filtros y orden en DAO.
+- [Pydantic: validadores](https://pydantic.dev/docs/validation/latest/concepts/validators/#model-validators): el payload se valida una vez; el patch exige además validar el estado combinado. Guía actual, contrastada con 2.14.1 en pruebas; no se afirma que sea una copia etiquetada de esa versión.
+- [FastAPI: modelos Query](https://fastapi.tiangolo.com/tutorial/query-param-models/#forbid-extra-query-parameters): Annotated y rechazo de filtros extra, disponible desde 0.115.0 y comprobado aquí con 0.159.1.
+- [PostgreSQL 18: CHECK y nulos](https://www.postgresql.org/docs/18/ddl-constraints.html#DDL-CONSTRAINTS-CHECK-CONSTRAINTS): replacement exige ambos extremos no nulos de forma expresa; UQ conserva una fila por fecha y FK impide otra cuenta/profesional.
+
+Se reutiliza op.execute de las migraciones existentes. Evidencia y límite de reservas reales en T19; las fuentes no acreditan ejecución.
+
+## Fuentes técnicas de T20–T21 · 2026-10-27
+
+Se conservan las versiones anteriores. T20 reutiliza los patrones de consulta, validación y coordinación citados en T19. El journal de un bloqueo global entrega reasonCode nulo a miembros de cada cuenta; GET solo muestra el motivo al profesional propio. El ámbito limitado conserva su cuenta.
+
+T21 añade solo [tzdata 2026.5](https://pypi.org/project/tzdata/2026.5/), datos IANA de Python Software Foundation. La prueba local mostró TZPATH vacío y ZoneInfoNotFoundError para America/Caracas. [Python 3.15: fuentes de zoneinfo](https://docs.python.org/3.15/library/zoneinfo.html#data-sources) recomienda declarar tzdata para Windows; no se añade otra biblioteca de lógica temporal. [fold](https://docs.python.org/3.15/library/zoneinfo.html#using-zoneinfo) permite contrastar ambos offsets y la vuelta desde UTC descarta horas inexistentes. Ninguna versión previa de uv.lock cambia.
+
+[PostgreSQL 18: horas ambiguas/inexistentes](https://www.postgresql.org/docs/18/datetime-invalid-input.html) explica por qué una conversión ordinaria no las rechaza sola. La disponibilidad usa zoneinfo, devuelve UTC y rechaza extremos sin solución única con 422. Un día completo puede durar 23 o 25 horas. No usa un offset fijo ni suma 24 horas a UTC. PostgreSQL sigue validando zonas de cuenta; zoneinfo usa los datos IANA del sistema o el paquete fijado. Operación debe mantener ambos catálogos al día; esta entrega prueba Caracas y New York, sin afirmar equivalencia de todos los catálogos.
 
 ## Fuentes técnicas de T16–T18 · 2026-10-26
 

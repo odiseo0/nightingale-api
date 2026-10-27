@@ -1,8 +1,10 @@
 # P-20261024-01-desktop-shared-api: API compartida para escritorio
 
-**Checkpoint actual:** C18 aceptado: «Acepto C18; continúa T55–T57». T46–T57 comprobadas para revisión C06, sin iniciar T19. Se conserva sentinel de Python 3.15 y su límite estático. Las pruebas con reservas reales conservan T22/T32.
+**Checkpoint actual:** C09 listo para revisión expresa, sin marcar aceptación. T19–T27 verificadas de forma secuencial, sin delegación; la autorización permitió pasar C07/C08 sin pausa. Se conservan los 16 diagnósticos estáticos previos. T28–T33 siguen Todo; T32 conserva pruebas conjuntas de procesos y avisos. Evidencia y límites en todo.md.
 
-**Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-26. **Lista:** [todo.md](todo.md).
+**Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-27. **Lista:** [todo.md](todo.md).
+
+**Continuación autorizada, 2026-10-27:** el objetivo recibido autoriza T19 → T20 → T21, comprobar C07 y continuar hasta C09 sin esperar revisión en C07. Se trabaja una tarea a la vez y sin delegación. Esta instrucción sustituye las pausas de C07/C08 para este bloque; no registra su aceptación. C09 conserva revisión. No adelantar citas dentro de T19–T21; T22 inicia su implementación tras comprobar C07. Se conservan los cambios locales del usuario sobre la aceptación de C06.
 
 **Corrección aprobada el 2026-10-26:** el usuario aprueba la ampliación T46–T57: «Acepto el plan, puedes continuar con las correcciones». Tras revisar T46–T48, pide continuar y permite T49–T51. Una tarea a la vez y sin delegación; detenerse en C17 antes de T52. C17/C18 y C06 conservan su revisión expresa. Se conservan los imports, espacios y demás revisiones del usuario.
 
@@ -117,21 +119,21 @@ La corrección del 2026-10-26 interrumpe T09: T34–T36 → C12 → T37–T39 �
 
 **C06: Catálogo y horario habitual.** Detenerse para revisión.
 
-- [ ] T19: Gestionar excepciones diarias.
-- [ ] T20: Gestionar bloqueos.
-- [ ] T21: Consultar disponibilidad.
+- [x] T19: Gestionar excepciones diarias.
+- [x] T20: Gestionar bloqueos.
+- [x] T21: Consultar disponibilidad.
 
 **C07: Disponibilidad protegida.** Detenerse para revisión.
 
-- [ ] T22: Crear citas.
-- [ ] T23: Confirmar citas.
-- [ ] T24: Reprogramar citas.
+- [x] T22: Crear citas.
+- [x] T23: Confirmar citas.
+- [x] T24: Reprogramar citas.
 
 **C08: Creación, confirmación y reprogramación.** Detenerse para revisión.
 
-- [ ] T25: Cancelar citas.
-- [ ] T26: Registrar resultado de asistencia.
-- [ ] T27: Proteger historia funcional.
+- [x] T25: Cancelar citas.
+- [x] T26: Registrar resultado de asistencia.
+- [x] T27: Proteger historia funcional.
 
 **C09: Ciclo completo de citas.** Detenerse para revisión.
 
@@ -188,9 +190,9 @@ Una tarea a la vez, sin delegación. Cada tarea deja un recorrido utilizable. De
 
 **C18: Validación e idempotencia.** Probar equivalencia de huellas y persistencia antes de simplificar salidas.
 
-- [ ] T55: Separar la proyección de ofertas de su serialización.
-- [ ] T56: Simplificar las lecturas HTTP restantes de C06.
-- [ ] T57: Cerrar la corrección y ajustar la evidencia de C06.
+- [x] T55: Separar la proyección de ofertas de su serialización.
+- [x] T56: Simplificar las lecturas HTTP restantes de C06.
+- [x] T57: Cerrar la corrección y ajustar la evidencia de C06.
 
 **Revisión C06, ya existente:** entregar la corrección completa, evidencia nueva y límites pendientes. Solo su aceptación expresa habilita T19. C16–C18 son revisiones de esta ampliación; no sustituyen C06 ni renumeran checkpoints previos.
 

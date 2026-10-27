@@ -1,6 +1,6 @@
 # Arquitectura de API
 
-**Actualizada:** 2026-10-26. **Estado:** C01–C05 y C12–C15 aceptados. T16–T18 añaden services y las reglas semanales de schedule, comprobadas para revisión C06, sin aceptar. La aceptación coordina al profesional antes de los controles de cuenta y guarda grupos de proyección por destino. Catálogo privado solo para propietario; ofertas para miembros. Pacientes/contactos conservan sus controles. Citas y su integración con esos casos siguen pendientes. Los límites funcionales proceden de [la especificación](nightingale-api.md). No crear carpetas sin uso concreto.
+**Actualizada:** 2026-10-27. **Estado:** C01–C06 y C12–C18 aceptados. T19–T27 comprobadas para revisión C09, sin marcar aceptación de C07–C09. schedule posee reglas, excepciones, bloques y cálculo de tramos; appointments combina ocupación real y agenda en la consulta autorizada, sin dependencia circular entre sus casos. La aceptación coordina profesional y controles de cuenta, conserva primera historia/transiciones y guarda grupos por destino. Un savepoint sobre la misma sesión revierte una propuesta de agenda incompatible y permite guardar solo su recibo de conflicto. Catálogo privado para propietario y ofertas para miembros. Snapshot, descarga, SSE y consumidores siguen pendientes. Límites en [la especificación](nightingale-api.md).
 
 ## Tres proyectos
 

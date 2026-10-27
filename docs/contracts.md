@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado al 2026-10-26:** C05 aceptado; T16–T18 comprobadas para revisión C06, sin aceptar. El [contrato de diseño HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. services posee catálogo/ofertas; schedule posee reglas semanales y unión local de tramos. accounts conserva permisos, sync recibos/grupos por destino y audit hechos. patients conserva fichas/documentos y contactos. Las aceptaciones no registran un dispositivo por deducción. Disponibilidad completa, citas, clientes generados e integración de consumidores siguen pendientes.
+**Estado al 2026-10-27:** C06 aceptado; T19–T27 comprobadas para revisión C09, sin marcar aceptación de C07–C09. El [contrato HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. services posee catálogo/ofertas; schedule agenda y tramos; appointments ocupación, ciclo e historia. accounts conserva permisos, sync recibos/grupos y audit hechos. patients conserva fichas/documentos/contactos. Snapshot, descarga, SSE, clientes generados e integración de consumidores siguen pendientes.
 
 ## Una fuente por contrato
 

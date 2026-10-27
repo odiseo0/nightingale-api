@@ -1,10 +1,10 @@
 # Estado y evidencia: P-20261024-01-desktop-shared-api
 
-**Plan:** [plan.md](plan.md). **Estado:** In progress. **Actualizado:** 2026-10-26.
+**Plan:** [plan.md](plan.md). **Estado:** In progress. **Actualizado:** 2026-10-27.
 
 El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usuario aceptó después C01 al decir «Válido, puedes continuar con el objetivo, por favor». Tras revertir la primera continuación, autorizó retomar el trabajo con su estilo de código. C01 conserva su aceptación. Una tarea a la vez, sin delegación. Los estados se registran solo tras comprobar.
 
-**Ampliación aprobada, 2026-10-26:** el usuario indica «Acepto el plan, puedes continuar con las correcciones». Tras C16 pide continuar; T49–T51 comprobadas, sin delegación, para revisión C17 antes de T52. C17/C18 recibieron aceptación expresa. T46–T57 comprobadas para revisión C06; C06 sigue sin aceptar y T19 no se inicia. Los registros anteriores conservan su evidencia histórica.
+**Ampliación aprobada, 2026-10-26:** el usuario indica «Acepto el plan, puedes continuar con las correcciones». Tras C16 pide continuar; T49–T51 comprobadas, sin delegación, para revisión C17 antes de T52. C17/C18 recibieron aceptación expresa. T46–T57 comprobadas; el usuario acepta C06 el 2026-10-27 y cierra esta revisión. T19 no se inicia. Los registros anteriores conservan su evidencia histórica.
 
 ## Resumen
 
@@ -28,15 +28,15 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 | T16 | Done | Catálogo privado, propiedad, versiones y rollback comprobados; revisión en C06 pendiente |
 | T17 | Done | Ofertas, duración y proyección entre cuentas comprobadas; revisión en C06 pendiente |
 | T18 | Done | Reglas, unión local, unicidad y coordinación comprobadas; revisión en C06 pendiente |
-| T19 | Todo | Gestionar excepciones diarias |
-| T20 | Todo | Gestionar bloqueos |
-| T21 | Todo | Consultar disponibilidad |
-| T22 | Todo | Crear citas |
-| T23 | Todo | Confirmar citas |
-| T24 | Todo | Reprogramar citas |
-| T25 | Todo | Cancelar citas |
-| T26 | Todo | Registrar resultado de asistencia |
-| T27 | Todo | Proteger historia funcional |
+| T19 | Done | Excepciones y reapertura comprobadas; reservas reales pendientes de T22/T32 |
+| T20 | Done | Bloqueos, privacidad y rollback entre cuentas comprobados; ocupación real pendiente de T22 |
+| T21 | Done | Disponibilidad derivada comprobada; ocupación real pendiente de T22 |
+| T22 | Done | Citas reales, ocupación global, primera historia y protección de agenda comprobadas |
+| T23 | Done | Confirmación, duplicados y versión actual comprobados |
+| T24 | Done | Reprogramación conserva duración/snapshots y revierte fallos |
+| T25 | Done | Cancelación conserva historia y libera ocupación |
+| T26 | Done | Asistencia y ausencia con reloj y margen vigentes comprobadas |
+| T27 | Done | Secuencia, igualdad de historia, inmutabilidad y cierre C09 comprobados |
 | T28 | Todo | Descargar cambios confirmados |
 | T29 | Todo | Materializar snapshot coherente |
 | T30 | Todo | Recuperar tras vencimiento |
@@ -485,15 +485,17 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 ### T19: Gestionar excepciones diarias
 
-**Estado:** Todo. **Propietario:** schedule. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** schedule. **Tamaño previsto:** M.
+
+**Desglose previo, 2026-10-27:** T19.1 define esquemas, modelo, DAO y migración (cuatro archivos de producto); T19.2 conecta casos y lecturas con aceptación y permisos (cinco archivos); T19.3 verifica SQL/HTTP, estructura y límites. Reutiliza BaseModel, validación de fechas, DAO y coordinación existentes. Las reservas reales siguen pendientes de T22/T32. El objetivo autoriza continuar tras C07 hasta C09 sin aceptar checkpoints por cuenta del agente.
 
 **Entrada/dependencias:** T18 comprobada y C06 aceptado.
 
 **Aceptación:**
 
-- [ ] Excepción activa sustituye horario habitual de esa fecha.
-- [ ] closed exige extremos nulos; replacement un único intervalo válido.
-- [ ] Inactivar conserva fila y no mueve citas.
+- [x] Excepción activa sustituye horario habitual de esa fecha.
+- [x] closed exige extremos nulos; replacement un único intervalo válido.
+- [x] Inactivar conserva fila y vuelve al habitual. Sin citas implementadas; conservación de reservas reales pendiente de T22/T32.
 
 **Comprobación:** Cerrar día y reabrir mediante inactivación. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -501,19 +503,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Control por profesional y fecha; disponibilidad derivada.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** seis pruebas enfocadas de agenda y 35 controles de estructura correctos. Suite: 115 pruebas en 52.266 s. Probe de agenda PostgreSQL/Keycloak correcto, repetido tras reutilizar el payload validado: cierre, reemplazo hasta 1440, reapertura sin borrar, unicidad incluso inactiva, duplicados concurrentes, filtros acotados, aislamiento, versiones y rechazo de patches inválidos. CHECK SQL rechaza reemplazos nulos/incompletos/vacíos. Fallo diferido revierte efecto/recibo/auditoría/journal; el reintento confirma. Head 20261027_01 aplicado/revertido/reaplicado con 22 tablas y rollback de revisión fallida. Build offline correcto. Analizador Zed 1.40.2: 16 errores previos, ninguno en agenda. Fuentes en docs/sources.md. No hay citas reales ni prueba de su conservación; T22/T32 mantienen esa integración. Servicios existentes PID 9400/32092 conservados y cambios nuevos del usuario en src/api/errors.py preservados.
 
 ### T20: Gestionar bloqueos
 
-**Estado:** Todo. **Propietario:** schedule. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** schedule. **Tamaño previsto:** M.
+
+**Desglose previo, 2026-10-27:** T20.1 define esquemas, modelo, DAO y migración (cuatro archivos de producto); T20.2 conecta casos, operaciones, permisos y lecturas (cinco archivos); T20.3 prueba ámbito global/limitado, privacidad, coordinación y rollback. Reutiliza coordinación del profesional, catálogos de cuentas y transacción actual; no añade dependencias. La integración con ocupación real espera T22.
 
 **Entrada/dependencias:** T19 comprobada.
 
 **Aceptación:**
 
-- [ ] Cuenta nula afecta toda actividad del profesional; valor limita ámbito.
-- [ ] Bloqueos no cancelan reservas ni revelan motivos de cuentas ajenas.
-- [ ] Creación/edición incompatibles con cita vigente se rechazan.
+- [x] Cuenta nula afecta toda actividad del profesional; valor limita ámbito.
+- [x] Motivo global visible solo al profesional propio; journal global sin motivo para miembros. Sin citas que cancelar en esta etapa.
+- [x] Creación/edición incompatibles con cita vigente se rechazan: T22 conecta reservas reales y comprueba la carrera reserva/bloqueo. T32 conserva la prueba conjunta entre procesos.
 
 **Comprobación:** Vacaciones globales y bloqueo limitado. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -521,19 +525,23 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Coordinación común con Citas; no decisiones por consulta previa aislada.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** nueve pruebas enfocadas y 35 controles de estructura correctos. Probe real de agenda correcto: global solo por profesional propio, limitado por asistente, intervalos UTC y equivalencia de offsets para duplicado, fin exclusivo, filtros acotados, aislamiento, cambios parciales y conservación de fila inactiva. Segunda cuenta SQL de tipo clinic solo para verificar ámbito y journal; HTTP continúa rechazándola. Motivo global nulo en ambas proyecciones; un fallo diferido en el segundo destino revierte el bloque y todos los registros. Reintento correcto. Control con intervalo requerido ficticio rechaza antes de escribir; no prueba citas reales. Migración 20261027_02 aplicada/revertida/reaplicada con 23 tablas y fallo de revisión sin DDL parcial. Analizador real: 16 errores previos, sin nuevos en agenda/sync. El primer probe detectó una variable de prueba que ocultaba patch y otro intento HTTP fuera del alcance de la fixture; ambos corregidos sin ampliar el producto. Suite/build completos siguen en el cierre C07.
 
 ### T21: Consultar disponibilidad
 
-**Estado:** Todo. **Propietario:** schedule y appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** schedule y appointments. **Tamaño previsto:** M.
+
+**Desglose previo, 2026-10-27:** T21.1 añade consulta/respuesta y conversión local inequívoca en el DAO existente; T21.2 combina reglas/excepciones y resta bloques con una lectura HTTP (hasta cinco archivos por paso); T21.3 prueba límites temporales/privacidad y cierra C07 con las comprobaciones pedidas. Se reutilizan booking_service, daily_day, PostgreSQL y timedelta; sin dependencias nuevas ni tabla de huecos. Ocupación real y coordinación con cambios de agenda se conectan en T22 antes de aceptar reservas. Horas ambiguas/inexistentes se rechazan con VALIDATION_ERROR; no se elige un offset sin decisión expresa.
+
+**Hallazgo posterior:** Windows no ofrece datos IANA a zoneinfo. Se añade únicamente tzdata==2026.5, según la documentación oficial de Python 3.15; ninguna dependencia previa cambia. La conversión usa la biblioteca estándar y valida ambos folds con vuelta desde UTC. No usa una ruta del PostgreSQL instalado como dependencia del producto. Fuentes y límites de catálogos en docs/sources.md.
 
 **Entrada/dependencias:** T20 comprobada.
 
 **Aceptación:**
 
-- [ ] Combina reglas, excepciones, bloqueos y ocupación sin persistir huecos.
-- [ ] Devuelve intervalos libres con fin exclusivo y duración solicitada válida.
-- [ ] No revela datos de reservas en otras cuentas.
+- [x] Combina reglas, excepciones y bloqueos sin persistir huecos; la resta admite intervalos internos. Ocupación real pendiente de T22.
+- [x] Devuelve intervalos libres con fin exclusivo y duración solicitada válida.
+- [x] T22 conecta ocupación real de otras cuentas y comprueba respuesta solo con intervalos y 404 al leer la cita ajena; T32 conserva pruebas conjuntas.
 
 **Comprobación:** Comparar intervalo contiguo, cierre y ocupación global. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -541,19 +549,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Consulta compuesta mediante contratos; no reserva ni garantiza futura aceptación.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** 12 pruebas enfocadas correctas; probe real de agenda correcto con referencia de oferta, duración pedida, unión/resta, bloques global/limitado, cierre diario, lectura sin escrituras y revocación. Comprueba HTTP 422 para rango mayor de 31 días y extremos ambiguos/inexistentes, así como día completo de 25 horas. Prueba pura también verifica día de 23 horas, contigüidad y ajuste a minutos. Cierre C07: 121 pruebas en 53.172 s; ocho probes reales correctos, head 20261027_02 con 23 tablas aplicado/revertido/reaplicado; rollback de revisión fallida; build offline. Wheel: 155 entradas y 100 fuentes idénticas; sdist: 156 entradas, sin archivos privados. OpenAPI: 36 rutas y 53 esquemas de componentes. Analizador Zed 1.40.2: 16 errores previos, ninguno en agenda; git diff --check correcto. Registros locales en .tmp/c07 y .tmp/c07-suite.txt. Sin HTTP separado del wheel, consumidores ni reservas reales. C07 no se marca aceptado; la instrucción nueva autoriza continuar T22.
 
 ### T22: Crear citas
 
-**Estado:** Todo. **Propietario:** appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** appointments. **Tamaño previsto:** M.
+
+**Desglose previo, 2026-10-27:** T22.1 define entrada/salida, modelos, DAO y migración con exclusión global y primera historia (cuatro archivos de producto); T22.2 añade el caso de creación con booking_patient/booking_service, lecturas y aceptación (hasta cinco archivos por paso); T22.3 conecta ocupación real a disponibilidad y rechaza cambios de reglas/excepciones/bloques/zona que afecten reservas vigentes. Para conservar el recibo de conflicto sin guardar el cambio rechazado, se usará un savepoint sobre la misma sesión, con soporte técnico mínimo en core/db; no otra sesión ni commit parcial. T22.4 prueba concurrencia real, privacidad, rollback y sincronía con historia. Cada paso se comprueba antes del siguiente; no se renumeran IDs ni se delega. T27 conserva la revisión completa de historia y sus controles contra SQL directo.
 
 **Entrada/dependencias:** T21 comprobada y C07 aceptado.
 
 **Aceptación:**
 
-- [ ] Aceptación exige ficha completa, oferta activa, intervalo válido y permisos actuales.
-- [ ] Exclusión global del profesional protege dos cuentas concurrentes.
-- [ ] Primera versión, snapshots, recibo, auditoría y cambios se conservan juntos.
+- [x] Aceptación exige ficha completa, oferta activa, intervalo válido y permisos actuales.
+- [x] Exclusión global del profesional protege dos cuentas concurrentes.
+- [x] Primera versión, snapshots, recibo, auditoría y cambios se conservan juntos.
 
 **Comprobación:** Dos reservas simultáneas y fallo entre cita e historia. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -561,19 +571,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Límite atómico completo; sin proveedores ni avisos HTTP dentro del commit.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** dos pruebas enfocadas y 40 controles de estructura correctos; head 20261027_03 con 25 tablas y btree_gist aplicado/revertido/reaplicado. Probe nuevo test-support/appointments/check.py correcto con PostgreSQL/Keycloak reales: creación de 45 minutos con referencia 30, documento declared, menor con responsable elegido vigente, ficha draft y oferta inactiva rechazadas, duplicado concurrente y dos reservas distintas con un solo ganador. El fallo entre cita e historia revierte efecto/recibo/auditoría/journal por FK diferida; mismo intento confirma al reintentar. Cierra lecturas por intersección, historial y aislamiento. Bloqueo observado mediante pg_blocking_pids: reserva y bloqueo compiten, solo uno confirma. Dos conexiones SQL de cuentas distintas prueban espera y exclusión 23P01; la cita real de la segunda cuenta resta disponibilidad sin exponer sus datos. Esa cuenta clinic es solo fixture SQL, sin habilitar gestión HTTP. Cambios de regla/excepción/bloqueo/zona incompatibles devuelven SLOT_UNAVAILABLE y conservan la reserva; un savepoint revierte la propuesta y el outer commit guarda solo el rechazo. También rechaza inactivar o mover una excepción con una cita fuera del horario habitual. Probes de agenda y pacientes correctos tras conectar ocupación real. Build offline correcto y git diff --check sin errores. Analizador mantiene 16 diagnósticos previos, ninguno nuevo de citas. Fuentes nuevas en docs/sources.md. T27 conserva integridad completa de secuencia/igualdad de historia; T32, pruebas conjuntas de procesos/consumidores.
 
 ### T23: Confirmar citas
 
-**Estado:** Todo. **Propietario:** appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** appointments. **Tamaño previsto:** M.
+
+**Desglose previo:** entrada vacía estricta, registro de acción y persistencia de transición usan como máximo cinco archivos de producto; se comprueban confirmación, duplicados y versión antigua antes de T24. Se reutilizan permisos, bloqueo, historia y transacción de T22; no se cambia el esquema SQL.
 
 **Entrada/dependencias:** T22 comprobada.
 
 **Aceptación:**
 
-- [ ] Solo scheduled con versión y actor válidos pasa a confirmed.
-- [ ] Conserva intervalo y registra confirmación/historia en el mismo commit.
-- [ ] Confirmación repetida sin cambio no añade transición.
+- [x] Solo scheduled con versión y actor válidos pasa a confirmed.
+- [x] Conserva intervalo y registra confirmación/historia en el mismo commit.
+- [x] Confirmación repetida sin cambio no añade transición.
 
 **Comprobación:** Confirmar, duplicar operación y usar versión antigua. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -581,19 +593,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** En esta etapa actor staff; no endpoints de paciente o Hub.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** tres pruebas enfocadas correctas. Probe real de citas: confirmación concurrente con misma operación da accepted/duplicate, añade una historia y conserva intervalo/creación. confirmedAt coincide con updatedAt del servidor; versión 2. Otra operación sobre confirmed rechaza INVALID_STATE_TRANSITION; versión antigua da VERSION_CONFLICT. Payload con confirmedAt del cliente rechazado; actor ajeno recibe 404. Historial ordenado/afterVersion comprobado; el recibo de creación sigue devolviendo su estado original scheduled. Sin migración ni dependencias nuevas.
 
 ### T24: Reprogramar citas
 
-**Estado:** Todo. **Propietario:** appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** appointments. **Tamaño previsto:** M.
+
+**Desglose previo:** se reutiliza AppointmentInterval para la entrada, el DAO de revisión y la rama de transición de T23 (cuatro archivos de producto). Revalidar paciente/responsable/oferta y disponibilidad con ocupación global excluyendo la propia cita; conservar snapshots y duración. Comprobar antes de escribir, probar rollback diferido y cerrar C08 antes de T25.
 
 **Entrada/dependencias:** T23 comprobada.
 
 **Aceptación:**
 
-- [ ] Conserva ID, referencias estables, duración y snapshots acordados.
-- [ ] Nuevo intervalo válido pasa a scheduled con confirmación nula.
-- [ ] Fallo conserva íntegra la reserva anterior.
+- [x] Conserva ID, referencias estables, duración y snapshots acordados.
+- [x] Nuevo intervalo válido pasa a scheduled con confirmación nula.
+- [x] Fallo conserva íntegra la reserva anterior.
 
 **Comprobación:** Reprogramar confirmada, provocar conflicto y comprobar rollback. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -601,19 +615,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Cita/historia/versión/resultados/cambios atómicos; sin conciliación Hub en esta etapa.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** cuatro pruebas enfocadas de citas correctas. Probe real reprograma confirmed a scheduled versión 3, conserva ID/nueve snapshots/duración de 45 aunque el catálogo pase a 20 y cambie el nombre, y excluye su propio intervalo al comprobar ocupación. Rechaza cambio de duración y solapamiento con otra cita. Fallo diferido por historia ausente revierte todo y conserva confirmación/versión 2; el mismo intento confirma al reintentar. Duplicado, NO_CHANGES e historia 1/2/3 comprobados. Cierre C08: 130 pruebas correctas en 58.002 s; nueve probes correctos; migración 20261027_03 con 25 tablas aplicada/revertida/reaplicada y fallo DDL revertido; build offline. Wheel: 166 entradas, 106 fuentes idénticas. Zed 1.40.2 mantiene 16 errores previos, ninguno en citas; git diff --check correcto. Registros .tmp/c08 y .tmp/c08-suite.txt. Sin HTTP del wheel ni consumidores. La instrucción permite continuar hasta C09; no se marca C08 aceptado.
 
 ### T25: Cancelar citas
 
-**Estado:** Todo. **Propietario:** appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** appointments. **Tamaño previsto:** M.
+
+**Desglose previo:** payload de motivo, registro de acción, transición y permiso usan cuatro archivos de producto. Reutilizar historia y exclusión parcial; comprobar cancelación de confirmed, duplicados y una nueva reserva sobre el intervalo liberado antes de T26. Sin migración ni dependencia nueva.
 
 **Entrada/dependencias:** T24 comprobada y C08 aceptado.
 
 **Aceptación:**
 
-- [ ] Solo estado vigente y versión actual permiten cancelar.
-- [ ] Conserva intervalo, confirmación previa e historia; libera ocupación.
-- [ ] Duplicados no añaden otra versión ni otra cancelación.
+- [x] Solo estado vigente y versión actual permiten cancelar.
+- [x] Conserva intervalo, confirmación previa e historia; libera ocupación.
+- [x] Duplicados no añaden otra versión ni otra cancelación.
 
 **Comprobación:** Cancelar y reservar intervalo liberado. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -621,19 +637,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Transición terminal; no borrado físico ni espera automatizada.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** cinco pruebas enfocadas correctas; probe real de citas correcto. Cancelación de confirmed añade solo una historia/recibo/auditoría/grupo, conserva intervalo/confirmedAt y alcanza versión 5. Duplicado no repite; nueva cancelación o confirmación del estado terminal rechaza. Disponibilidad vuelve a incluir el intervalo y otra cita real lo reserva, con su propia referencia vigente de 20 minutos, sin cambiar la cancelada. Sin migración ni dependencias nuevas.
 
 ### T26: Registrar resultado de asistencia
 
-**Estado:** Todo. **Propietario:** appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** appointments. **Tamaño previsto:** M.
+
+**Desglose previo:** reutilizar payload de motivo y transición terminal en tres archivos de producto. Comparar el reloj de servidor con startsAt y el margen vigente del contexto releído; comprobar antes del límite y en el límite con reloj controlado. No inferir ausencia sin una acción expresa.
 
 **Entrada/dependencias:** T25 comprobada.
 
 **Aceptación:**
 
-- [ ] completed requiere inicio alcanzado; no_show inicio más margen vigente.
-- [ ] Solo personal autorizado registra el resultado.
-- [ ] Estado terminal conserva reserva histórica y no se reabre.
+- [x] completed requiere inicio alcanzado; no_show inicio más margen vigente.
+- [x] Solo personal autorizado registra el resultado.
+- [x] Estado terminal conserva reserva histórica y no se reabre.
 
 **Comprobación:** Reloj controlado antes/después del margen y estado terminal. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -641,19 +659,21 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Regla administrativa; sin historia clínica ni ausencia deducida del silencio.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** probe real de citas correcto con reloj controlado en server_time del DAO: completed rechaza antes de startsAt y acepta en el inicio. no_show rechaza antes de 15 minutos; tras cambiar la política a 30 rechaza en el límite antiguo y acepta a los 30 exactos. Motivo/actor e historia se guardan con la transición. Duplicado de ausencia no repite efecto; confirmar completed o cancelar no_show rechaza. Otra reserva en ambos intervalos devuelve SLOT_UNAVAILABLE. Solo se sustituye el reloj en el probe; no se aceptan tiempos o actores del cliente. Sin esquema SQL ni dependencia nueva.
 
 ### T27: Proteger historia funcional
 
-**Estado:** Todo. **Propietario:** appointments. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** appointments. **Tamaño previsto:** M.
+
+**Desglose previo:** T27.1 añade restricciones diferidas de secuencia/igualdad/transición e historia inmutable en una migración; T27.2 verifica entradas SQL inválidas, permisos e igualdad de campos y completa proyecciones explícitas de lectura; T27.3 ejecuta suite/probes/migraciones/build/analizador y entrega C09 para revisión. Máximo cinco archivos de producto por paso; misma fuente física y sin acciones nuevas. Cada entrada nueva se comprueba contra su predecesora y el máximo actual, sin reinterpretar motivos o actores históricos con permisos actuales.
 
 **Entrada/dependencias:** T26 comprobada.
 
 **Aceptación:**
 
-- [ ] Versiones empiezan en 1 y avanzan sin huecos hasta el máximo actual.
-- [ ] Valores actuales y última historia coinciden, incluidos snapshots e instantes.
-- [ ] Identidad ordinaria no puede reescribir ni borrar historia.
+- [x] Versiones empiezan en 1 y avanzan sin huecos hasta el máximo actual.
+- [x] Valores actuales y última historia coinciden, incluidos snapshots e instantes.
+- [x] Identidad ordinaria no puede reescribir ni borrar historia.
 
 **Comprobación:** Intentar hueco, versión futura y actualización/eliminación. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -661,7 +681,13 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 **Transacción, datos y consumidores:** Restricciones diferidas e historia inmutable; no sustituye auditoría ni recibos.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** migración 20261027_04 con comprobación diferida de secuencia, estado/última entrada, nueve snapshots, responsables, instantes y transiciones. Valida también entradas anteriores al migrar. Permisos y trigger impiden reescribir o borrar historia. Probe real rechaza UPDATE/DELETE con rol operativo, también reescritura/borrado administrativo, salto de versión actual, historia futura, hueco, acción inválida, snapshot distinto del padre y cambio de ambos snapshots respecto del acuerdo inicial. Todos los intentos revierten y conservan la fila/versiones anteriores. Cada entrada real del ciclo supera la función de integridad. Las lecturas de cita/historia usan dicts con campos explícitos y response_model. La revisión detectó cadenas numéricas/formatos básicos de fecha admitidos por Pydantic; el validador compartido exige ahora RFC 3339 con offset, probado en agenda/citas.
+
+**Cierre C09:** 131 pruebas correctas en 54.805 s, incluidos controles de estructura de todos los componentes afectados; nueve probes PostgreSQL/Keycloak reales correctos (access, accounts, sync, team, patients, services, schedule, appointments, persistence), en orden. Head 20261027_04 aplicado/revertido/reaplicado con 25 tablas y btree_gist; fallo de revisión sin DDL parcial. Build offline correcto: wheel de 166 entradas con 106 fuentes idénticas, sdist de 167 entradas, sin archivos privados. OpenAPI local generado desde la app: 39 rutas y 57 esquemas de componentes, con origen/versión en .tmp/c09/origin.txt. Analizador de Zed basedpyright 1.40.2: 16 errores previos, ninguno en citas/agenda; no se afirma análisis global correcto ni se ocultan avisos. git diff --check y revisión de archivos nuevos sin espacios finales correctos. Registros locales en .tmp/c09, .tmp/c09-suite.txt y .tmp/c09-pyright.json.
+
+Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/errors.py, la fábrica/app/Depends, sentinel y las versiones previas. Solo tzdata==2026.5 añade una dependencia Python justificada por la falta de IANA en Windows. Sin HTTP separado del wheel, commits, otros repositorios o despliegues. Rust/Hub, snapshot, descarga, SSE y operación quedan fuera; T28–T33 siguen Todo. Las carreras probadas usan sesiones independientes y esperas PostgreSQL observadas; T32 conserva pruebas conjuntas con dos procesos de API y avisos. C09 queda para revisión expresa, sin marcar aceptación.
+
+**Revisión final:** se simplifica la consulta de compromisos a su único ámbito usado, la cuenta. Probe completo de citas y build/inspección de paquete repetidos después, correctos; análisis final conserva exactamente 16 errores previos. Revisión secuencial del diff contra contrato y reglas, sin delegación. Se comprueban 64 enlaces locales de documentos cambiados: cinco destinos históricos ausentes, ninguno nuevo. HEAD permanece 6c27a02 y los servicios Test conservan PID 9400/32092. git diff --check correcto.
 
 ### T28: Descargar cambios confirmados
 
@@ -1299,28 +1325,32 @@ Fuentes de Pydantic 2.14.1: [validadores](https://github.com/pydantic/pydantic/b
 
 ### C06: Catálogo y horario habitual
 
-**Corrección comprobada:** T46–T57 verificadas y C16–C18 aceptados. C06 queda para revisión expresa; T19 no se inicia. Las pruebas con intervalos ficticios no acreditan reservas reales, pendientes de T22/T32.
+**Corrección comprobada:** T46–T57 verificadas y C16–C18 aceptados. El usuario acepta C06 el 2026-10-27; T19 queda pendiente, sin iniciar. Las pruebas con intervalos ficticios no acreditan reservas reales, pendientes de T22/T32.
 
 - [x] T16–T18 comprobadas y evidencia registrada dentro del alcance actual; integración con reservas reales conserva T22/T32.
 - [x] Pruebas aplicables y recorrido del bloque comprobados; límites de disponibilidad, citas y consumidores identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Revisión y aceptación expresa del usuario el 2026-10-27: «Aprobado, con esto terminamos la revisión?».
 
 ### C07: Disponibilidad protegida
 
-- [ ] T19–T21 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] T19–T21 comprobadas en el alcance disponible y evidencia registrada; ocupación real pendiente de T22.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
 - [ ] Revisión y aceptación expresa del usuario.
+
+**Continuación autorizada el 2026-10-27:** el objetivo permite avanzar hasta C09 sin detenerse en C07. No equivale a aceptación. T22 debe conectar reservas reales a disponibilidad y al rechazo de cambios incompatibles; no se acredita ese criterio con intervalos ficticios.
 
 ### C08: Creación, confirmación y reprogramación
 
-- [ ] T22–T24 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] T22–T24 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
 - [ ] Revisión y aceptación expresa del usuario.
+
+**Continuación autorizada:** el objetivo permite continuar hasta C09; no se marca C08 aceptado ni se espera aquí otra revisión.
 
 ### C09: Ciclo completo de citas
 
-- [ ] T25–T27 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] T25–T27 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### C10: Descarga y recuperación
@@ -1510,3 +1540,8 @@ Las 12 pruebas actuales pasan. uv build --offline produce los dos artefactos. La
 - Fuente: FastAPI 0.159.1 resuelto; guía oficial actual [response_model y prioridad](https://fastapi.tiangolo.com/tutorial/response-model/#response_model-priority), contrastada con el paquete instalado y HTTP/OpenAPI reales. El enlace al archivo de documentación etiquetado 0.159.1 no estuvo disponible; no se presenta esa lectura como realizada. Sin dependencia nueva.
 - Evidencia local no versionada: `.tmp/c06-final/` (suite, ocho probes, salida JSON del analizador, OpenAPI previo/posterior y paquetes). Las 48 huellas previas se verifican en la suite y el probe de pacientes recupera un recibo real con la huella anterior sin persistir payload. No se acredita consumidor Rust/Hub, reservas reales, disponibilidad completa, snapshot, descarga, SSE ni producción.
 - C06 pendiente de revisión y aceptación expresa del usuario. T19 continúa Todo.
+
+
+### Aceptación de C06 · 2026-10-27
+
+El usuario indica: «Aprobado, con esto terminamos la revisión?». Se registra C06 aceptado y se cierra la revisión y corrección T46–T57. Se conservan los 16 diagnósticos estáticos documentados y la integración con reservas reales pendiente de T22/T32. No se inicia T19 ni se declara completo el plan general.

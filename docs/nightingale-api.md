@@ -1,8 +1,8 @@
 # Especificación técnica breve: Nightingale API
 
 **Versión:** 0.4
-**Fecha:** 2026-10-26
-**Estado:** C01–C05 y C12–C15 aceptados. T16–T18 comprobadas para revisión C06, sin aceptar: catálogo privado, ofertas por cuenta y reglas semanales con unión local de tramos. Se conservan credenciales, equipo, auditoría, pacientes/contactos, alta administrativa y aceptación atómica. Disponibilidad completa, citas, snapshot, descarga, SSE y consumidores siguen pendientes. T22/T32 deben conectar y probar los controles compartidos con reservas reales.
+**Fecha:** 2026-10-27
+**Estado:** C01–C06 y C12–C18 aceptados. T19–T27 comprobadas; C09 listo para revisión, sin marcar aceptación de C07–C09. Agenda, disponibilidad con ocupación real y ciclo de citas probado con PostgreSQL/Keycloak aislados. Se conservan credenciales, equipo, auditoría, pacientes/contactos y alta administrativa. Snapshot, descarga, SSE y consumidores siguen pendientes; T32 conserva pruebas conjuntas de procesos y avisos.
 **Decisión:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional).
 
 ## 1. Propósito y tecnología
@@ -77,7 +77,7 @@ Las transacciones son breves, con consultas acotadas e índices adecuados. No in
 
 El repositorio de API posee la fuente OpenAPI y los contratos de eventos/operaciones, con compatibilidad entre versiones y consumidores Rust y Hub. Las migraciones no dependen de que todos los escritorios se actualicen a la vez. El esquema operativo no es un contrato SQL público.
 
-Comprobaciones futuras mínimas: aislamiento entre cuentas, transición inválida enviada sin Rust, dos reservas concurrentes, duplicado y contenido distinto, respuesta perdida tras commit, revocación con pendientes, cancelación del Hub frente a versión antigua, paginación sin omisiones y caída de workers sin perder trabajos. No se han ejecutado: la base de proceso no implementa esos recorridos.
+T19–T27 comprueban aislamiento, transiciones inválidas sin Rust, reservas concurrentes, duplicados, revocación vigente, rollback y conservación de historia con PostgreSQL real. El soporte de sync conserva su prueba de respuesta perdida tras commit. La [lista de control](../tasks/P-20261024-01-desktop-shared-api/todo.md) registra comandos, resultados y límites. Descarga sin omisiones, snapshot, SSE entre procesos y consumidores conservan T28–T33. Hub y workers siguen fuera de esta etapa.
 
 Pendientes de producto fuera de esta etapa: autorización del Hub, despliegue/proveedor, cola, política de comunicaciones/espera, objetivos de producción, copias, restauración y RPO/RTO, verificación y corrección global de identidad. D09 concreta identidad, dispositivo, operaciones, cursores, lotes y ventana de recuperación para el escritorio; no demuestra implementación. El objetivo local de avisos no sustituye un SLO de producción. No incluye historia clínica ni lógica de presentación del escritorio o del Hub.
 

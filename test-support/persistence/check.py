@@ -140,13 +140,13 @@ async def check_migrations(directory):
     try:
         assert (
             await migrator.fetchval("SELECT version_num FROM public.alembic_version")
-            == "20261026_08"
+            == "20261027_04"
         )
         assert (
             await migrator.fetchval(
                 "SELECT count(*) FROM information_schema.tables WHERE table_schema='nightingale'"
             )
-            == 21
+            == 25
         )
 
         # A failing revision must roll back both its DDL and its version update.
@@ -156,7 +156,7 @@ async def check_migrations(directory):
             encoding="utf-8",
         )
         (directory / "migrations/versions/failed_probe.py").write_text(
-            'from alembic import op\nrevision="failed_probe"\ndown_revision="20261026_08"\n'
+            'from alembic import op\nrevision="failed_probe"\ndown_revision="20261027_04"\n'
             'def upgrade():\n    op.execute("CREATE TABLE nightingale.failed_probe (id integer)")\n'
             '    op.execute("SELECT 1/0")\n',
             encoding="utf-8",
@@ -169,7 +169,7 @@ async def check_migrations(directory):
         )
         assert (
             await migrator.fetchval("SELECT version_num FROM public.alembic_version")
-            == "20261026_08"
+            == "20261027_04"
         )
 
         result = migrate("downgrade", "base")
