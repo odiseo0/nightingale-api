@@ -32,35 +32,13 @@ from src.api.patients.repository.dao import (
     dao_profiles,
     dao_relationships,
 )
-from src.core import Err, Ok
+from src.core import Err, Ok, Result
 from src.core.db import transaction
-from src.core.schema import PageQuery, PaginatedResponse
+from src.core.schema import BaseModel, PageQuery, PaginatedResponse
 from src.core.utils.utils import Empty
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-
-
-def normalized_patient_payload(action: str, payload: dict) -> dict:
-    schema = {
-        "RegisterPatient": RegisterPatientPayload,
-        "UpdatePatientProfile": PatientPatch,
-        "SetPatientProfileStatus": PatientStatusPayload,
-        "SetPatientCompletion": PatientCompletionPayload,
-        "AddPatientIdentifier": AddPatientIdentifierPayload,
-    }.get(action)
-
-    if schema is not None:
-        try:
-            return schema.model_validate(payload).model_dump(
-                mode="json",
-                by_alias=True,
-                exclude_unset=action == "UpdatePatientProfile",
-            )
-        except ValidationError:
-            pass
-
-    return payload
 
 
 async def profile_satisfies(
@@ -148,20 +126,21 @@ async def apply_patient_operation(
     db: AsyncSession,
     context: AccountContext,
     action: str,
-    entity_key,
+    entity_key: UUID | dict[str, UUID],
     expected_version: int,
-    payload: dict,
-):
+    payload: BaseModel | None,
+) -> Result[AccountEffect, AccountObjectNotFound | AccountRuleError]:
     if not isinstance(entity_key, UUID):
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
     if action == "AddPatientIdentifier":
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        try:
-            data = AddPatientIdentifierPayload.model_validate(payload)
-        except ValidationError:
+
+        if not isinstance(payload, AddPatientIdentifierPayload):
             return Err(AccountRuleError("VALIDATION_ERROR"))
+
+        data = payload
 
         if await dao_profiles.scoped(db, context.account.id, data.patient_id) is Empty:
             return Err(AccountObjectNotFound())
@@ -212,10 +191,10 @@ async def apply_patient_operation(
         if row is not Empty:
             return Err(AccountRuleError("NO_CHANGES", row.version))
 
-        try:
-            data = RegisterPatientPayload.model_validate(payload)
-        except ValidationError:
+        if not isinstance(payload, RegisterPatientPayload):
             return Err(AccountRuleError("VALIDATION_ERROR"))
+
+        data = payload
 
         today = await dao_patients.local_today(db, context.account.time_zone)
 
@@ -281,10 +260,17 @@ async def apply_patient_operation(
                 "SetPatientCompletion": PatientCompletionPayload,
                 "SetPatientProfileStatus": PatientStatusPayload,
             }[action]
-            data = schema.model_validate(payload)
+
+            if payload is None or not isinstance(payload, schema):
+                return Err(AccountRuleError("VALIDATION_ERROR"))
+
+            data = payload
             values = data.model_dump(exclude_unset=True)
 
             if action == "UpdatePatientProfile":
+                if not isinstance(data, PatientPatch):
+                    return Err(AccountRuleError("VALIDATION_ERROR"))
+
                 PatientFields.model_validate(
                     {
                         **{

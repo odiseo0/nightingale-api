@@ -15,7 +15,6 @@ from src.api.accounts.domain.accounts import (
     AccountEffect,
     AccountPolicyPayload,
     AccountResponse,
-    CreateInvitationPayload,
     MemberResponse,
     MembershipStatusPayload,
     ProfessionalPayload,
@@ -36,38 +35,67 @@ from src.api.authorization.application.authorization_cases import (
     identified_users,
 )
 from src.api.authorization.domain.errors import AccessDenied
-from src.core import Err, Ok
+from src.core import Err, Ok, Result
 from src.core.db import transaction
-from src.core.schema import PageQuery, PaginatedResponse
+from src.core.schema import BaseModel, PageQuery, PaginatedResponse
 from src.core.utils.utils import Empty
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def normalized_payload(action: str, payload: dict) -> dict:
-    schema = {
-        "CreateInvitation": CreateInvitationPayload,
-        "SetMembershipStatus": MembershipStatusPayload,
-        "UpdateAccountDetails": AccountDetailsPatch,
-        "UpdateAccountPolicy": AccountPolicyPayload,
-        "SetAccountStatus": MembershipStatusPayload,
-        "UpdateProfessionalProfile": ProfessionalPayload,
-    }.get(action)
-
-    if schema is not None:
-        try:
-            return schema.model_validate(payload).model_dump(
-                mode="json", by_alias=True, exclude_unset=True
-            )
-        except ValidationError:
-            pass
-
-    return payload
-
-
-async def lock_professional(db: AsyncSession, account_id: UUID):
+async def lock_professional(db: AsyncSession, account_id: UUID) -> None:
     await dao_professionals.lock_for_account(db, account_id)
+
+
+async def catalog_accounts(
+    db: AsyncSession, user_id: UUID, account_id: UUID
+) -> list[UUID]:
+    """Call after locking the account's professional, before account controls."""
+    return await dao_professionals.catalog_accounts(db, user_id, account_id)
+
+
+async def own_professional(
+    db: AsyncSession, user_id: UUID
+) -> Result[ProfessionalResponse, AccountObjectNotFound]:
+    row = await dao_professionals.get_by(
+        db, where={"user_id": user_id}, execution_options={"populate_existing": True}
+    )
+
+    if row is Empty:
+        return Err(AccountObjectNotFound())
+
+    return Ok(ProfessionalResponse.model_validate(row))
+
+
+async def account_professional(
+    db: AsyncSession,
+    context: AccountContext,
+    professional_id: UUID,
+    *,
+    own: bool = False,
+) -> Result[ProfessionalResponse, AccountObjectNotFound | AccessDenied]:
+    row = await dao_professionals.scoped(db, context.account.id, professional_id)
+
+    if row is None:
+        return Err(AccountObjectNotFound())
+
+    professional, link_status, membership_status = row
+
+    if own and professional.user_id != context.actor.user_id:
+        return Err(AccountObjectNotFound())
+
+    identity = await identified_users(db, [professional.user_id])
+
+    if (
+        professional.status != "active"
+        or link_status != "active"
+        or membership_status != "active"
+        or identity[professional.user_id].status != "active"
+    ):
+        return Err(AccessDenied())
+
+    return Ok(ProfessionalResponse.model_validate(professional))
 
 
 async def apply_management_operation(
@@ -76,8 +104,8 @@ async def apply_management_operation(
     action: str,
     entity_key: UUID,
     expected_version: int,
-    payload: dict,
-):
+    payload: BaseModel | None,
+) -> Result[AccountEffect, AccessDenied | AccountObjectNotFound | AccountRuleError]:
     if not context.owner:
         return Err(AccessDenied())
 
@@ -94,9 +122,13 @@ async def apply_management_operation(
 
         if current.version != expected_version:
             return Err(AccountRuleError("VERSION_CONFLICT", current.version))
+
         try:
             if action == "UpdateAccountDetails":
-                patch = AccountDetailsPatch.model_validate(payload)
+                if not isinstance(payload, AccountDetailsPatch):
+                    return Err(AccountRuleError("VALIDATION_ERROR"))
+
+                patch = payload
 
                 if not patch.model_fields_set:
                     return Err(AccountRuleError("VALIDATION_ERROR"))
@@ -117,9 +149,15 @@ async def apply_management_operation(
                 ):
                     return Err(AccountRuleError("VALIDATION_ERROR"))
             elif action == "UpdateAccountPolicy":
-                changes = AccountPolicyPayload.model_validate(payload).model_dump()
+                if not isinstance(payload, AccountPolicyPayload):
+                    return Err(AccountRuleError("VALIDATION_ERROR"))
+
+                changes = payload.model_dump()
             else:
-                changes = MembershipStatusPayload.model_validate(payload).model_dump()
+                if not isinstance(payload, MembershipStatusPayload):
+                    return Err(AccountRuleError("VALIDATION_ERROR"))
+
+                changes = payload.model_dump()
         except ValidationError:
             return Err(AccountRuleError("VALIDATION_ERROR"))
 
@@ -153,10 +191,10 @@ async def apply_management_operation(
         if row.version != expected_version:
             return Err(AccountRuleError("VERSION_CONFLICT", row.version))
 
-        try:
-            data = ProfessionalPayload.model_validate(payload)
-        except ValidationError:
+        if not isinstance(payload, ProfessionalPayload):
             return Err(AccountRuleError("VALIDATION_ERROR"))
+
+        data = payload
 
         if data.public_name == row.public_name:
             return Err(AccountRuleError("NO_CHANGES", row.version))
@@ -177,7 +215,7 @@ async def apply_management_operation(
             )
         )
 
-    if payload:
+    if payload is None or payload.model_fields_set:
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
     row = await dao_account_devices.get_scoped(db, context.account.id, entity_key)
@@ -195,6 +233,9 @@ async def apply_management_operation(
 
     details = await device_details(db, entity_key)
 
+    if details is None:
+        return Err(AccessDenied())
+
     if target_status == "active":
         users = await identified_users(db, [row.user_id])
         membership = await dao_memberships.get_scoped(
@@ -202,8 +243,7 @@ async def apply_management_operation(
         )
 
         if (
-            details is None
-            or details.status != "active"
+            details.status != "active"
             or users[row.user_id].status != "active"
             or membership is Empty
             or membership.status != "active"

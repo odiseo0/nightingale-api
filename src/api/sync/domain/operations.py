@@ -1,15 +1,108 @@
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Annotated, Literal, Self
+from uuid import UUID
 
 from pydantic import (
-    UUID7, AwareDatetime, ConfigDict, Field, JsonValue, StringConstraints,
-    field_serializer, field_validator, model_validator,
+    UUID7,
+    AwareDatetime,
+    ConfigDict,
+    Field,
+    JsonValue,
+    StringConstraints,
+    ValidationError,
+    field_serializer,
+    field_validator,
+    model_validator,
 )
 
-from src.api.accounts.domain.accounts import AccountDeviceResponse, AccountResponse, InvitationAcceptanceResult, InvitationResponse, MemberResponse, ProfessionalResponse
-from src.api.patients.domain.patients import PatientIdentifierResponse, PatientProfileResponse
-from src.api.patients.domain.contacts import ContactResponse, RelationshipResponse
+from src.api.accounts.domain.accounts import (
+    AccountDetailsPatch,
+    AccountDeviceResponse,
+    AccountPolicyPayload,
+    AccountResponse,
+    CreateInvitationPayload,
+    InvitationAcceptanceResult,
+    InvitationResponse,
+    MemberResponse,
+    MembershipStatusPayload,
+    ProfessionalPayload,
+    ProfessionalResponse,
+)
+from src.api.patients.domain.contacts import (
+    CONTACT_SCHEMAS,
+    ContactResponse,
+    RelationshipResponse,
+)
+from src.api.patients.domain.patients import (
+    AddPatientIdentifierPayload,
+    PatientCompletionPayload,
+    PatientIdentifierResponse,
+    PatientPatch,
+    PatientProfileResponse,
+    PatientStatusPayload,
+    RegisterPatientPayload,
+)
+from src.api.schedule.domain.schedule import (
+    CreateScheduleRulePayload,
+    ScheduleRulePatch,
+    ScheduleRuleResponse,
+    ScheduleRuleStatusPayload,
+)
+from src.api.services.domain.offers import (
+    OfferServicePayload,
+    ServiceOfferResponse,
+    UpdateServiceOfferPayload,
+)
+from src.api.services.domain.services import (
+    CreateServicePayload,
+    ServicePatch,
+    ServiceResponse,
+    ServiceStatusPayload,
+)
 from src.core.schema import ApiError, BaseModel
+from src.core.schema.http import SerializedInstant
+
+SERVICE_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateService": CreateServicePayload,
+    "UpdateService": ServicePatch,
+    "SetServiceStatus": ServiceStatusPayload,
+}
+OFFER_SCHEMAS: dict[str, type[BaseModel]] = {
+    "OfferService": OfferServicePayload,
+    "UpdateServiceOffer": UpdateServiceOfferPayload,
+    "SetServiceOfferStatus": ServiceStatusPayload,
+}
+RULE_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateScheduleRule": CreateScheduleRulePayload,
+    "UpdateScheduleRule": ScheduleRulePatch,
+    "SetScheduleRuleStatus": ScheduleRuleStatusPayload,
+}
+
+OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateInvitation": CreateInvitationPayload,
+    "SetMembershipStatus": MembershipStatusPayload,
+    "UpdateAccountDetails": AccountDetailsPatch,
+    "UpdateAccountPolicy": AccountPolicyPayload,
+    "SetAccountStatus": MembershipStatusPayload,
+    "UpdateProfessionalProfile": ProfessionalPayload,
+    "RegisterPatient": RegisterPatientPayload,
+    "UpdatePatientProfile": PatientPatch,
+    "SetPatientProfileStatus": PatientStatusPayload,
+    "SetPatientCompletion": PatientCompletionPayload,
+    "AddPatientIdentifier": AddPatientIdentifierPayload,
+    **CONTACT_SCHEMAS,
+    **SERVICE_SCHEMAS,
+    **OFFER_SCHEMAS,
+    **RULE_SCHEMAS,
+}
+
+EMPTY_PAYLOAD_ACTIONS = {
+    "AcceptInvitation",
+    "RegisterAccountDevice",
+    "RestoreAccountDevice",
+    "RevokeAccountDevice",
+    "RevokeInvitation",
+}
 
 
 class OperationEnvelope(BaseModel):
@@ -20,13 +113,33 @@ class OperationEnvelope(BaseModel):
     expected_version: int = Field(strict=True, ge=0)
     payload: dict[str, JsonValue]
     depends_on: list[UUID7] = Field(default_factory=list, max_length=8)
-    occurred_at_local: AwareDatetime | None = None
+    occurred_at_local: AwareDatetime | None = Field(
+        default=None, json_schema_extra={"default": None}
+    )
 
     # An invalid payload is hashed as received. The shared base strips text,
     # which would otherwise merge two distinct rejected requests.
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, str_strip_whitespace=False)
+    model_config = ConfigDict(
+        extra="forbid", allow_inf_nan=False, str_strip_whitespace=False
+    )
+
+    def validated_payload(self) -> BaseModel | None:
+        schema = OPERATION_SCHEMAS.get(self.action)
+
+        if schema is None:
+            return (
+                BaseModel()
+                if self.action in EMPTY_PAYLOAD_ACTIONS and not self.payload
+                else None
+            )
+
+        try:
+            return schema.model_validate(self.payload)
+        except ValidationError:
+            return None
 
     @field_validator("action")
+    @classmethod
     def nonblank_action(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("La acción no puede estar vacía")
@@ -34,17 +147,23 @@ class OperationEnvelope(BaseModel):
         return value
 
     @field_validator("entity_key")
-    def known_key(cls, value):
+    @classmethod
+    def known_key(cls, value: UUID | dict[str, UUID]) -> UUID | dict[str, UUID]:
         if isinstance(value, dict) and set(value) not in (
-            {"patientId", "contactPersonId"}, {"professionalId", "serviceId"},
+            {"patientId", "contactPersonId"},
+            {"professionalId", "serviceId"},
         ):
             raise ValueError("La clave compuesta no pertenece al contrato")
 
         return value
 
     @field_serializer("occurred_at_local")
-    def serialize_local_time(self, value):
-        return None if value is None else value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    def serialize_local_time(self, value: datetime | None) -> SerializedInstant | None:
+        return (
+            None
+            if value is None
+            else value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+        )
 
 
 class OperationBatch(BaseModel):
@@ -54,9 +173,12 @@ class OperationBatch(BaseModel):
 
     @model_validator(mode="after")
     def ordered_dependencies(self) -> Self:
-        positions = {item.operation_id: index for index, item in enumerate(self.operations)}
+        positions = {
+            item.operation_id: index for index, item in enumerate(self.operations)
+        }
         if len(positions) != len(self.operations):
             raise ValueError("El lote repite una operación")
+
         for index, item in enumerate(self.operations):
             if len(set(item.depends_on)) != len(item.depends_on) or any(
                 positions.get(dependency, -1) >= index for dependency in item.depends_on
@@ -66,16 +188,35 @@ class OperationBatch(BaseModel):
         return self
 
 
+type OperationState = (
+    AccountDeviceResponse
+    | AccountResponse
+    | InvitationResponse
+    | InvitationAcceptanceResult
+    | MemberResponse
+    | ProfessionalResponse
+    | PatientProfileResponse
+    | PatientIdentifierResponse
+    | ContactResponse
+    | RelationshipResponse
+    | ServiceResponse
+    | ServiceOfferResponse
+    | ScheduleRuleResponse
+)
+
+
 class OperationRecord(BaseModel):
     operation_id: UUID7
     status: Literal["accepted", "conflict", "rejected", "retryable_failure"]
     entity_version: int | None
-    state: AccountDeviceResponse | AccountResponse | InvitationResponse | InvitationAcceptanceResult | MemberResponse | ProfessionalResponse | PatientProfileResponse | PatientIdentifierResponse | ContactResponse | RelationshipResponse | None
+    state: OperationState | None
     error: ApiError | None
 
 
 class OperationResult(OperationRecord):
-    status: Literal["accepted", "duplicate", "conflict", "rejected", "retryable_failure"]
+    status: Literal[
+        "accepted", "duplicate", "conflict", "rejected", "retryable_failure"
+    ]
     original_result: OperationRecord | None = None
 
 

@@ -1,11 +1,17 @@
 from datetime import UTC, datetime
-from typing import TypeVar
+from typing import Annotated, TypeVar, overload
 
-from pydantic import UUID7, ConfigDict, Field, field_serializer
+from pydantic import UUID7, ConfigDict, Field, WithJsonSchema, field_serializer
 
 from .base import BaseModel
 
 T = TypeVar("T")
+
+# A string return annotation must retain the public date-time format.
+# https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/json_schema.md#withjsonschema-annotation
+SerializedInstant = Annotated[
+    str, WithJsonSchema({"type": "string", "format": "date-time"})
+]
 
 
 class ErrorResponse(BaseModel):
@@ -40,6 +46,12 @@ class PageQuery(BaseModel):
 
 
 class AdministrativeResponse(BaseModel):
+    @overload
+    def serialize_instant(self, value: datetime) -> str: ...
+
+    @overload
+    def serialize_instant(self, value: None) -> None: ...
+
     @field_serializer("created_at", "updated_at", "last_seen_at", check_fields=False)
     def serialize_instant(self, value: datetime | None) -> str | None:
         if value is None:

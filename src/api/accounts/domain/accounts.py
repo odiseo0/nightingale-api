@@ -1,5 +1,8 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Annotated, Literal
+from uuid import UUID
 
 import pycountry
 from pydantic import (
@@ -19,6 +22,7 @@ from src.core.schema import (
     PageQuery,
     PaginatedResponse,
 )
+from src.core.schema.http import SerializedInstant
 
 
 class AccountDetails(BaseModel):
@@ -33,6 +37,7 @@ class AccountDetails(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_default=True)
 
     @field_validator("location_country")
+    @classmethod
     def assigned_country(cls, value: str) -> str:
         if pycountry.countries.get(alpha_2=value) is None:
             raise ValueError("El país no pertenece al catálogo ISO admitido")
@@ -51,6 +56,7 @@ class BootstrapPracticeInput(AccountDetails):
     professional_name: str = Field(min_length=1)
 
     @field_validator("owner_issuer", "owner_subject")
+    @classmethod
     def nonblank_identity(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("La identidad externa no puede estar vacía")
@@ -140,8 +146,8 @@ class InvitationResponse(AdministrativeResponse):
     accepted_at: AwareDatetime | None
     version: int
 
-    @field_serializer("expires_at", "accepted_at")
-    def serialize_invitation_instants(self, value):
+    @field_serializer("expires_at", "accepted_at", when_used="unless-none")
+    def serialize_invitation_instants(self, value: datetime) -> SerializedInstant:
         return self.serialize_instant(value)
 
 
@@ -189,14 +195,15 @@ class MembershipStatusPayload(BaseModel):
 class AccountChange:
     entity_type: str
     entity_key: str | dict[str, str]
-    state: BaseModel
+    state: BaseModel | Mapping[str, object]
     version: int
     audience: Literal["members", "owner"] = "owner"
+    account_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class AccountEffect:
-    state: BaseModel
+    state: BaseModel | Mapping[str, object]
     version: int
     changes: list[AccountChange]
     permission_changed: bool
@@ -214,11 +221,13 @@ class AccountDetailsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("location_country")
-    def assigned_country(cls, value):
+    @classmethod
+    def assigned_country(cls, value: str | None) -> str | None:
         return value if value is None else AccountDetails.assigned_country(value)
 
     @field_validator("*")
-    def present_value(cls, value):
+    @classmethod
+    def present_value(cls, value: str | None) -> str:
         if value is None:
             raise ValueError("El campo presente no puede ser nulo")
 

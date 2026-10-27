@@ -1,8 +1,10 @@
 # P-20261024-01-desktop-shared-api: API compartida para escritorio
 
-**Checkpoint actual:** C04 aceptado por el usuario el 2026-10-26: «Aprobado, podemos continuar». T13 → T14 → T15 comprobadas en secuencia; detenido en C05 para revisión, sin aceptar. No avanzar a T16. Las aceptaciones y la evidencia anteriores se conservan.
+**Checkpoint actual:** C18 aceptado: «Acepto C18; continúa T55–T57». T46–T57 comprobadas para revisión C06, sin iniciar T19. Se conserva sentinel de Python 3.15 y su límite estático. Las pruebas con reservas reales conservan T22/T32.
 
 **Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-26. **Lista:** [todo.md](todo.md).
+
+**Corrección aprobada el 2026-10-26:** el usuario aprueba la ampliación T46–T57: «Acepto el plan, puedes continuar con las correcciones». Tras revisar T46–T48, pide continuar y permite T49–T51. Una tarea a la vez y sin delegación; detenerse en C17 antes de T52. C17/C18 y C06 conservan su revisión expresa. Se conservan los imports, espacios y demás revisiones del usuario.
 
 **Aprobación:** el usuario pidió «Por favor, implementa este plan» y después aceptó C01. No se aceptan por ello checkpoints posteriores. El usuario indicó además «No hay Docker, no te preocupes por Docker. No lo necesitamos ahora»: no exigir Docker. Después pidió revertir esa continuación y luego autorizó reanudar respetando el estilo implementado por él. No repetir la reescritura retirada.
 
@@ -109,9 +111,9 @@ La corrección del 2026-10-26 interrumpe T09: T34–T36 → C12 → T37–T39 �
 
 **C05: Pacientes y contactos.** Detenerse para revisión.
 
-- [ ] T16: Gestionar catálogo propio.
-- [ ] T17: Gestionar ofertas por cuenta.
-- [ ] T18: Gestionar reglas semanales.
+- [x] T16: Gestionar catálogo propio.
+- [x] T17: Gestionar ofertas por cuenta.
+- [x] T18: Gestionar reglas semanales.
 
 **C06: Catálogo y horario habitual.** Detenerse para revisión.
 
@@ -144,6 +146,67 @@ La corrección del 2026-10-26 interrumpe T09: T34–T36 → C12 → T37–T39 �
 - [ ] T33: Entregar el contrato y su evidencia.
 
 **C11: Colaboración y entrega de API.** Detenerse para revisión.
+
+## Corrección aprobada de C06 · In progress · 2026-10-26
+
+### Resultado y límites
+
+Corregir las causas de los avisos sobre EmptyType y None, completar los tipos de los validadores y los recorridos afectados, validar cada payload una sola vez y devolver diccionarios tipados en las respuestas de lectura de C06. La aprobación de esta ampliación no acepta C06 ni habilita T19. Los registros completos viven solo en todo.md.
+
+No cambia acciones, rutas, campos públicos, credenciales, permisos, versiones funcionales, huellas de operaciones existentes ni el modelo SQL. No añade clases de comandos, otra fábrica, una capa de coordinación, dependencias por preferencia o una configuración que oculte los avisos. Los modelos Pydantic siguen como fuente de entrada/salida; que el caso devuelva un dict no elimina ese contrato. La corrección de tipos puede tocar soporte común y sus consumidores actuales, sin reescribir código ajeno a los hallazgos.
+
+### Acuerdos aprobados
+
+- **Ausencia:** comprobar Python y el analizador reales con un caso mínimo. Preferir `Empty = sentinel("Empty")` de Python 3.15 y el tipo que representa ese mismo valor; conservar `is Empty`. Revisar los alias EmptyType/UndefinedType y sus usos antes de retirarlos. No cambiar a None ni actualizar el analizador en silencio si falta soporte. La prueba de compatibilidad precede al cambio común.
+
+  **Decisión posterior del usuario, 2026-10-26:** tras mostrar la falta de soporte de basedpyright 1.40.2 y una alternativa con Enum/Final, el usuario indica «Si tenemos Python 3.15 podemos utilizar sentinel() tranquilamente, si esa fue la propuesta inicial, por favor síguela». Se conserva sentinel de Python 3.15, sin Enum ni cambios del analizador. Registrar por separado la ejecución correcta y el límite estático; no dar la reducción numérica de errores por prueba de tipos ni ocultar diagnósticos. Esta decisión resuelve la elección de T46, sin aceptar C16/C06.
+- **Resultados:** expresar los retornos de Ok/Err y comprobar error/state antes de acceder a sus campos cuando el modelo permite None. Acotar el resultado de invitaciones a su tipo real. No usar cast, Any o ignores para evitar el diagnóstico ni crear una jerarquía por cada acción sin necesidad.
+- **Anotaciones:** `before` recibe entrada sin validar, normalmente object; `after` usa el tipo real del campo; validadores de modelo devuelven Self y serializadores declaran entrada/salida. Completar también parámetros y retornos de DAOs/casos afectados. SQLAlchemy en aplicación solo bajo TYPE_CHECKING; sin repositorios ajenos.
+- **Entrada:** una selección y validación por acción produce los datos que reutilizan la huella y el caso. Retirar la cadena de seis normalizadores y la segunda validación del original al migrar cada componente. Conservar exactamente ausencia frente a null en patches, defaults, aliases, texto normalizado válido y payload inválido como JSON recibido. No persistir el payload personal para simplificar ese flujo.
+- **Salida:** usar dict tipado y `response_model` en las lecturas afectadas. Las proyecciones de recibos/journal se validan y serializan dentro de la transacción, antes del commit, con una fuente de esquema y campos explícitos. FastAPI no sustituye ese control interno ni autoriza devolver un ORM completo. Conservar modelos que sí se usan para reglas, como intervalos y propuestas de agenda.
+- **Evidencia:** mantener la comprobación real de citas en T22/T32. T57 separa las casillas probadas con intervalos ficticios de la protección pendiente con reservas; no adelanta tablas o rutas para marcarlas completas.
+
+### Orden aprobado
+
+Una tarea a la vez, sin delegación. Cada tarea deja un recorrido utilizable. Detenerse para revisión tras cada grupo; el usuario acepta cada checkpoint, no las pruebas.
+
+- [x] T46: Corregir el tipo de ausencia tras comprobar el analizador; sentinel conservado por decisión posterior del usuario, con límite estático registrado.
+- [x] T47: Acotar los resultados opcionales de operaciones.
+- [x] T48: Anotar los validadores compartidos.
+
+**C16: Tipos base.** Comprobar ausencia, resultados y validadores compartidos antes de seguir.
+
+- [x] T49: Anotar validadores de pacientes, servicios y agenda.
+- [x] T50: Tipar el acceso de identidad y cuentas afectado.
+- [x] T51: Tipar los DAOs de datos operativos afectados.
+
+**C17: Tipos de los recorridos.** Revisar los tipos sin ocultar diagnósticos.
+
+- [x] T52: Unificar la validación de operaciones de cuentas.
+- [x] T53: Reutilizar el payload validado de pacientes y contactos.
+- [x] T54: Reutilizar el payload validado de servicios y reglas.
+
+**C18: Validación e idempotencia.** Probar equivalencia de huellas y persistencia antes de simplificar salidas.
+
+- [ ] T55: Separar la proyección de ofertas de su serialización.
+- [ ] T56: Simplificar las lecturas HTTP restantes de C06.
+- [ ] T57: Cerrar la corrección y ajustar la evidencia de C06.
+
+**Revisión C06, ya existente:** entregar la corrección completa, evidencia nueva y límites pendientes. Solo su aceptación expresa habilita T19. C16–C18 son revisiones de esta ampliación; no sustituyen C06 ni renumeran checkpoints previos.
+
+### Comprobación y fuentes
+
+T46 localiza basedpyright 1.40.2 instalado por Zed fuera de PATH y registra su comando, intérprete, configuración y resultados en todo.md. El caso mínimo reproduce el aviso de EmptyType y muestra falta de soporte para las anotaciones del sentinel propuesto. Se pide decisión antes de cambiar de diseño o instalar/actualizar; no declarar la comprobación estática pasada por leer el código.
+
+Comandos existentes que se usarán tras aprobar: suite unittest, probes de acceso/cuentas/sync/equipo/pacientes/servicios/agenda/persistencia, build offline y git diff --check. Cada tarea fija sus checks enfocados; cada revisión añade la suite completa y el build. Reutilizar servicios de prueba y PostgreSQL aislado; nunca SQLite para acreditar integridad. Omitir la prueba HTTP separada del wheel. Las 108 pruebas y ocho probes del cierre anterior son evidencia histórica, no validación de esta corrección.
+
+Fuentes consultadas en la revisión, que se contrastarán con las versiones resueltas antes de implementar:
+
+- [Python 3.15: sentinel](https://docs.python.org/3.15/library/functions.html#sentinel), [reglas de tipos para sentinels](https://typing.python.org/en/latest/spec/special-types.html#sentinels) y [basedpyright: reducción de tipos](https://docs.basedpyright.com/latest/usage/type-concepts-advanced/#type-guards).
+- [Pydantic: validadores](https://docs.pydantic.dev/latest/concepts/validators/) y [FastAPI: response_model](https://fastapi.tiangolo.com/tutorial/response-model/#response_model-parameter). El lockfile conserva Pydantic 2.14.1 y FastAPI 0.159.1.
+- [Contrato de huella e idempotencia](../../docs/api-v1.md#6-resultados-idempotencia-y-errores), arquitectura, instrucciones del usuario y reglas locales de planificación.
+
+Riesgos: soporte del analizador para sentinel; consumidores de la ausencia común; hashes antiguos que deben seguir reconociéndose; serialización de UUID/fechas/UTC al pasar a dict; filtrado de campos; errores internos opcionales. Cada riesgo tiene un control antes de la revisión que lo cierra. No hay una decisión funcional nueva pendiente; la disponibilidad del analizador se resuelve en T46.
 
 ## Herramientas y comprobaciones
 

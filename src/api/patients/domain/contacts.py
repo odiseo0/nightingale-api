@@ -11,8 +11,13 @@ from pydantic import (
     model_validator,
 )
 
-from src.api.patients.domain.patients import IdentifierInput, PatientFields
+from src.api.patients.domain.patients import (
+    IdentifierInput,
+    PatientFields,
+    PatientStatusPayload,
+)
 from src.core.schema import AdministrativeResponse, BaseModel, PageQuery
+from src.core.schema.http import SerializedInstant
 
 
 class ContactFields(BaseModel):
@@ -26,7 +31,8 @@ class ContactFields(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("issuing_country")
-    def assigned_country(cls, value):
+    @classmethod
+    def assigned_country(cls, value: str | None) -> str | None:
         return None if value is None else IdentifierInput.assigned_country(value)
 
 
@@ -72,12 +78,15 @@ class RelationshipData(BaseModel):
     relationship_kind: Literal["mother", "father", "guardian", "other"]
     is_responsible_contact: bool = Field(default=False, strict=True)
     valid_from: AwareDatetime
-    valid_until: AwareDatetime | None = None
+    valid_until: AwareDatetime | None = Field(
+        default=None, json_schema_extra={"default": None}
+    )
 
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("valid_from", "valid_until", mode="before")
-    def rfc_instant(cls, value):
+    @classmethod
+    def rfc_instant(cls, value: object) -> str | datetime | None:
         if value is not None and not isinstance(value, (str, datetime)):
             raise ValueError("Se requiere un instante con zona")
 
@@ -86,8 +95,12 @@ class RelationshipData(BaseModel):
 
         return value
 
-    @field_serializer("valid_from", "valid_until", when_used="json")
-    def serialize_range(self, value):
+    @field_serializer("valid_from", when_used="json")
+    def serialize_start(self, value: datetime) -> SerializedInstant:
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+    @field_serializer("valid_until", when_used="json")
+    def serialize_range(self, value: datetime | None) -> SerializedInstant | None:
         return (
             None
             if value is None
@@ -105,17 +118,22 @@ class RelationshipData(BaseModel):
 class RelationshipPatch(BaseModel):
     relationship_kind: Literal["mother", "father", "guardian", "other"] | None = None
     is_responsible_contact: bool | None = Field(default=None, strict=True)
-    valid_from: AwareDatetime | None = None
-    valid_until: AwareDatetime | None = None
+    valid_from: AwareDatetime | None = Field(
+        default=None, json_schema_extra={"default": None}
+    )
+    valid_until: AwareDatetime | None = Field(
+        default=None, json_schema_extra={"default": None}
+    )
 
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("valid_from", "valid_until", mode="before")
-    def rfc_instant(cls, value):
+    @classmethod
+    def rfc_instant(cls, value: object) -> str | datetime | None:
         return RelationshipData.rfc_instant(value)
 
     @field_serializer("valid_from", "valid_until", when_used="json")
-    def serialize_range(self, value):
+    def serialize_range(self, value: datetime | None) -> SerializedInstant | None:
         return (
             None
             if value is None
@@ -173,8 +191,12 @@ class RelationshipResponse(AdministrativeResponse):
     updated_at: AwareDatetime
     version: int
 
-    @field_serializer("valid_from", "valid_until", "verified_at", when_used="json")
-    def serialize_range(self, value):
+    @field_serializer("valid_from", when_used="json")
+    def serialize_start(self, value: datetime) -> SerializedInstant:
+        return self.serialize_instant(value)
+
+    @field_serializer("valid_until", "verified_at", when_used="json")
+    def serialize_range(self, value: datetime | None) -> SerializedInstant | None:
         return self.serialize_instant(value)
 
 
@@ -183,3 +205,13 @@ class PatientContactResponse(RelationshipResponse):
     contact_full_name: str
     phone_code: str | None
     phone: str | None
+
+
+CONTACT_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateContactPerson": ContactData,
+    "UpdateContactPerson": ContactPatch,
+    "SetContactPersonStatus": PatientStatusPayload,
+    "CreatePatientContactRelationship": RelationshipData,
+    "UpdatePatientContactRelationship": RelationshipPatch,
+    "SetPatientContactRelationshipStatus": PatientStatusPayload,
+}

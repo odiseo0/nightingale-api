@@ -58,21 +58,8 @@ def datetime_now() -> datetime:
     return datetime.now(tz=TZ)
 
 
-class Empty:
-    def __str__(self) -> str:
-        return "Empty"
+Empty = sentinel("Empty")
+Undefined = sentinel("Undefined")
 
-    def __repr__(self) -> str:
-        return "Empty"
-
-
-class Undefined:
-    def __str__(self) -> str:
-        return "Undefined"
-
-    def __repr__(self) -> str:
-        return "Undefined"
-
-
-EmptyType = Empty
-UndefinedType = Undefined
+type EmptyType = Empty
+type UndefinedType = Undefined

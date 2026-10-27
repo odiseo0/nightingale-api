@@ -1,11 +1,15 @@
-from datetime import datetime
+from collections.abc import Mapping
+from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import Date, cast, func, or_, select, text
+from sqlalchemy import Date, Row, Select, cast, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.patients.domain.contacts import ContactQuery, RelationshipQuery
+from src.api.patients.domain.patients import PatientQuery
 from src.core.db import DAO
 from src.core.schema import BaseModel
+from src.core.utils.utils import EmptyType
 
 from .models import (
     AccountPatient,
@@ -17,16 +21,16 @@ from .models import (
 
 
 class PatientDAO(DAO[Patient, BaseModel, BaseModel]):
-    async def server_time(self, db: AsyncSession):
-        return await db.scalar(select(func.clock_timestamp()))
+    async def server_time(self, db: AsyncSession) -> datetime:
+        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
 
-    async def local_today(self, db: AsyncSession, time_zone: str):
-        return await db.scalar(
+    async def local_today(self, db: AsyncSession, time_zone: str) -> date:
+        return (await db.execute(
             select(cast(func.timezone(time_zone, func.clock_timestamp()), Date))
-        )
+        )).scalar_one()
 
-    async def local_date(self, db: AsyncSession, time_zone: str, instant: datetime):
-        return await db.scalar(select(cast(func.timezone(time_zone, instant), Date)))
+    async def local_date(self, db: AsyncSession, time_zone: str, instant: datetime) -> date:
+        return (await db.execute(select(cast(func.timezone(time_zone, instant), Date)))).scalar_one()
 
     async def reserve_id(self, db: AsyncSession, patient_id: UUID) -> bool:
         # Across accounts, reserve only a new identity. A collision reveals no
@@ -46,7 +50,7 @@ class PatientDAO(DAO[Patient, BaseModel, BaseModel]):
 class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
     async def complete_for_contact(
         self, db: AsyncSession, account_id: UUID, contact_id: UUID
-    ):
+    ) -> list[AccountPatient]:
         rows = await db.scalars(
             select(self.model)
             .join(
@@ -65,8 +69,8 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
         return list(rows)
 
     async def create_profile(
-        self, db: AsyncSession, values: dict, *, commit: bool = True
-    ):
+        self, db: AsyncSession, values: dict[str, object], *, commit: bool = True
+    ) -> AccountPatient:
         row = await self.add(db, self.model(**values))
 
         if commit:
@@ -74,7 +78,7 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
 
         return row
 
-    async def scoped(self, db: AsyncSession, account_id: UUID, patient_id: UUID):
+    async def scoped(self, db: AsyncSession, account_id: UUID, patient_id: UUID) -> AccountPatient | EmptyType:
         return await self.get_by(
             db,
             where={"account_id": account_id, "patient_id": patient_id},
@@ -82,8 +86,8 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
         )
 
     async def revise(
-        self, db: AsyncSession, row: AccountPatient, changes: dict, now: datetime
-    ):
+        self, db: AsyncSession, row: AccountPatient, changes: dict[str, object], now: datetime
+    ) -> AccountPatient:
         for name, value in changes.items():
             setattr(row, name, value)
 
@@ -93,7 +97,7 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
 
         return row
 
-    async def page(self, db: AsyncSession, account_id: UUID, query):
+    async def page(self, db: AsyncSession, account_id: UUID, query: PatientQuery) -> tuple[list[AccountPatient], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
 
         if query.status is not None:
@@ -155,7 +159,7 @@ class PatientIdentifierDAO(DAO[PatientIdentifier, BaseModel, BaseModel]):
             select(select(self.model.id).where(self.model.id.in_(identifiers)).exists())
         )
 
-    async def page(self, db: AsyncSession, patient_id: UUID, offset: int, shows: int):
+    async def page(self, db: AsyncSession, patient_id: UUID, offset: int, shows: int) -> tuple[list[PatientIdentifier], int]:
         statement = select(self.model).where(self.model.patient_id == patient_id)
         total = await self.count(db, statement)
         rows = await db.scalars(
@@ -166,7 +170,7 @@ class PatientIdentifierDAO(DAO[PatientIdentifier, BaseModel, BaseModel]):
 
 
 class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
-    async def lock_new_id(self, db: AsyncSession, contact_id: UUID):
+    async def lock_new_id(self, db: AsyncSession, contact_id: UUID) -> ContactPerson | EmptyType:
         await db.execute(
             text("SELECT pg_advisory_xact_lock(hashtextextended(:key,0))"),
             {"key": f"contact_person:{contact_id}"},
@@ -174,7 +178,7 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
 
         return await self.get(db, contact_id)
 
-    async def scoped(self, db: AsyncSession, account_id: UUID, contact_id: UUID):
+    async def scoped(self, db: AsyncSession, account_id: UUID, contact_id: UUID) -> ContactPerson | EmptyType:
         return await self.get_by(
             db,
             where={"account_id": account_id, "id": contact_id},
@@ -182,8 +186,8 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
         )
 
     async def revise(
-        self, db: AsyncSession, row: ContactPerson, changes: dict, now: datetime
-    ):
+        self, db: AsyncSession, row: ContactPerson, changes: dict[str, object], now: datetime
+    ) -> ContactPerson:
         return await self.update(
             db,
             row.id,
@@ -191,7 +195,7 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
             commit=False,
         )
 
-    async def page(self, db: AsyncSession, account_id: UUID, query):
+    async def page(self, db: AsyncSession, account_id: UUID, query: ContactQuery) -> tuple[list[ContactPerson], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
 
         if query.status is not None:
@@ -218,7 +222,7 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
 class PatientContactRelationshipDAO(
     DAO[PatientContactRelationship, BaseModel, BaseModel]
 ):
-    async def candidates(self, db: AsyncSession, account_id: UUID, patient_id: UUID):
+    async def candidates(self, db: AsyncSession, account_id: UUID, patient_id: UUID) -> list[Row[PatientContactRelationship, ContactPerson]]:
         rows = await db.execute(
             select(self.model, ContactPerson)
             .join(
@@ -235,7 +239,7 @@ class PatientContactRelationshipDAO(
 
     async def scoped(
         self, db: AsyncSession, account_id: UUID, patient_id: UUID, contact_id: UUID
-    ):
+    ) -> PatientContactRelationship | EmptyType:
         return await self.get_by(
             db,
             where={
@@ -247,8 +251,8 @@ class PatientContactRelationshipDAO(
         )
 
     async def create_relationship(
-        self, db: AsyncSession, values: dict, *, commit: bool = True
-    ):
+        self, db: AsyncSession, values: dict[str, object], *, commit: bool = True
+    ) -> PatientContactRelationship:
         row = await self.add(db, self.model(**values))
 
         if commit:
@@ -260,9 +264,9 @@ class PatientContactRelationshipDAO(
         self,
         db: AsyncSession,
         row: PatientContactRelationship,
-        values: dict,
+        values: dict[str, object],
         now: datetime,
-    ):
+    ) -> PatientContactRelationship:
         for name, value in values.items():
             setattr(row, name, value)
 
@@ -272,7 +276,7 @@ class PatientContactRelationshipDAO(
 
         return row
 
-    def projection(self, account_id: UUID):
+    def projection(self, account_id: UUID) -> Select[*tuple[object, ...]]:
         return (
             select(
                 *self.model.__table__.columns,
@@ -299,11 +303,11 @@ class PatientContactRelationshipDAO(
         self,
         db: AsyncSession,
         account_id: UUID,
-        query,
+        query: RelationshipQuery,
         *,
-        patient_id=None,
-        contact_id=None,
-    ):
+        patient_id: UUID | None = None,
+        contact_id: UUID | None = None,
+    ) -> tuple[list[Mapping[str, object]], int]:
         statement = self.projection(account_id)
 
         if patient_id is not None:

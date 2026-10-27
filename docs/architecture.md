@@ -1,6 +1,6 @@
 # Arquitectura de API
 
-**Actualizada:** 2026-10-26. **Estado:** C01–C04 y C12–C15 aceptados. T13–T15 añaden el componente patients para revisión C05: fichas/documentos, contactos/vínculos y completitud, coordinados con la aceptación existente. Los límites funcionales proceden de [la especificación](nightingale-api.md). No crear carpetas sin uso concreto.
+**Actualizada:** 2026-10-26. **Estado:** C01–C05 y C12–C15 aceptados. T16–T18 añaden services y las reglas semanales de schedule, comprobadas para revisión C06, sin aceptar. La aceptación coordina al profesional antes de los controles de cuenta y guarda grupos de proyección por destino. Catálogo privado solo para propietario; ofertas para miembros. Pacientes/contactos conservan sus controles. Citas y su integración con esos casos siguen pendientes. Los límites funcionales proceden de [la especificación](nightingale-api.md). No crear carpetas sin uso concreto.
 
 ## Tres proyectos
 

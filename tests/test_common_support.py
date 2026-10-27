@@ -49,6 +49,22 @@ class CommonSupportTests(unittest.TestCase):
     run_python = foundation.FoundationTests.run_python
     database_settings = foundation.FoundationTests.database_settings
 
+    def test_absence_is_one_value_distinct_from_none_and_undefined(self):
+        from copy import copy, deepcopy
+        from pickle import dumps, loads
+
+        from src.core.utils.utils import Empty, EmptyType, Undefined, UndefinedType
+
+        self.assertIs(EmptyType.__value__, Empty)
+        self.assertIs(UndefinedType.__value__, Undefined)
+        self.assertIsNot(Empty, Undefined)
+        self.assertIsNot(Empty, None)
+
+        for value in (Empty, Undefined):
+            self.assertIs(copy(value), value)
+            self.assertIs(deepcopy(value), value)
+            self.assertIs(loads(dumps(value)), value)
+
     def test_http_errors_keep_correlation_headers_and_safe_details(self):
         result = self.run_python("""
             import asyncio

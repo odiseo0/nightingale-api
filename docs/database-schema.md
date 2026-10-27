@@ -2,7 +2,7 @@
 
 **Versión:** 1.0, ampliación documental del plan compartido aprobado; C01 aceptado.\
 **Fecha:** 2026-10-24.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; la ampliación 1.0 corresponde a T03/C01 aceptados del plan sucesor. T13–T15 añaden las cinco tablas de pacientes/contactos y su integridad diferida, hasta la migración 20261026_05, probadas solo en bases ficticias aisladas. C04 aceptado; C05 pendiente. Este diseño no acredita implementación completa.\
+**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; la ampliación 1.0 corresponde a T03/C01 aceptados del plan sucesor. C05 aceptado. T16–T18 añaden services, professional_services y schedule_rules al núcleo existente: migraciones hasta 20261026_08, con 21 tablas, probadas solo en bases ficticias aisladas. C06 queda para revisión, sin aceptar. Las tablas de citas aún no existen; este diseño no acredita implementación completa.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.

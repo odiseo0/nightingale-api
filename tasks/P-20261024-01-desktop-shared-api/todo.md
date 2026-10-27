@@ -4,6 +4,8 @@
 
 El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usuario aceptó después C01 al decir «Válido, puedes continuar con el objetivo, por favor». Tras revertir la primera continuación, autorizó retomar el trabajo con su estilo de código. C01 conserva su aceptación. Una tarea a la vez, sin delegación. Los estados se registran solo tras comprobar.
 
+**Ampliación aprobada, 2026-10-26:** el usuario indica «Acepto el plan, puedes continuar con las correcciones». Tras C16 pide continuar; T49–T51 comprobadas, sin delegación, para revisión C17 antes de T52. C17/C18 recibieron aceptación expresa. T46–T57 comprobadas para revisión C06; C06 sigue sin aceptar y T19 no se inicia. Los registros anteriores conservan su evidencia histórica.
+
 ## Resumen
 
 | ID | Estado | Resultado |
@@ -23,9 +25,9 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 | T13 | Done | Borradores, documentos opcionales y aislamiento comprobados |
 | T14 | Done | Contactos reutilizables, vínculos y constancias comprobados |
 | T15 | Done | Completitud y documentos declarados con integridad diferida comprobados |
-| T16 | Todo | Gestionar catálogo propio |
-| T17 | Todo | Gestionar ofertas por cuenta |
-| T18 | Todo | Gestionar reglas semanales |
+| T16 | Done | Catálogo privado, propiedad, versiones y rollback comprobados; revisión en C06 pendiente |
+| T17 | Done | Ofertas, duración y proyección entre cuentas comprobadas; revisión en C06 pendiente |
+| T18 | Done | Reglas, unión local, unicidad y coordinación comprobadas; revisión en C06 pendiente |
 | T19 | Todo | Gestionar excepciones diarias |
 | T20 | Todo | Gestionar bloqueos |
 | T21 | Todo | Consultar disponibilidad |
@@ -53,6 +55,18 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 | T43 | Done | Soporte de cursores retirado; listas usan LIMIT/OFFSET |
 | T44 | Done | Script pequeño probado con configuración inválida y PostgreSQL real |
 | T45 | Done | Corrección comprobada; C15 listo para revisión |
+| T46 | Done | sentinel por decisión del usuario; ejecución comprobada y límite estático registrado |
+| T47 | Done | Guardas de resultado original e invitación; probes sync/equipo correctos |
+| T48 | Done | Firmas y esquemas conservados; C16 aceptado con límite estático |
+| T49 | Done | Validadores tipados; 17 pruebas y 72 esquemas conservados |
+| T50 | Done | Tipos de acceso/cuentas y guardas comprobados con tres probes |
+| T51 | Done | DAOs operativos tipados; C17 para revisión |
+| T52 | Done | Selección única y 48 huellas previas conservadas |
+| T53 | Done | Pacientes/contactos consumen el modelo ya validado |
+| T54 | Done | Seis normalizadores retirados; C18 aceptado |
+| T55 | Done | Separar proyección de ofertas y serialización; tras C18 |
+| T56 | Done | Simplificar lecturas HTTP de C06; tras C18 |
+| T57 | Done | Cierre comprobado; C06 para revisión |
 
 ## Registros de tarea
 
@@ -402,63 +416,72 @@ Suite final de 91 pruebas correcta (63.974 s); seis probes reales correctos (acc
 
 ### T16: Gestionar catálogo propio
 
-**Estado:** Todo. **Propietario:** services. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** services. **Tamaño previsto:** M. Done indica comprobación técnica, no aceptación del usuario; C06 sigue pendiente.
 
 **Entrada/dependencias:** T15 comprobada y C05 aceptado.
 
 **Aceptación:**
 
-- [ ] Solo el profesional propietario crea o modifica su catálogo.
-- [ ] Duración entera 1–1440 y estados tienen reglas explícitas.
-- [ ] Cambios no recalculan citas ni permiten editar catálogo ajeno.
+- [x] Solo el profesional propietario crea o modifica su catálogo.
+- [x] Duración entera 1–1440 y estados tienen reglas explícitas.
+- [x] Cambios no recalculan citas ni permiten editar catálogo ajeno. No hay aún citas persistidas; la integración de sus snapshots conserva T22–T27.
 
-**Comprobación:** Modificar base y probar propiedad/versión. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
+**Comprobación:** `uv run --locked python test-support/services/check.py`, `uv run --locked python -m unittest discover -s tests -v` y `uv build --offline`. Propiedad, versión, búsqueda literal, proyección privada y rollback real.
 
 **Archivos previstos:** src/api/services/domain/; src/api/services/application/; src/api/services/repository/; src/api/services/infrastructure/; tests/services/. Son ubicaciones, no orden de crear directorios vacíos. Si el recorrido excede cinco archivos o una revisión concreta, dividir antes de ejecutar sin renumerar IDs aprobados.
 
 **Transacción, datos y consumidores:** Catálogo global del profesional; cambios se proyectan en cuentas afectadas sin filtrar catálogo privado.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** CreateService/UpdateService/SetServiceStatus y GET /v1/me/services con esquemas de domain, DAO derivado y migración 20261026_06. Profesional antes de controles de cuenta ordenados; catálogo solo para owner. El probe `uv run --locked python test-support/services/check.py` pasó con PostgreSQL/Keycloak reales: propiedad, duración estricta, versiones y duplicados concurrentes, búsqueda literal, paginación, denegación a asistente, cuenta inactiva y rollback diferido de efecto/recibo/auditoría/grupo. SQL rechaza transferencia, versión fija y duración cero. Suite: 99 pruebas correctas en 44.480 s; build offline correcto. Un primer intento detectó una ubicación incorrecta de repository; se corrigió y se repitieron integración y suite. No existen tablas/rutas de citas; T22–T27 conservan sus pruebas reales. El usuario autorizó T16 → T17 → T18 antes de revisión C06; este registro no acepta C06.
+
+**Desglose de ejecución (2026-10-26):** T16.1 define esquemas/modelo y migración del catálogo; T16.2 conecta propiedad, coordinación y aceptación; T16.3 añade lectura, controles de estructura y pruebas PostgreSQL/HTTP. Cada parte conserva este ID y se ejecuta en secuencia, sin delegación. No crea ofertas, agenda ni citas por anticipado. El alcance requiere más de cinco archivos para respetar los límites de cada componente.
 
 ### T17: Gestionar ofertas por cuenta
 
-**Estado:** Todo. **Propietario:** services. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** services. **Tamaño previsto:** M. Comprobación técnica; C06 sigue sin aceptación.
 
 **Entrada/dependencias:** T16 comprobada.
 
 **Aceptación:**
 
-- [ ] Oferta comprueba cuenta, profesional y propiedad del servicio.
-- [ ] Ajuste nulo usa base y ajuste positivo válido se conserva al reservar.
-- [ ] Inactividad no cancela citas previas ni afecta otras ofertas.
+- [x] Oferta comprueba cuenta, profesional y propiedad del servicio.
+- [x] Ajuste nulo usa la base vigente y ajuste positivo válido conserva su valor en la referencia interna comprobada.
+- [ ] Conservar la duración elegida en el snapshot de una cita real: pendiente de T22.
+- [x] Inactivar una oferta conserva las otras ofertas y sus filas independientes.
+- [ ] Probar que la inactividad no cancela citas previas con reservas reales: pendiente de T22–T27/T32.
 
-**Comprobación:** Ofertar servicio propio en dos cuentas y rechazar ajeno. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
+**Comprobación:** `uv run --locked python test-support/services/check.py`, suite completa y build offline. Segunda oferta mediante fixture relacional explícita; rechazo de servicio ajeno y rollback de ambas proyecciones. La evidencia distingue ese control de gestión HTTP de clínicas y de una reserva real.
 
 **Archivos previstos:** src/api/services/domain/; src/api/services/application/; src/api/services/repository/; src/api/services/infrastructure/; tests/services/. Son ubicaciones, no orden de crear directorios vacíos. Si el recorrido excede cinco archivos o una revisión concreta, dividir antes de ejecutar sin renumerar IDs aprobados.
 
 **Transacción, datos y consumidores:** Transacción de servicio/oferta/versiones/cambios; sin escritura directa de citas.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** OfferService/UpdateServiceOffer/SetServiceOfferStatus y GET de ofertas por cuenta, con FK compuestas, estados y versiones independientes. El catálogo se proyecta solo al propietario; las ofertas publican nombre/base/ajuste/duración efectiva y ambas versiones a members. Cambiar catálogo no aumenta la versión propia de oferta: serviceVersion identifica ese cambio. Una fixture clinic permite comprobar segunda oferta sin habilitar gestión HTTP de clínicas. El probe de servicios pasó: nulo usa la base nueva, ajuste 45 se conserva, inactivar una oferta no altera la otra, FK rechaza servicio ajeno y fallo diferido en la segunda cuenta revierte catálogo/recibo/auditoría/ambos grupos. booking_service resuelve actividad de cuenta, usuario, pertenencia, profesional, vínculo, servicio y oferta; T22 debe usarlo y conservar el snapshot en una cita real. No se afirma esa reserva ahora. Suite completa: 100 pruebas correctas en 53.106 s; build offline correcto. El DAO derivado usa add para la clave compuesta; el DAO base permanece intacto.
+
+**Desglose de ejecución (2026-10-26):** T17.1 añade modelo/esquemas/migración; T17.2 conecta operaciones, lectura y proyección; T17.3 comprueba propiedad, duración y dos ofertas aisladas. Sin gestión de clínicas ni citas. La segunda cuenta del mismo profesional usa solo una fixture relacional clinic: el esquema permite una única independent por propietario. Esa parte prueba DAO/FK/proyección, no gestión HTTP de clínicas.
 
 ### T18: Gestionar reglas semanales
 
-**Estado:** Todo. **Propietario:** schedule. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** schedule. **Tamaño previsto:** M. Comprobación técnica; C06 sigue sin aceptación y no acredita citas reales.
 
 **Entrada/dependencias:** T17 comprobada.
 
 **Aceptación:**
 
-- [ ] Minutos 0–1439/1–1440, día ISO y vigencia cumplen el diccionario.
-- [ ] Unión de tramos y unicidad de fin abierto no duplican disponibilidad.
-- [ ] Cambio conserva citas y rechaza incompatibilidad bajo coordinación.
+- [x] Minutos 0–1439/1–1440, día ISO y vigencia cumplen el diccionario.
+- [x] Unión de tramos y unicidad de fin abierto no duplican disponibilidad. Se comprueban los intervalos semanales; la disponibilidad completa sigue en T21.
+- [x] El cambio rechaza intervalos requeridos ficticios incompatibles sin escribir reglas, bajo bloqueo del profesional.
+- [ ] Conservar citas reales y rechazar un cambio incompatible con ellas, incluida su carrera: pendiente de T22/T32.
 
-**Comprobación:** Jornada partida y fin 1440 con zona. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
+**Comprobación:** `uv run --locked python test-support/schedule/check.py`, suite completa, probe de persistencia y build offline. Jornada partida, fin 1440, fecha local, vigencia incluida, UQ abierta, versiones y espera real del profesional.
 
 **Archivos previstos:** src/api/schedule/domain/; src/api/schedule/application/; src/api/schedule/repository/; src/api/schedule/infrastructure/; tests/schedule/. Son ubicaciones, no orden de crear directorios vacíos. Si el recorrido excede cinco archivos o una revisión concreta, dividir antes de ejecutar sin renumerar IDs aprobados.
 
 **Transacción, datos y consumidores:** No tabla de reservas duplicada; carrera se repetirá con Citas en T32.
 
-**Evidencia:** pendiente.
+**Evidencia (2026-10-26):** Tres acciones y dos lecturas de reglas, domain con BaseModel del proyecto, DAO derivado y migración 20261026_08. El probe real comprueba intervalos 08:00–13:00/14:00–24:00 tras unir solapados, fin de vigencia incluido y fecha de Caracas antes/después de las 04:00 UTC. Rechaza rangos inválidos, profesional ajeno, versión antigua, duplicado abierto por API y por SQL. Dos actores crean el mismo intervalo abierto: solo uno confirma. pg_blocking_pids prueba que la edición espera al profesional; al continuar lee el estado vigente. Un cambio incompatible con un intervalo requerido ficticio devuelve SLOT_UNAVAILABLE antes de escribir. Un fallo diferido revierte estado/recibo/auditoría/grupo; el reintento confirma. Se reautoriza al revocar el dispositivo. No se crean excepciones, bloqueos, disponibilidad completa ni citas: T21 resuelve esos intervalos completos y horas locales ambiguas; T22/T32 deben aportar ocupación real al control. Suite final: 108 pruebas correctas en 51.714 s; ocho probes reales, head de 21 tablas aplicado/revertido/reaplicado y build offline correctos. C06 para revisión, sin aceptar.
+
+**Desglose de ejecución (2026-10-26):** T18.1 define reglas/modelo/migración; T18.2 conecta lecturas y aceptación bajo bloqueo del profesional; T18.3 comprueba límites, unión, unicidad abierta y rechazo de una propuesta incompatible con intervalos requeridos ficticios. No crea ocupación ni citas. T22/T32 deben alimentar el control con reservas reales y probar su carrera; los controles de T18 no acreditan esa integración.
 
 ### T19: Gestionar excepciones diarias
 
@@ -1006,6 +1029,242 @@ T34.1 corrige reglas y arquitectura; T34.2 registra plan, tareas e índice. T35.
 
 **Evidencia:** 63 pruebas unittest correctas (33.838 s), con 20 controles de estructura en users/authorization/accounts/sync y tres controles generales de esquemas, paginación y módulos retirados. Los archivos de esquemas se cargan sin activar los imports antiguos de users; no se cambia ni acredita la ejecución de ese componente de referencia. Se permite su alias de tipo de parámetros en infrastructure, sin permitir helpers ni clases. Integraciones reales correctas: acceso con Keycloak/PostgreSQL, cuentas con alta/lecturas/rollback/concurrencia y subprocess administrativo, y persistencia con upgrade/downgrade, fallo de revisión sin DDL parcial, permisos y dos escritores. Solo bases ficticias verificadas y eliminadas; servicios previos conservados. uv build --offline correcto: sdist y wheel sin módulos retirados ni carpetas privadas; no se ejecuta la prueba HTTP separada del wheel. git diff --check correcto. Huellas: de 80 archivos protegidos, 74 iguales; cambian solo dos pruebas de estructura y un comentario de .env.example, y se retiran los tres módulos previstos. Fábrica, dependencias de sesión, app, DAO base, esquema base, migraciones, manifiesto y lockfile conservan su huella. Revisión documental: 45 tareas, 15 checkpoints, 15 documentos y 86 enlaces locales; seis destinos previos ausentes, cuatro referencias de procedencia del esquema al escritorio y dos de la copia histórica, sin copiar ni modificar otro repositorio. No se añaden endpoints ni se declara implementado snapshot/avance incremental. C15 requiere aceptación del usuario.
 
+## Corrección aprobada de C06
+
+El usuario aprobó la ampliación; cada checkpoint conserva su aceptación por separado. Los archivos previstos delimitan cada cambio, no autorizan crear capas o archivos vacíos. Si aparece una sexta modificación de producto en una tarea, dividirla antes de ejecutarla y conservar los IDs. Los cambios de estado/evidencia del plan siguen cada comprobación. No delegar.
+
+### T46: Corregir el tipo de ausencia tras comprobar el analizador
+
+**Estado:** Done. **Propietario:** core técnico. **Tamaño:** M. **Dependencias:** ampliación aprobada; C06 sigue sin aceptar.
+
+**Entrada:** definición actual de Empty/Undefined, retornos del DAO, consumidores y avisos del usuario. Localizar el analizador real, su intérprete, versión y configuración, sin asumir que Cursor Pyright sea basedpyright.
+
+**Aceptación:**
+
+- [x] Reproducir en un caso mínimo el aviso de EmptyType; comprobar soporte de sentinel de Python 3.15 y registrar el comando real y su salida.
+- [x] Valor y anotación representan la misma ausencia; consultas presentes/ausentes conservadas. EmptyType/UndefinedType quedan como alias de tipo de sus sentinels; Undefined no tiene consumidores. La reducción estática con `is Empty` queda sin acreditar en basedpyright 1.40.2; el usuario pidió conservar sentinel tras recibir esa evidencia.
+- [x] El DAO acepta UUID e int y conserva las guardas de sus consumidores, sin nuevos cast, Any o ignores. La comprobación estática de la ausencia mantiene el límite anterior.
+
+**Archivos:** src/core/utils/utils.py; src/core/db/dao.py; tests/test_common_support.py; test-support/persistence/check.py para comprobar consultas presentes/ausentes en PostgreSQL real. Casos mínimos temporales en .tmp, sin persistir datos personales. Motor, fábrica y dependencia de sesión conservados.
+
+**Comprobación:** basedpyright 1.40.2 instalado por Zed; ruta y comando reales en la evidencia. Pruebas enfocadas: `uv run --locked python -m unittest discover -s tests -p test_common_support.py -v`; suite completa y probe de persistencia al cambiar el DAO. Revisión de consulta ausente/presente; la reducción estática queda con el límite explícito del analizador.
+
+**Transacción/consumidores:** soporte compartido; no cambia SQL, commits ni respuesta pública. Revisar todos los consumidores de la ausencia común. Si falta soporte real del analizador, pedir decisión antes de instalar/actualizar, sin elegir otro diseño en silencio.
+
+**Evidencia parcial, 2026-10-26:** commit actual 233569c; cambios locales conservados. El usuario confirma que usa Zed. Se localiza su CLI en `C:\Users\Pedro\AppData\Local\Zed\languages\basedpyright\node_modules\basedpyright\index.js`, versión 1.40.2. Comando base: `node <ruta-CLI> --pythonpath .venv/Scripts/python.exe --pythonversion 3.15 src --outputjson`. Carga el pyproject.toml actual: basic, sin nuevas supresiones; Python del entorno 3.15.1, con sentinel disponible. El análisis inicial de 97 archivos registra 155 errores, 102 con EmptyType. No es un cierre estático correcto.
+
+Casos mínimos en `.tmp/c16-types`: `node <ruta-CLI> --project .tmp/c16-types/pyrightconfig.json --pythonpath .venv/Scripts/python.exe --outputjson`. El caso actual reproduce `Cannot access attribute "id" for class "EmptyType"`. `Empty = sentinel("Empty")` y `Row | Empty` producen `Variable not allowed in type expression` y no reducen la unión; ocurre también al activar funciones experimentales solo en la configuración temporal. El alias de tipo tampoco resuelve ese límite. Una alternativa temporal con Enum de un solo valor y `Empty: Final = EmptyType.EMPTY` sí reduce a Row tras `is Empty`, también al importar desde otro módulo; presente, ausente e identidad pasan en ejecución. Se pide decisión al usuario antes de elegir otro diseño o tocar soporte común. No se instala ni actualiza nada. T47/T48 siguen sin iniciar.
+
+El usuario pide después conservar sentinel de Python 3.15, en lugar de Enum o actualizar herramientas. Se implementan ambos sentinels con sus alias de tipo; se amplían los tipos de claves del DAO a int/UUID y se retira el cast a int de create. Cinco pruebas enfocadas correctas y suite de 109 pruebas correcta (56.557 s). El probe de persistencia pasa con PostgreSQL real: añade consulta presente/ausente por get/get_by/get_for_update, clave UUID ausente, y conserva migraciones/rollback/concurrencia. No modifica el esquema de producto. El intento inicial de pruebas dentro del aislamiento tuvo dos errores de temporales/asyncio; fuera del aislamiento pasan, con el mismo entorno. UV_CACHE_DIR apunta a .uv-cache del repositorio por el fallo de permisos de la caché del sandbox; sin instalación ni actualización.
+
+El análisis posterior devuelve 46 errores en 97 archivos, incluidos dos reportInvalidTypeForm en los alias de sentinel. La reducción desde 155 no acredita el estrechamiento: el analizador trata ese tipo como desconocido. Se conserva esa limitación por la decisión posterior del usuario y no se declara cierre estático correcto. PostgreSQL/Keycloak de pruebas conservan PID 9400/32092. T46 queda comprobada con ese límite explícito; C16 sigue sin aceptar.
+
+Fuentes: [sentinel en Python 3.15](https://docs.python.org/3.15/builtins/functions.html#sentinel), [tipos de sentinels](https://typing.python.org/en/latest/spec/special-types.html#sentinels), [CLI de basedpyright](https://docs.basedpyright.com/latest/configuration/command-line/), [configuración](https://docs.basedpyright.com/latest/configuration/config-files/) y [Enum](https://docs.python.org/3.15/howto/enum.html). Se contrastan con la CLI instalada y los casos mínimos; no se atribuye soporte por leer la documentación.
+
+### T47: Acotar los resultados opcionales de operaciones
+
+**Estado:** Done. **Propietario:** sync y cuentas. **Tamaño:** M. **Dependencias:** T46 comprobada con el límite estático registrado.
+
+**Aceptación:**
+
+- [x] Los accesos a error.code y state dejan de depender de una relación entre campos que el tipo no expresa; comprobar campos/tipo concretos antes de usarlos y declarar el retorno específico de invitaciones.
+- [x] Accepted, duplicate, conflict, rejected y retryable_failure conservan sus formas públicas y el resultado original; un estado interno inválido no produce AttributeError ni un éxito inventado.
+- [x] Ningún diagnóstico objetivo se oculta con casts, ignores o configuración; evitar una jerarquía de clases por acción si basta una guarda y un tipo de retorno preciso.
+
+**Archivos previstos:** src/api/sync/domain/operations.py; src/api/sync/application/operations_cases.py; src/api/accounts/application/invitations_cases.py; tests/test_operations.py.
+
+**Comprobación:** analizador localizado en T46; `uv run --locked python -m unittest discover -s tests -p test_operations.py -v`; probes `test-support/sync/check.py` y `test-support/team/check.py` con `uv run --locked python`. Revisar aceptación, rechazo y repetición de invitación por HTTP. Ampliar pruebas solo para invariantes que los casos actuales no cubran.
+
+**Transacción/consumidores:** conservar reautorización, recibos y rechazo inicial sin pertenencia; sin nuevas tablas ni commit parcial. JSON y semántica de estados estables.
+
+**Evidencia:** cuatro pruebas enfocadas correctas (1.746 s). El nuevo caso comprueba aceptación, duplicado y los tres estados de fallo, incluidos originales rechazados y ocho resultados internos incompletos/incompatibles; estos últimos producen DAOError, sin AttributeError ni éxito. accept_invitation declara InvitationAcceptanceResult y sus errores; el efecto de cuentas y el estado de operation_result tienen tipos explícitos. Probes sync y equipo correctos con PostgreSQL/Keycloak reales: duplicados concurrentes, autorización vigente, aceptación/revocación, rechazo inicial, rollback y respuesta perdida en ASGI. El analizador baja de 46 a 44 errores y ya no señala los dos accesos opcionales de accept_invitation; no hay cambios de configuración ni supresiones. Conserva los límites de sentinel y otros recorridos pendientes. Sin cambios SQL, rutas, commits ni servicios nuevos.
+
+### T48: Anotar los validadores compartidos
+
+**Estado:** Done. **Propietario:** accounts, sync, audit y esquema técnico. **Tamaño:** M. **Dependencias:** T47 comprobada.
+
+**Aceptación:**
+
+- [x] Validadores y serializadores de los archivos afectados declaran sus entradas y salidas reales; model validators after devuelven Self.
+- [x] Los validadores de campo de este bloque son after y usan el tipo real del campo o de sus campos atendidos; no hay before nuevos ni Any para suplir firmas.
+- [x] Null, campos ausentes, credenciales exactas y serialización UTC conservan su conducta; ninguna nueva regla de producto aparece al añadir tipos.
+
+**Archivos previstos:** src/api/accounts/domain/accounts.py; src/api/sync/domain/operations.py; src/api/audit/domain/audit.py; src/core/schema/http.py.
+
+**Comprobación:** analizador de T46; pruebas existentes `test_account_changes.py`, `test_operations.py`, `test_audit.py` y `test_common_support.py`, mediante unittest discover con -p por archivo. Revisión manual de firmas frente al modo de cada validador. No escribir pruebas que solo repitan una anotación.
+
+**Transacción/consumidores:** sin efecto transaccional; mismas entradas, errores y representación pública.
+
+**Evidencia:** 14 pruebas enfocadas correctas (test_account_changes, test_operations, test_audit y test_common_support); sus casos vuelven a pasar en la suite final tras completar el ajuste de esquemas. Revisión AST de las doce firmas decoradas: entradas y salidas explícitas y Self en los dos model validators after. @classmethod explícito corrige la llamada compartida al validador de país. Se retiran tres declaraciones exactamente duplicadas de AuditQuery, sin cambiar campos ni reglas.
+
+Los retornos de serializadores tipados alteraban el esquema generado al usar str sin formato. SerializedInstant conserva date-time en las tres salidas afectadas; las sobrecargas de serialize_instant precisan el retorno sin cambiar su cuerpo. unless-none mantiene acceptedAt nulo sin declarar expiresAt anulable. occurredAtLocal conserva su default nulo explícito en el esquema. Los seis esquemas JSON de validación/serialización de InvitationResponse, AuditEventResponse y OperationEnvelope coinciden con los de antes de T48 al ignorar solo el orden de alternativas de unión. No se añaden pruebas que repitan anotaciones.
+
+Fuentes de Pydantic 2.14.1: [validadores](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/validators.md), [WithJsonSchema](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/json_schema.md#withjsonschema-annotation) y [serializadores](https://docs.pydantic.dev/latest/api/functional_serializers/#pydantic.functional_serializers.field_serializer), contrastados con el paquete instalado. Sin nuevas dependencias. El analizador no señala las firmas de los cuatro archivos de T48; el cierre global conserva los avisos detallados en C16.
+
+### T49: Anotar validadores de pacientes, servicios y agenda
+
+**Estado:** Done. **Propietario:** patients, services y schedule. **Tamaño:** M. **Dependencias:** C16 aceptado con el límite estático de sentinel conservado.
+
+**Aceptación:**
+
+- [x] Todos los validadores/serializadores de estos cuatro archivos tienen tipos explícitos, incluidos value y retorno; conservar Self donde corresponda.
+- [x] Se conservan teléfono/documento, fecha frente a instante, patches, duración estricta, vigencia y estados.
+- [x] El analizador no necesita excepciones para las llamadas compartidas a validadores ni para los valores devueltos.
+
+**Archivos previstos:** src/api/patients/domain/patients.py; src/api/patients/domain/contacts.py; src/api/services/domain/services.py; src/api/schedule/domain/schedule.py.
+
+**Comprobación:** analizador; `uv run --locked python -m unittest discover -s tests -p test_patients.py -v`, y equivalentes existentes para test_services.py/test_schedule.py. Revisar manualmente valor inválido, null explícito y ausencia. Sin nueva validación de negocio.
+
+**Transacción/consumidores:** sin escrituras; contratos y datos conservados.
+
+**Evidencia:** 17 pruebas enfocadas correctas (10 pacientes, 4 servicios, 3 agenda). Los 72 esquemas JSON de validación/serialización de los 36 modelos definidos en los cuatro archivos coinciden con el inicio, salvo orden de alternativas de unión. Entradas before object, salidas precisas, classmethod explícito y Self en after. Serializadores distinguen inicio requerido de extremos opcionales para conservar null y date-time; se reutiliza SerializedInstant de T48. La guarda del teléfono comprueba ambas partes tras el rechazo previo de parejas incompletas. Analizador: 35 errores en 97 archivos, sin errores en esos cuatro archivos; sin supresiones, dependencias ni reglas nuevas. Fuentes Pydantic 2.14.1 de T48 conservadas.
+
+### T50: Tipar el acceso afectado de identidad y cuentas
+
+**Estado:** Done. **Propietario:** authorization, accounts y audit. **Tamaño:** M. **Dependencias:** T49 comprobada.
+
+**Aceptación:**
+
+- [x] Parámetros y retornos de los métodos afectados expresan filas, ausencia, listas, estados y tiempo del servidor con tipos concretos. La ausencia conserva el límite de sentinel ya registrado.
+- [x] Los nuevos casos own_professional, account_professional y catalog_accounts declaran contexto, identidad, IDs y Ok/Err sin importar repositorios ajenos.
+- [x] Se mantienen permisos vigentes, orden de bloqueo, refresco tras espera y propiedad; ningún tipo justifica omitir una comprobación real.
+
+**Archivos previstos:** src/api/authorization/repository/dao.py; src/api/accounts/repository/dao.py; src/api/accounts/application/management_cases.py; src/api/audit/repository/dao.py.
+
+**Comprobación:** analizador; controles existentes `test_accounts_structure.py` y `test_authorization_structure.py`; probes de acceso/cuentas/equipo. Revisar manualmente las firmas frente a los resultados SQL y las guardas de los casos. Corregir consumidores solo si el cambio de tipo los exige; dividir antes si se exceden cinco archivos.
+
+**Transacción/consumidores:** misma sesión y locks; sin cambios de permiso, SQL de producto o identidad externa.
+
+**Evidencia:** 40 controles de estructura correctos y probes de acceso/cuentas/equipo correctos con PostgreSQL/Keycloak de prueba. Firmas completas en los DAOs afectados y en own_professional/account_professional/catalog_accounts; los casos consumen respuestas de dominio. Row de SQLAlchemy 2.1.6 usa parámetros variádicos (Row[Professional, str, str]), contrastados con el paquete instalado. Guardas previas al acceso en revise/rename y ante datos globales de dispositivo ausentes; sin consultas ni locks nuevos. Tiempos del servidor usan scalar_one sobre la misma consulta. Analizador: 31 errores globales, ninguno en los cuatro archivos de T50. Se mantienen sentinel y los avisos de bloques posteriores/código previo. Fuentes: [SELECT de ORM 2.1.6](https://docs.sqlalchemy.org/en/21/orm/queryguide/select.html#selecting-orm-entities) y [AsyncSession.execute](https://docs.sqlalchemy.org/en/21/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncSession.execute). Sin dependencias nuevas.
+
+### T51: Tipar los DAOs de datos operativos afectados
+
+**Estado:** Done. **Propietario:** patients, services, schedule y sync. **Tamaño:** M. **Dependencias:** T50 comprobada.
+
+**Aceptación:**
+
+- [x] Los métodos afectados declaran AsyncSession, IDs, consultas, filas, valores de actualización, paginación y retornos, sin nuevos Any, casts o supresiones. Los retornos son filas concretas o mappings de object; sentinel conserva su límite estático previo.
+- [x] Las claves compuestas y los pares oferta/servicio conservan su forma; ausencia usa el acuerdo comprobado de T46.
+- [x] No cambia la responsabilidad de consultar/escribir en DAO ni commit=False en los casos coordinados.
+
+**Archivos previstos:** src/api/patients/repository/dao.py; src/api/services/repository/dao.py; src/api/schedule/repository/dao.py; src/api/sync/repository/dao.py.
+
+**Comprobación:** analizador; controles de estructura de test_accounts_structure.py; probes de pacientes/servicios/agenda/sync. Revisión manual del tipo inferido al recibir una fila y después de comprobar ausencia. No añadir otra base DAO ni interfaces vacías.
+
+**Transacción/consumidores:** versiones, contadores, journal y aislamiento conservados. C17 requiere suite completa y build offline.
+
+**Evidencia:** probes de pacientes/servicios/agenda/sync correctos con PostgreSQL/Keycloak reales, seguidos por persistencia aislada. Todos los métodos de los siete DAOs modificados entre T50/T51 tienen parámetros y retornos; las proyecciones conservan mappings de object y las uniones de ORM usan Row variádico de SQLAlchemy 2.1.6. Misma SQL, sesión, filtros, orden, LIMIT/OFFSET, locks, claves compuestas y commit=False. No se crean capas ni interfaces. Analizador final: 28 errores en 97 archivos, ninguno en los doce archivos de producto del bloque. El cierre completo se registra en C17; no se presenta el análisis global como correcto.
+
+### T52: Unificar la validación de operaciones de cuentas
+
+**Estado:** Done. **Propietario:** sync y accounts. **Tamaño:** M. **Dependencias:** C17 aceptado al pedir continuar con el resto de las correcciones.
+
+**Aceptación:**
+
+- [x] Seleccionar/validar una vez el payload de las acciones de cuenta e invitación; el caso reutiliza ese dato tipado. No crear un sistema de comandos ni otra capa de coordinación.
+- [x] La huella coincide con la anterior para datos ficticios representativos: defaults, texto válido, ausencia/null de patch, fechas/IDs y aliases. Un payload inválido conserva su JSON recibido y un rechazo seguro.
+- [x] Recibos previos y duplicados mantienen significado; ninguna credencial/correlación se incorpora a la huella ni se persiste el payload personal.
+
+**Archivos previstos:** src/api/sync/domain/operations.py; src/api/sync/application/operations_cases.py; src/api/accounts/application/management_cases.py; src/api/accounts/application/invitations_cases.py; tests/test_operations.py.
+
+**Comprobación:** analizador; test_operations.py; probes sync/equipo/cuentas. Fijar antes del cambio ejemplos ficticios con huellas esperadas y contrastar después. Revisar petición original, equivalente con defaults y petición distinta bajo la misma operationId.
+
+**Transacción/consumidores:** validación estructural no sustituye autorización vigente; efecto, recibo, auditoría y journal siguen juntos. Migración gradual: los componentes no trasladados conservan su conducta hasta T53/T54; no dejar el mecanismo temporal en el cierre.
+
+**Evidencia:** se fijan antes del cambio 48 huellas ficticias del recorrido anterior en tests/fixtures/operation_hashes.json, con origen/versiones. Todas coinciden con el recorrido nuevo de accept_operation. Seis pruebas de operaciones correctas, incluida selección única por modelo y reutilización real de la instancia en casos de cuenta/invitación. La primera fixture de esa prueba omitía owner_user_id; se completa sin cambiar producto para ella y la repetición pasa. Probes cuentas/equipo/sync correctos con PostgreSQL/Keycloak reales. El normalizador de cuentas se retira; los demás permanecen solo hasta T53/T54. Analizador: 22 errores globales, sin avisos en management_cases/invitations_cases. Sin cambios de configuración ni dependencias. Fuentes Pydantic 2.14.1: [modelos](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/models.md) y [model_dump/exclude_unset](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/serialization.md).
+
+### T53: Reutilizar el payload validado de pacientes y contactos
+
+**Estado:** Done. **Propietario:** patients y sync. **Tamaño:** M. **Dependencias:** T52 comprobada.
+
+**Aceptación:**
+
+- [x] Pacientes, documentos, contactos y vínculos reutilizan el payload ya validado; retirar sus normalizadores y la segunda lectura del original.
+- [x] Se preservan defaults, texto documental exacto, parejas de teléfono, formatos de fecha/instante y campos presentes de patch al obtener la huella.
+- [x] No cambia completitud, propiedad, restricciones diferidas, recepción de rechazos ni reautorización del duplicado.
+
+**Archivos previstos:** src/api/patients/application/patients_cases.py; src/api/patients/application/contacts_cases.py; src/api/sync/application/operations_cases.py; tests/test_patients.py; tests/test_operations.py.
+
+**Comprobación:** analizador; pruebas de pacientes/operaciones; probes pacientes/sync. Revisar el mismo payload válido antes/después y rechazos con valores inválidos distintos. Mantener separadas identidad declarada y verificación.
+
+**Transacción/consumidores:** misma aceptación y claves/huellas; sin cambios de esquema ni reglas de reserva.
+
+**Evidencia:** 16 pruebas enfocadas correctas (10 pacientes, 6 operaciones), con las 48 huellas previas conservadas y una selección por modelo. Probe pacientes correcto con PostgreSQL/Keycloak: documentos declarados, completitud diferida, contactos y carreras; incluye el probe sync. Se retiran ambos normalizadores y se pasan instancias validadas a los casos. Las validaciones restantes comprueban el estado guardado combinado con patches, no vuelven a leer el payload original. CONTACT_SCHEMAS pasa a su domain y sync lo consume como fuente única; se modifica también ese domain y sync/domain/operations.py, cinco archivos de producto en total. Sin nueva capa, esquema SQL ni reglas de verificación. Analizador ejecutado y resultado conservado en .tmp/c18-types/t53-static.json.
+
+### T54: Reutilizar el payload validado de servicios y reglas
+
+**Estado:** Done. **Propietario:** services, schedule y sync. **Tamaño:** M. **Dependencias:** T53 comprobada.
+
+**Aceptación:**
+
+- [x] Servicios, ofertas y reglas consumen una entrada tipada validada una vez; retirar sus normalizadores y la cadena completa de seis funciones en sync.
+- [x] `{}` y override explícito null siguen siendo equivalentes para OfferService; UpdateServiceOffer requiere su campo, y ausencia/null de patches conserva su diferencia. No coaccionar booleanos a enteros.
+- [x] Tipar los parámetros/retornos de los casos modificados y conservar las versiones, permisos, duración y rechazo de reglas incompatibles del alcance actual.
+
+**Archivos previstos:** src/api/services/application/services_cases.py; src/api/services/application/offers_cases.py; src/api/schedule/application/schedule_cases.py; src/api/sync/application/operations_cases.py; tests/test_operations.py.
+
+**Comprobación:** analizador; pruebas de operaciones/servicios/agenda; probes servicios/agenda/sync. Revisar huellas equivalentes/diferentes y buscar consumidores restantes de normalized_*; no retirar funciones antes de migrar su último consumidor.
+
+**Transacción/consumidores:** no cambiar la coordinación del profesional ni los grupos por cuenta. C18 requiere suite completa, pruebas reales de rollback/idempotencia y build offline.
+
+**Evidencia:** 13 pruebas enfocadas correctas (operaciones/servicios/agenda) y probes servicios/agenda/sync correctos. La selección de esquemas queda en sync/domain/operations.py; los casos reciben BaseModel validado o None y comprueban el tipo antes de usar sus campos. Los cinco archivos de producto son los tres casos, sync/application y sync/domain. No hay normalized_*payload ni model_validate(payload) en src; las comprobaciones de estados propuestos se conservan. El probe de agenda que llama al caso directamente entrega ahora ScheduleRuleStatusPayload, sin restaurar la validación retirada. Se amplía el probe de pacientes para observar una validación por petición y comprobar un recibo real con huella previa a T52, duplicado con defaults equivalentes y conflicto de contenido, sin guardar el payload. Fuentes Pydantic 2.14.1 de T52; cierre completo en C18.
+
+### T55: Separar la proyección de ofertas de su serialización
+
+**Estado:** Done. **Propietario:** services y sync. **Tamaño:** M por paso. **Dependencias:** C18 aceptado expresamente: «Acepto C18; continúa T55–T57».
+
+**Desglose previo a código:** T55.1 traslada la proyección a un dict tipado y adapta todos sus consumidores de escritura (domain/offers.py, accounts/domain/accounts.py, offers_cases.py, services_cases.py y sync/application/operations_cases.py: cinco archivos de producto). Aceptación: salida interna revisable, validación/serialización antes del commit y rollback de una proyección inválida en la segunda cuenta; pruebas/probe servicios y operaciones. T55.2, tras comprobar T55.1, adapta read_offers y services_api.py para dict y response_model; prueba HTTP, esquema y total autorizado. Ambos reutilizan la misma sesión/recibo/journal y no añaden campos ni contratos. La división conserva T55 y el checkpoint final C06; se añade services_cases.py porque también consume offer_response. No se abre trabajo paralelo.
+
+**Aceptación:**
+
+- [x] La proyección de oferta usa un dict con tipos y campos explícitos cuando solo reúne datos de salida; no construye ServiceOfferResponse para devolverla de inmediato. Conservar un helper solo si sus consumidores lo justifican.
+- [x] El HTTP declara response_model y un retorno que coincide con el valor real; recibo y journal validan/serializan esa proyección dentro de la transacción antes de confirmar, con la fuente de esquema existente.
+- [x] Se conservan camelCase, UTC, UUID, campos permitidos, ambas versiones y audiencia privada/pública; un error de proyección revierte efecto/recibo/auditoría/grupos completos.
+
+**Archivos previstos:** src/api/accounts/domain/accounts.py; src/api/sync/application/operations_cases.py; src/api/services/application/offers_cases.py; src/api/services/infrastructure/services_api.py; tests/test_services.py.
+
+**Comprobación:** analizador; pruebas existentes de servicios/operaciones; probe servicios con rollback en la segunda cuenta y probe sync. Revisar respuesta GET, resultado guardado y proyección del journal del mismo dato ficticio. No devolver __dict__ ni un ORM completo para evitar el mapeo.
+
+**Transacción/consumidores:** AccountEffect/AccountChange deben aceptar la representación explícita acordada, sin posponer el control al HTTP ni convertir core en soporte de negocio. Mantener Pydantic donde comprueba estado interno necesario.
+
+**Evidencia (2026-10-26):** T55.1 y T55.2 comprobadas en orden. Cuatro pruebas de servicios y probe real servicios/sync correctos; una proyección inválida en la segunda cuenta devuelve retryable_failure y conserva los contadores, el nombre y la posibilidad de reintentar. HTTP usa dict y response_model; OpenAPI completo igual a la captura previa. Analizador: los mismos 16 avisos documentados en C18, ninguno nuevo en estos consumidores. El recibo y el journal conservan validación y JSON antes del commit.
+
+### T56: Simplificar las lecturas HTTP restantes de C06
+
+**Estado:** Done. **Propietario:** services y schedule. **Tamaño:** M. **Dependencias:** T55 comprobada.
+
+**Aceptación:**
+
+- [x] Las lecturas de catálogo/reglas devuelven dicts tipados con items/total y response_model en rutas; retirar construcciones de respuesta que solo repiten esos datos.
+- [x] Se conservan los objetos que sí aplican reglas de dominio, como los intervalos y la propuesta semanal; no eliminar validación interna necesaria por analogía con la salida HTTP.
+- [x] Los casos afectados declaran contexto, consultas y resultados reales; las rutas conservan solo endpoints/configuración, sin Request ni helpers de serialización.
+
+**Archivos previstos:** src/api/services/application/services_cases.py; src/api/schedule/application/schedule_cases.py; src/api/services/infrastructure/services_api.py; src/api/schedule/infrastructure/schedule_api.py; tests/test_schedule.py.
+
+**Comprobación:** analizador; pruebas de servicios/agenda y controles de estructura; ambos probes reales. Revisar JSON y OpenAPI generados, filtros, total autorizado, página vacía, estado inactivo y acceso ajeno. No ampliar esta tarea a reconstruir todas las respuestas antiguas de otros componentes.
+
+**Transacción/consumidores:** conservar el límite de lectura y el filtrado; sin nuevos campos ni contratos de consumidor. Las escrituras mantienen el control interno probado en T55.
+
+**Evidencia (2026-10-26):** Cuatro pruebas de servicios y tres de agenda correctas; ambos probes reales correctos. Catálogo, ofertas y lista/detalle de reglas devuelven dicts con campos explícitos; rutas con response_model. OpenAPI completo idéntico a la captura anterior a T55. Intervalos, propuesta y validación de escrituras conservados. Esquema SQL, migraciones, manifiesto y lock sin cambios. Analizador conserva los 16 avisos previos, sin avisos nuevos en estas lecturas.
+
+### T57: Cerrar la corrección y ajustar la evidencia de C06
+
+**Estado:** Done. **Propietario:** revisión y documentación. **Tamaño:** M. **Dependencias:** T56 comprobada.
+
+**Aceptación:**
+
+- [x] Diagnósticos objetivo corregidos en los consumidores afectados, salvo el límite de sentinel elegido por el usuario; salida real del analizador con 16 errores residuales detallados en el cierre. Sin nuevas supresiones ni reglas desactivadas. Imports/espacios y diff revisados frente al trabajo previo del usuario.
+- [x] Suite completa, ocho probes reales, migraciones aisladas, build/inspección del paquete y git diff --check pasan; registrar por separado cualquier límite o fallo ajeno, sin presentarlo como comprobado.
+- [x] El plan distingue intervalos ficticios de citas reales: las comprobaciones de protección/conservación con reservas quedan pendientes en T22/T32, y no como prueba cumplida en T17/T18. Entregar C06 sin aceptar ni iniciar T19.
+
+**Archivos previstos:** AGENTS.md; docs/api-v1.md; docs/operations/development.md; este todo.md; plan.md. AGENTS documenta las reglas aprobadas de tipos y respuesta HTTP; no añade prohibiciones generales sobre esquemas con uso real.
+
+**Comprobación:** comando real del analizador registrado en T46; `uv run --locked python -m unittest discover -s tests -v`; `uv run --locked python test-support/<componente>/check.py` para los ocho archivos que ya existen (access, accounts, sync, team, patients, services, schedule, persistence); `uv build --offline`; `git diff --check`. El marcador <componente> representa esos archivos existentes, no es un comando para copiar literalmente. No ejecutar la prueba HTTP separada del wheel.
+
+**Transacción/consumidores:** pruebas de datos ficticios en PostgreSQL aislado; servicios existentes conservados. Sin cambios SQL, consumidor Rust/Hub, dependencia nueva, commit o despliegue. La revisión final incluye que la huella antigua sigue recuperando su recibo.
+
+**Evidencia:** cierre T57 registrado al final de este documento. Los avisos estáticos pendientes se detallan por separado; no se afirma un análisis global sin errores.
+
 ## Checkpoints
 
 ### C01: Contratos, modelos y decisiones
@@ -1036,12 +1295,14 @@ T34.1 corrige reglas y arquitectura; T34.2 registra plan, tareas e índice. T35.
 
 - [x] T13–T15 comprobadas y evidencia registrada.
 - [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Usuario acepta el 2026-10-26: «Aprobado, por favor escríbeme un prompt para continuar esto en otra sesión». Habilita T16 → T17 → T18 hasta revisión C06; en esta sesión solo se prepara el traspaso.
 
 ### C06: Catálogo y horario habitual
 
-- [ ] T16–T18 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+**Corrección comprobada:** T46–T57 verificadas y C16–C18 aceptados. C06 queda para revisión expresa; T19 no se inicia. Las pruebas con intervalos ficticios no acreditan reservas reales, pendientes de T22/T32.
+
+- [x] T16–T18 comprobadas y evidencia registrada dentro del alcance actual; integración con reservas reales conserva T22/T32.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites de disponibilidad, citas y consumidores identificados.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### C07: Disponibilidad protegida
@@ -1098,7 +1359,57 @@ T34.1 corrige reglas y arquitectura; T34.2 registra plan, tareas e índice. T35.
 - [x] Paginación, scripts, contrato, pruebas e integraciones documentados.
 - [x] Usuario revisó y aceptó el 2026-10-26: «Sí, continúa con el desarrollo. Por favor». Permite retomar T09 y después T07, sin aceptar C03.
 
+### C16: Tipos base · aceptado con límite estático
+
+- [ ] Reducción estática de sentinel pendiente de soporte de basedpyright 1.40.2. T46–T48 implementadas y analizadas sin supresiones nuevas; los accesos opcionales de accept_invitation están resueltos. El usuario pidió conservar sentinel tras recibir la evidencia del límite; esta decisión no acepta C16.
+- [x] Pruebas enfocadas, suite completa, build offline y revisión del recorrido de ausencia/resultado/validadores. Evidencia nueva en el registro siguiente.
+- [x] El usuario permite continuar el 2026-10-26: «Podemos continuar para terminar la revisión y corrección de código». C16 aceptado con el límite de sentinel registrado; habilita T49–T51, sin aceptar C17/C06.
+
+### C17: Tipos de los recorridos · aceptado
+
+- [x] T49–T51 comprobadas; entradas y filas tipadas. La ausencia conserva el sentinel elegido por el usuario y el límite del analizador registrado en C16.
+- [x] Analizador ejecutado sin supresiones nuevas: 28 errores globales pendientes, ninguno en el bloque. Pruebas enfocadas, suite completa, ocho probes, build offline y revisión del paquete correctos; límites siguientes explícitos.
+- [x] El usuario permite continuar con «Puedes continuar con el resto de las correcciones». Habilita T52–T54, sin aceptar C18 ni C06.
+
+### C18: Validación e idempotencia · pendiente
+
+- [x] T52–T54 comprobadas; no quedan normalizadores distribuidos ni segunda validación del payload original en esos recorridos.
+- [x] Huellas previas/defaults/patch/rechazos, duplicados y rollback reales comprobados; 112 pruebas, ocho probes y build offline correctos. Analizador ejecutado con 16 avisos pendientes explícitos, no correcto globalmente; sin supresiones nuevas.
+- [x] El usuario acepta: «Acepto C18; continúa T55–T57». C06 sigue pendiente y T19 no se habilita.
+
 ## Registro de comprobaciones
+
+### T52 → T53 → T54 · 2026-10-26 · C18 para revisión
+
+- El usuario permite continuar tras C17 con «Puedes continuar con el resto de las correcciones». Trabajo secuencial y sin delegación. C18 y C06 siguen sin aceptar; T55/T19 no se inician.
+- Una selección de esquema y una validación por operación producen el modelo usado por huella y ejecución. Las 48 huellas capturadas antes de T52 coinciden, incluidas defaults, vacío/null de OfferService, patches, fechas, documentos, teléfonos, booleanos inválidos y JSON recibido de rechazos. Fixture con origen/versiones y solo datos ficticios. Las seis funciones de normalización se retiran sin consumidores pendientes.
+- El probe PostgreSQL de pacientes acredita una validación por petición real, request_hash igual al valor anterior a T52, recuperación del recibo al añadir defaults equivalentes y conflicto al cambiar contenido. Los duplicados y conflictos no añaden efectos. El recibo conserva estado permitido, no payload de entrada. Se mantienen las validaciones de propuestas que combinan fila guardada y patch.
+- Suite final: 112 pruebas correctas en 61.078 s. Ocho probes reales correctos (acceso, cuentas, sync, equipo, pacientes, servicios, agenda y persistencia), con migraciones aisladas hasta 20261026_08/21 tablas, rollback inmediato/diferido, carreras y respuesta perdida en ASGI. Las bases aleatorias se eliminan; PostgreSQL/Keycloak de prueba se conservan. Agenda sigue usando intervalos ficticios, sin citas reales; T22/T32 mantienen esa prueba.
+- Build offline correcto, wheel de 152 entradas con los diez módulos modificados iguales a la fuente y sin fixtures, pruebas ni carpetas privadas. Los 72 esquemas JSON del bloque previo siguen iguales, salvo orden de alternativas de unión. Sin HTTP separado del wheel, dependencias, cambios SQL, commits, despliegues ni cambios en otros repositorios. git diff --check correcto; app, motor/fábrica, DAO base, base de esquemas, lockfile y sentinel conservados.
+- basedpyright 1.40.2 analiza 97 archivos y devuelve 16 errores. Cuatro accesos en contactos siguen sin reducir Empty; dos avisos corresponden a los alias de sentinel sin soporte. Los otros diez están en resultado Err[Never] de accounts_cases, dos nombres de tabla, seis exportaciones previas de users y el módulo previo de caché. No quedan avisos sobre la selección del tipo de payload ni accesos a error.code opcional; no se ocultan los pendientes ni se declara un cierre estático global correcto.
+
+### T49 → T50 → T51 · 2026-10-26 · C17 para revisión
+
+- El usuario permite continuar tras C16 con «Podemos continuar para terminar la revisión y corrección de código». Trabajo secuencial y sin delegación. C17/C18 y C06 quedan sin aceptar; T52/T19 no se inician.
+- T49: 17 pruebas enfocadas y 72 esquemas JSON de 36 modelos conservados (se ignora solo el orden de alternativas de unión). T50: 40 controles de estructura y probes de acceso/cuentas/equipo correctos. T51: pacientes/servicios/agenda/sync y persistencia correctos. Ocho probes de esta ejecución usan PostgreSQL/Keycloak reales y bases aleatorias aisladas eliminadas al salir; ningún dato real. Agenda sigue usando intervalos requeridos ficticios, sin citas; T22/T32 conservan su prueba real.
+- Suite final: 110 pruebas correctas en 52.217 s. Build offline correcto; wheel de 152 entradas con los doce módulos modificados idénticos a la fuente y sin carpetas privadas ni pruebas. Sin HTTP separado del wheel.
+- basedpyright 1.40.2 con Python 3.15.1 y la configuración existente: 97 archivos, 28 errores, ninguno en los doce archivos de producto modificados. Los pendientes están en selección/uso de payloads de cuentas/contactos (T52/T53), dos nombres de tabla, exportaciones previas de users, el módulo previo de caché y los dos alias de sentinel sin soporte. No se cambian diagnósticos, herramientas ni dependencias; no se atribuye la reducción a soporte nuevo de sentinel.
+- Se conservan los imports y cambios previos del usuario, los demás archivos de producto, pruebas y scripts, manifiesto/lockfile, AGENTS, esquema SQL/migraciones, app, motor/fábrica, DAO base y los sentinels. git diff --check correcto. Servicios de prueba conservados con PID 9400/32092; sin commits, despliegues ni cambios en otros repositorios. Fuentes oficiales y versiones en T49/T50; revisión AST de las firmas de DAO sin omisiones.
+
+### T46 → T47 → T48 · 2026-10-26 · C16 para revisión con límite estático
+
+- Ampliación aprobada por el usuario; trabajo secuencial, sin delegación. Tras localizar basedpyright 1.40.2 de Zed y comprobar que no admite el sentinel en anotaciones, el usuario pide mantener la propuesta de Python 3.15. No se instala/actualiza el analizador ni se elige Enum. C16 y C06 siguen sin aceptar; T49/T19 no se inician.
+- Suite final: 110 pruebas correctas en 61.041 s, incluidos controles de estructura sin excepciones nuevas. Ocho probes reales correctos después de T48: acceso, cuentas, sync, equipo, pacientes, servicios, agenda y persistencia. Migraciones hasta 20261026_08, 21 tablas, upgrade/downgrade/reaplicación y rollback de revisión fallida en bases aleatorias aisladas eliminadas al salir. El probe de agenda usa intervalos ficticios, sin citas reales; T22/T32 conservan esa prueba.
+- Analizador: 97 archivos, 40 errores, sin avisos en las firmas de T48 ni en accept_invitation. Dos errores son reportInvalidTypeForm en EmptyType/UndefinedType por falta de soporte. El resto permanece en payloads/casos/DAOs de bloques posteriores y código previo (users, modelos y caché). No se declara correcto el análisis global ni se interpreta la reducción 155 → 40 como prueba del tipo de ausencia; parte de la reducción procede de Unknown. Configuración y lockfile sin cambios.
+- Build offline correcto; wheel de 152 entradas, ocho módulos modificados idénticos a la fuente, sin datos privados, pruebas ni carpetas de herramientas. No se ejecuta HTTP separado del wheel. Se conservan esquema SQL, migraciones, motor, fábrica, dependencia de sesión, app y alta administrativa. git diff --check correcto. Servicios de prueba conservados; sin commits, despliegues, consumidores ni cambios en otros repositorios.
+
+### T16 → T17 → T18 · 2026-10-26 · C06 para revisión
+
+- El usuario autoriza expresamente este bloque tras C05. Se trabaja una tarea a la vez, sin delegación, commits ni despliegue. No se inicia T19.
+- Catálogo privado y ofertas por cuenta comparten aceptación/recibo/auditoría/grupos. Bloqueo del profesional antes de controles de cuenta ordenados, proyecciones members limitadas a ofertas, y rollback de ambos destinos comprobados. Duplicados y consulta de resultado vuelven a validar vínculo profesional.
+- Agenda conserva reglas, une tramos locales y exige UQ abierta también con SQL directo. El control de incompatibilidad usa intervalos requeridos ficticios; T22/T32 conservan integrarlo con reservas reales, sin crear tablas/rutas anticipadas. T21 conserva disponibilidad completa y resolución de horas ambiguas/inexistentes.
+- Suite final: 108 pruebas correctas en 51.714 s. Ocho integraciones reales correctas: acceso, cuentas, sync, equipo, pacientes, servicios, agenda y persistencia; servicios/agenda repetidos tras la revisión. Migraciones hasta 20261026_08 con 21 tablas, aplicadas/revertidas/reaplicadas en bases aleatorias aisladas que se eliminan. Build offline y wheel de 152 entradas comprobados; sin carpetas privadas ni prueba HTTP separada del wheel.
+- Revisión de 28 Python y 14 Markdown, 78 enlaces locales: cinco destinos históricos ausentes, sin nueva ausencia. Fábrica, dependencia de sesiones, DAO base, esquema base, alta administrativa, manifiesto y lockfile sin cambios. git diff --check correcto. PostgreSQL/Keycloak conservan los PID 9400/32092. C06 queda sin aceptar; no hay autorización para T19.
 
 ### T13 → T14 → T15 · 2026-10-26 · C05 para revisión
 
@@ -1186,3 +1497,16 @@ Las 12 pruebas actuales pasan. uv build --offline produce los dos artefactos. La
 - Solo Alembic y Mako se añaden a dependencias. SQL offline, build offline y git diff --check correctos. No se ejecuta la prueba HTTP separada del wheel que el usuario pidió omitir.
 - Los procesos temporales de Keycloak y ambos clústeres PostgreSQL se detienen. Las descargas, certificados, roles y catálogos ficticios quedan en .tmp ignorado; las bases aleatorias de cada comprobación se eliminan. No se cambia el servicio personal ni otro repositorio; sin Docker, commits o despliegue.
 - C02 queda para revisión expresa del usuario. T07 no se inicia y no se marca aceptado este checkpoint.
+
+
+### T55 → T56 → T57 · 2026-10-26 · Corrección final para revisión C06
+
+- T55.1/T55.2 comprobadas antes de T56. offer_response devuelve ServiceOfferProjection con campos explícitos; sus consumidores usan dicts. El resultado y cada proyección del journal validan y serializan antes del commit con sus esquemas existentes. El probe provoca una proyección incompleta en la segunda cuenta: retryable_failure, cero cambios en contadores y estado, reintento aceptado. Se conservan ambas versiones y audiencias.
+- T56: catálogo, ofertas y lista/detalle de reglas devuelven dicts, con tipos reales y response_model en las rutas. Propuesta, intervalos, referencia interna de reserva y validaciones de escritura conservan sus modelos. OpenAPI completo idéntico a la captura previa a T55; 72 esquemas JSON iguales a la base de C17, salvo orden no significativo de uniones.
+- T57: `uv run --locked --offline python -m unittest discover -s tests -v`: 112 pruebas correctas en 52.924 s. Ocho probes reales correctos en secuencia: access, accounts, sync, team, patients, services, schedule, persistence. PostgreSQL aislado: head 20261026_08 de 21 tablas, upgrade/downgrade/reaplicación, fallo de revisión sin DDL parcial, permisos y dos escritores coordinados. PostgreSQL PID 9400 y Keycloak PID 32092 conservados; solo bases ficticias verificadas y eliminadas por los probes.
+- `uv build --offline --out-dir .tmp/c06-final/build` correcto: wheel 152 entradas, 97 fuentes Python idénticas al árbol actual; sdist 153 entradas. Sin secretos, temporales ni pruebas privadas. No se ejecutó la prueba HTTP separada del wheel. `git diff --check` correcto. Esquema SQL, migraciones, manifiesto, lock y versión Python conservan las huellas anteriores a T52. HEAD sigue en 233569c; sin commits ni despliegues.
+- basedpyright 1.40.2 de Zed, Python 3.15, 97 archivos: 16 errores, cero avisos nuevos en los consumidores corregidos. Seis derivan del soporte de sentinel elegido por el usuario (dos alias y cuatro accesos en contacts_cases); diez son previos: Err[Never] en accounts_cases, dos declaraciones __tablename__, seis exports retirados de users y valkey.asyncio ausente en código heredado. No hay supresiones nuevas, casts/Any añadidos ni configuración relajada. No se restauran módulos retirados ni se instala Valkey. El cierre NO acredita un análisis estático global correcto.
+- Se releen estándares y especificación por separado, sin delegar. El diff y las huellas conservan las revisiones previas ajenas a estas tareas. AGENTS registra tipos reales, validación única de payload y dicts/response_model con validación interna antes del commit. T17/T18 separan casillas comprobadas con datos ficticios de reservas reales pendientes en T22/T32.
+- Fuente: FastAPI 0.159.1 resuelto; guía oficial actual [response_model y prioridad](https://fastapi.tiangolo.com/tutorial/response-model/#response_model-priority), contrastada con el paquete instalado y HTTP/OpenAPI reales. El enlace al archivo de documentación etiquetado 0.159.1 no estuvo disponible; no se presenta esa lectura como realizada. Sin dependencia nueva.
+- Evidencia local no versionada: `.tmp/c06-final/` (suite, ocho probes, salida JSON del analizador, OpenAPI previo/posterior y paquetes). Las 48 huellas previas se verifican en la suite y el probe de pacientes recupera un recibo real con la huella anterior sin persistir payload. No se acredita consumidor Rust/Hub, reservas reales, disponibilidad completa, snapshot, descarga, SSE ni producción.
+- C06 pendiente de revisión y aceptación expresa del usuario. T19 continúa Todo.

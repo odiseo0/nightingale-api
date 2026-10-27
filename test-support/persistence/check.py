@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from uuid import uuid4
+from uuid import uuid4, uuid7
 
 import asyncpg
 from sqlalchemy import text
@@ -140,13 +140,13 @@ async def check_migrations(directory):
     try:
         assert (
             await migrator.fetchval("SELECT version_num FROM public.alembic_version")
-            == "20261026_05"
+            == "20261026_08"
         )
         assert (
             await migrator.fetchval(
                 "SELECT count(*) FROM information_schema.tables WHERE table_schema='nightingale'"
             )
-            == 18
+            == 21
         )
 
         # A failing revision must roll back both its DDL and its version update.
@@ -156,7 +156,7 @@ async def check_migrations(directory):
             encoding="utf-8",
         )
         (directory / "migrations/versions/failed_probe.py").write_text(
-            'from alembic import op\nrevision="failed_probe"\ndown_revision="20261026_05"\n'
+            'from alembic import op\nrevision="failed_probe"\ndown_revision="20261026_08"\n'
             'def upgrade():\n    op.execute("CREATE TABLE nightingale.failed_probe (id integer)")\n'
             '    op.execute("SELECT 1/0")\n',
             encoding="utf-8",
@@ -169,7 +169,7 @@ async def check_migrations(directory):
         )
         assert (
             await migrator.fetchval("SELECT version_num FROM public.alembic_version")
-            == "20261026_05"
+            == "20261026_08"
         )
 
         result = migrate("downgrade", "base")
@@ -191,10 +191,12 @@ async def check_migrations(directory):
 async def check_transactions():
     from sqlalchemy.orm import Mapped, mapped_column
 
+    from src.api.accounts.repository.dao import dao_accounts
     from src.api.health import ready
     from src.core.db import DAO
     from src.core.db.model import Base
     from src.core.db.session import async_session_factory, engine
+    from src.core.utils.utils import Empty
 
     class TransactionProbe(Base):
         __tablename__ = "transaction_probe"
@@ -208,6 +210,16 @@ async def check_transactions():
     try:
         async with async_session_factory() as db:
             assert await ready(db) == {"status": "ready", "database": "available"}
+
+            assert await dao.get(db, 0) is Empty
+            assert await dao.get_for_update(db, 0) is Empty
+            assert await dao.get_by(db, {"id": 0}) is Empty
+            assert await dao_accounts.get(db, uuid7()) is Empty
+
+            row = await dao.get(db, 1)
+            assert row is not Empty and row.id == 1
+            assert await dao.get_for_update(db, 1) is row
+            assert await dao.get_by(db, {"id": 1}) is row
 
         async with async_session_factory() as db:
             try:

@@ -2,7 +2,7 @@
 
 **Versión:** 0.4
 **Fecha:** 2026-10-26
-**Estado:** C01–C04 y C12–C15 aceptados. T13–T15 quedan para revisión C05: fichas borrador, documentos declarados, contactos/vínculos por cuenta y completitud protegida. Se conservan credenciales, equipo, auditoría, alta administrativa y aceptación atómica. Servicios, agenda/citas, snapshot, descarga, SSE y consumidores siguen pendientes.
+**Estado:** C01–C05 y C12–C15 aceptados. T16–T18 comprobadas para revisión C06, sin aceptar: catálogo privado, ofertas por cuenta y reglas semanales con unión local de tramos. Se conservan credenciales, equipo, auditoría, pacientes/contactos, alta administrativa y aceptación atómica. Disponibilidad completa, citas, snapshot, descarga, SSE y consumidores siguen pendientes. T22/T32 deben conectar y probar los controles compartidos con reservas reales.
 **Decisión:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional).
 
 ## 1. Propósito y tecnología

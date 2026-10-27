@@ -2,6 +2,19 @@
 
 **Inspección inicial T01:** 2026-10-21. Este documento conserva la procedencia y evidencia de esa entrega. Estado y comprobaciones posteriores de T03: [guía de desarrollo](operations/development.md).
 
+## Fuentes técnicas de T16–T18 · 2026-10-26
+
+Versiones resueltas: FastAPI 0.159.1, Pydantic 2.14.1, SQLAlchemy 2.1.6, Alembic 1.20.1 y PostgreSQL local 18.3. Sin dependencias nuevas. Las guías de FastAPI/Pydantic son las actuales; las pruebas las contrastan con esas versiones.
+
+- [FastAPI: modelos Query](https://fastapi.tiangolo.com/tutorial/query-param-models/#forbid-extra-query-parameters): filtros tipados y campos extra rechazados.
+- [Pydantic: validadores de modelo](https://docs.pydantic.dev/latest/concepts/validators/#model-validators) y [modo estricto por campo](https://docs.pydantic.dev/latest/concepts/strict_mode/#at-the-field-level): duración entera y patch parcial.
+- [SQLAlchemy 2.1: joins](https://docs.sqlalchemy.org/en/21/orm/queryguide/select.html#joins) e [icontains con autoescape](https://docs.sqlalchemy.org/en/21/core/sqlelement.html#sqlalchemy.sql.expression.ColumnElement.icontains): ámbito antes de contar/paginar y búsqueda literal en DAO.
+- [PostgreSQL 18: bloqueos de fila](https://www.postgresql.org/docs/18/explicit-locking.html#LOCKING-ROWS): profesional antes de controles de cuenta ordenados y relectura tras espera. [NULLS NOT DISTINCT](https://www.postgresql.org/docs/18/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS): unicidad de reglas abiertas.
+- [Alembic 1.20.1: execute](https://alembic.sqlalchemy.org/en/latest/ops.html#alembic.operations.Operations.execute): SQL explícito y reversible, como las migraciones existentes.
+- [PostgreSQL 18: AT TIME ZONE](https://www.postgresql.org/docs/18/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT): fecha local desde un instante con offset usando la zona de cuenta. La resolución de [horas ambiguas o inexistentes](https://www.postgresql.org/docs/18/datetime-invalid-input.html) para futuros extremos de disponibilidad sigue en T21; la conversión ordinaria de PostgreSQL no las rechaza sola.
+
+La evidencia vive en todo.md; estas fuentes no prueban reservas reales ni consumidores.
+
 ## Fuentes técnicas de T09/T07 · 2026-10-26
 
 Manifiesto y uv.lock: FastAPI 0.159.1, Pydantic 2.14.1, SQLAlchemy 2.1.6, HTTPX 0.28.1 y Alembic 1.20.1; no se añaden ni actualizan dependencias.

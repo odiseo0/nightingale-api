@@ -1,10 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select, text
+from sqlalchemy import Row, case, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.db import DAO
+from src.core.db import DAO, DAOError
 from src.core.schema import BaseModel
 from src.core.utils.utils import Empty, EmptyType
 
@@ -20,11 +20,14 @@ from .models import (
 
 class AccountDAO(DAO[Account, BaseModel, BaseModel]):
     async def revise(
-        self, db: AsyncSession, account_id: UUID, changes: dict, now: datetime
-    ):
+        self, db: AsyncSession, account_id: UUID, changes: dict[str, object], now: datetime
+    ) -> Account:
         account = await self.get_for_update(
             db, account_id, execution_options={"populate_existing": True}
         )
+        if account is Empty:
+            raise DAOError("La cuenta que se va a actualizar no existe")
+
         return await self.update(
             db,
             account_id,
@@ -38,7 +41,7 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
         )
 
     async def get_server_time(self, db: AsyncSession) -> datetime:
-        return await db.scalar(select(func.clock_timestamp()))
+        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
 
     async def is_known_time_zone(self, db: AsyncSession, name: str) -> bool:
         # Use the same catalog as the account constraint; no OS tzdata is needed.
@@ -99,11 +102,11 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
             )
         ).one_or_none()
 
-        return tuple(row) if row is not None else Empty
+        return (row[0], row[1]) if row is not None else Empty
 
 
 class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
-    async def page(self, db: AsyncSession, account_id: UUID, offset: int, shows: int):
+    async def page(self, db: AsyncSession, account_id: UUID, offset: int, shows: int) -> tuple[list[AccountMembership], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
         total = await self.count(db, statement)
         rows = (
@@ -114,7 +117,7 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
         return list(rows), total
 
-    async def get_scoped(self, db: AsyncSession, account_id: UUID, user_id: UUID):
+    async def get_scoped(self, db: AsyncSession, account_id: UUID, user_id: UUID) -> AccountMembership | EmptyType:
         row = await db.scalar(
             select(self.model)
             .where(self.model.account_id == account_id, self.model.user_id == user_id)
@@ -132,7 +135,7 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
         now: datetime,
         *,
         commit: bool = True,
-    ):
+    ) -> AccountMembership:
         row.status = status
         row.version += 1
         row.updated_at = now
@@ -170,6 +173,27 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
 
 class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
+    async def scoped(self, db: AsyncSession, account_id: UUID, professional_id: UUID) -> Row[Professional, str, str] | None:
+        return (await db.execute(
+            select(self.model, AccountProfessional.status, AccountMembership.status)
+            .join(AccountProfessional, AccountProfessional.professional_id == self.model.id)
+            .join(AccountMembership, (AccountMembership.account_id == AccountProfessional.account_id) & (AccountMembership.user_id == self.model.user_id))
+            .where(AccountProfessional.account_id == account_id, self.model.id == professional_id)
+            .execution_options(populate_existing=True)
+        )).one_or_none()
+
+    async def catalog_accounts(self, db: AsyncSession, user_id: UUID, source_account_id: UUID) -> list[UUID]:
+        professional_id = select(AccountProfessional.professional_id).where(
+            AccountProfessional.account_id == source_account_id,
+            AccountProfessional.user_id == user_id,
+        ).scalar_subquery()
+        return list((await db.scalars(
+            select(AccountProfessional.account_id)
+            .join(Account, Account.id == AccountProfessional.account_id)
+            .where(AccountProfessional.professional_id == professional_id, Account.owner_user_id == user_id)
+            .order_by(AccountProfessional.account_id)
+        )).all())
+
     async def page(
         self,
         db: AsyncSession,
@@ -177,7 +201,7 @@ class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
         offset: int,
         shows: int,
         status: str | None = None,
-    ):
+    ) -> tuple[list[Professional], int]:
         statement = (
             select(self.model)
             .join(
@@ -199,7 +223,7 @@ class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
 
         return list(rows), total
 
-    async def lock_for_account(self, db: AsyncSession, account_id: UUID):
+    async def lock_for_account(self, db: AsyncSession, account_id: UUID) -> None:
         await db.scalars(
             select(self.model)
             .join(
@@ -209,14 +233,18 @@ class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
             .where(AccountProfessional.account_id == account_id)
             .order_by(self.model.id)
             .with_for_update(of=self.model)
+            .execution_options(populate_existing=True)
         )
 
     async def rename(
         self, db: AsyncSession, professional_id: UUID, public_name: str, now: datetime
-    ):
+    ) -> Professional:
         professional = await self.get_for_update(
             db, professional_id, execution_options={"populate_existing": True}
         )
+
+        if professional is Empty:
+            raise DAOError("El profesional que se va a actualizar no existe")
 
         return await self.update(
             db,
@@ -259,7 +287,7 @@ class AccountProfessionalDAO(DAO[AccountProfessional, BaseModel, BaseModel]):
 
 
 class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
-    async def page(self, db: AsyncSession, account_id: UUID, offset: int, shows: int):
+    async def page(self, db: AsyncSession, account_id: UUID, offset: int, shows: int) -> tuple[list[AccountDeviceAccess], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
         total = await self.count(db, statement)
         rows = (
@@ -277,7 +305,7 @@ class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
         status: str,
         user_id: UUID,
         now: datetime,
-    ):
+    ) -> AccountDeviceAccess:
         row.status = status
         row.changed_by_user_id = user_id
         row.updated_at = now
@@ -334,7 +362,7 @@ class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
 
 
 class AccountInvitationDAO(DAO[AccountInvitation, BaseModel, BaseModel]):
-    async def get_scoped(self, db: AsyncSession, invitation_id: UUID, account_id: UUID):
+    async def get_scoped(self, db: AsyncSession, invitation_id: UUID, account_id: UUID) -> AccountInvitation | EmptyType:
         row = await db.scalar(
             select(self.model)
             .where(self.model.id == invitation_id, self.model.account_id == account_id)
@@ -352,7 +380,7 @@ class AccountInvitationDAO(DAO[AccountInvitation, BaseModel, BaseModel]):
         *,
         accepted_operation_id: UUID | None = None,
         commit: bool = True,
-    ):
+    ) -> AccountInvitation:
         row.status = "accepted" if accepted_operation_id is not None else "revoked"
         row.accepted_at = now if accepted_operation_id is not None else None
         row.accepted_operation_id = accepted_operation_id
@@ -376,7 +404,7 @@ class AccountInvitationDAO(DAO[AccountInvitation, BaseModel, BaseModel]):
         status: str | None = None,
         offset: int = 0,
         shows: int = 100,
-    ):
+    ) -> tuple[list[AccountInvitation], int]:
         effective_status = case(
             (
                 (self.model.status == "pending") & (self.model.expires_at <= now),

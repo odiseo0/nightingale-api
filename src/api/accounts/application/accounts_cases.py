@@ -398,6 +398,7 @@ async def get_access(
                         "SetPatientCompletion", "AddPatientIdentifier",
                         "CreateContactPerson", "UpdateContactPerson", "SetContactPersonStatus",
                         "CreatePatientContactRelationship", "UpdatePatientContactRelationship", "SetPatientContactRelationshipStatus",
+                        "CreateScheduleRule", "UpdateScheduleRule", "SetScheduleRuleStatus",
                     ]
                     if state == "active"
                     else []
@@ -413,6 +414,8 @@ async def get_access(
                         "RevokeAccountDevice",
                         "RestoreAccountDevice",
                         "UpdateProfessionalProfile",
+                        "CreateService", "UpdateService", "SetServiceStatus",
+                        "OfferService", "UpdateServiceOffer", "SetServiceOfferStatus",
                     ]
                     if state == "active" and context.owner
                     else []

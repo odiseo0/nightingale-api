@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime
 import runpy
 from pathlib import Path
@@ -364,6 +365,26 @@ async def check_patients(runtime, administrative, client, tokens):
     else:
         raise AssertionError("Invalidating the only document left a complete profile")
     assert (await get(f"/patients/{adult}/identifiers"))["items"][0]["verificationStatus"] == "declared"
+
+    # A committed receipt must still match the hash captured before T52.
+    from src.api.patients.domain.patients import RegisterPatientPayload
+
+    fixture = json.loads((ROOT / "tests/fixtures/operation_hashes.json").read_text(encoding="utf-8"))
+    vector = next(item for item in fixture["cases"] if item["action"] == "RegisterPatient" and "birthDate" in item["payload"])
+    previous_request = {**fixture["envelope"], **{name: value for name, value in vector.items() if name != "sha256"}}
+    with patch.object(RegisterPatientPayload, "model_validate", wraps=RegisterPatientPayload.model_validate) as validate:
+        previous = await submit(previous_request)
+        assert previous["status"] == "accepted" and validate.call_count == 1
+        async with administrative() as db:
+            stored = (await db.execute(text("SELECT request_hash, result_json ? 'payload' AS input_saved FROM nightingale.operation_receipts WHERE account_id=:account AND actor_user_id=:actor AND operation_id=:operation"), {"account": UUID(base.rsplit("/", 1)[1]), "actor": UUID(owner["userId"]), "operation": UUID(previous_request["operationId"])})).one()
+        assert bytes(stored.request_hash).hex() == vector["sha256"] and not stored.input_saved
+        before = await counts()
+        repeated = await submit({**previous_request, "payload": {**previous_request["payload"], "fullName": "Fixture", "identifiers": []}})
+        assert repeated["status"] == "duplicate" and repeated["originalResult"] == previous
+        assert validate.call_count == 2 and await counts() == before
+        changed = await submit({**previous_request, "payload": {**previous_request["payload"], "fullName": "Different fixture"}})
+        assert changed["error"]["code"] == "IDEMPOTENCY_CONFLICT" and await counts() == before
+
     missing = await client.get(base + "/patients")
     access.expect(missing, 401)
     unregistered = await access.issue(client, tokens[0]["access_token"])

@@ -27,3 +27,13 @@ class UsersStructureTests(structure.AuthorizationStructureTests):
 class PatientsStructureTests(structure.AuthorizationStructureTests):
     component = structure.ROOT / "src/api/patients"
     dao_names = {"PatientDAO", "AccountPatientDAO", "PatientIdentifierDAO", "ContactPersonDAO", "PatientContactRelationshipDAO"}
+
+
+class ServicesStructureTests(structure.AuthorizationStructureTests):
+    component = structure.ROOT / "src/api/services"
+    dao_names = {"ServiceDAO", "ProfessionalServiceDAO"}
+
+
+class ScheduleStructureTests(structure.AuthorizationStructureTests):
+    component = structure.ROOT / "src/api/schedule"
+    dao_names = {"ScheduleRuleDAO"}

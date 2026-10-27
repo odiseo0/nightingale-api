@@ -17,15 +17,24 @@ from .models import AppUser, Device, DeviceToken
 class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
     async def lock_identified(self, db: AsyncSession, user_ids: list[UUID]) -> None:
         await db.scalars(
-            select(self.model).where(self.model.id.in_(user_ids)).order_by(self.model.id)
-            .with_for_update().execution_options(populate_existing=True)
+            select(self.model)
+            .where(self.model.id.in_(user_ids))
+            .order_by(self.model.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
-    async def get_identified(self, db: AsyncSession, user_ids: list[UUID]) -> list[AppUser]:
-        return list((await db.scalars(select(self.model).where(self.model.id.in_(user_ids)))).all())
+    async def get_identified(
+        self, db: AsyncSession, user_ids: list[UUID]
+    ) -> list[AppUser]:
+        return list(
+            (
+                await db.scalars(select(self.model).where(self.model.id.in_(user_ids)))
+            ).all()
+        )
 
     async def get_server_time(self, db: AsyncSession) -> datetime:
-        return await db.scalar(select(func.clock_timestamp()))
+        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
 
     async def get_or_create(
         self,
@@ -49,8 +58,10 @@ class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
                 index_elements=[self.model.oidc_issuer, self.model.oidc_subject]
             )
         )
+
         with catch_sqlalchemy_exception():
             await db.execute(statement)
+
             if commit:
                 await db.commit()
 
@@ -65,6 +76,7 @@ class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
             .with_for_update()
             .execution_options(populate_existing=True)
         )
+
         if user is None:
             raise DAOError("La identidad creada no pudo recuperarse")
 
@@ -72,11 +84,22 @@ class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
 
 
 class DeviceDAO(DAO[Device, BaseModel, BaseModel]):
-    async def get_identified(self, db: AsyncSession, device_ids: list[UUID]) -> list[Device]:
-        return list((await db.scalars(select(self.model).where(self.model.id.in_(device_ids)))).all())
+    async def get_identified(
+        self, db: AsyncSession, device_ids: list[UUID]
+    ) -> list[Device]:
+        return list(
+            (
+                await db.scalars(
+                    select(self.model).where(self.model.id.in_(device_ids))
+                )
+            ).all()
+        )
 
     async def get_owned_for_update(
-        self, db: AsyncSession, device_id: UUID, user_id: UUID,
+        self,
+        db: AsyncSession,
+        device_id: UUID,
+        user_id: UUID,
     ) -> Device | EmptyType:
         device = await db.scalar(
             select(self.model)
@@ -102,8 +125,10 @@ class DeviceTokenDAO(DAO[DeviceToken, BaseModel, BaseModel]):
             .where(self.model.device_id == device_id, self.model.revoked_at.is_(None))
             .values(revoked_at=now)
         )
+
         with catch_sqlalchemy_exception():
             await db.execute(statement)
+
             if commit:
                 await db.commit()
 

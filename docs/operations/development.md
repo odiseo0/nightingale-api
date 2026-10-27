@@ -1,8 +1,46 @@
 # Desarrollo de la base de proceso
 
-**Lectura vigente al 2026-10-26:** C04 aceptado. T13–T15 comprobadas para revisión C05, aún sin aceptar. No avanzar a T16.
+## T55–T57 comprobadas para revisión C06 · 2026-10-26
 
-## Estado actual para revisión C05
+Las lecturas HTTP de catálogo, ofertas y reglas devuelven dicts con campos explícitos y response_model en sus rutas. Recibos y journal conservan validación y serialización antes del commit; una proyección inválida en la segunda cuenta revierte toda la operación y permite reintentar. Los modelos de propuesta, intervalos y referencia interna se conservan.
+
+112 pruebas correctas en 52.924 s, ocho probes PostgreSQL/Keycloak reales, migraciones up/down/reaplicación, build offline e inspección del paquete correctos. OpenAPI completo y 72 esquemas JSON conservados; 48 huellas previas siguen iguales. Wheel de 152 entradas y 97 fuentes idénticas al árbol actual, sin archivos privados. Servicios existentes conservados.
+
+El analizador de Zed mantiene 16 errores documentados, seis por el soporte de sentinel y diez de código previo; no se afirma una comprobación estática global correcta. El [cierre T57](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t57-cerrar-la-corrección-y-ajustar-la-evidencia-de-c06) conserva evidencia, fuentes y límites. Las reservas reales siguen pendientes de T22/T32. C06 espera aceptación expresa; T19 no se inicia. Los apartados siguientes conservan evidencia histórica.
+
+## T52–T54 para revisión C18 · 2026-10-26
+
+Cada operación valida una vez su payload y usa el mismo modelo para la huella y el caso. Se retiran los seis normalizadores; las validaciones que combinan estado guardado y patch se conservan. Las 48 huellas previas siguen iguales. PostgreSQL comprueba una validación por petición real, recibo con huella previa, duplicado con defaults equivalentes, conflicto al cambiar contenido y ausencia de payload en el recibo.
+
+112 pruebas, ocho probes reales, 72 esquemas JSON, build offline y wheel de 152 entradas comprobados. El analizador mantiene 16 errores: seis se relacionan con el soporte de sentinel y diez con código previo; no se ocultan ni se declara un cierre estático global. El [registro de C18](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t52--t53--t54--2026-10-26--c18-para-revisión) detalla cambios, fuentes y límites. Registro histórico: C18 recibió después aceptación expresa; T55–T57 continúan hasta revisión C06. C06 sigue sin aceptar y T19 no se inicia. Los registros siguientes conservan sus resultados históricos.
+
+## T49–T51 para revisión C17 · 2026-10-26
+
+Tras la autorización de continuar en C16, se completan firmas de validadores/serializadores de pacientes, servicios y agenda, y de los DAOs/casos de acceso afectados. Se conservan 72 esquemas JSON, formatos de fecha, null y ausencia. Filas y pares de ORM usan los tipos variádicos de SQLAlchemy 2.1.6; se mantienen consultas, locks, transacciones y permisos.
+
+110 pruebas correctas, ocho probes reales correctos y build offline con wheel de 152 entradas revisado. basedpyright conserva 28 errores globales y no señala ninguno de los doce archivos de producto de este bloque; los alias de sentinel siguen sin soporte. El [registro de C17](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t49--t50--t51--2026-10-26--c17-para-revisión) distingue evidencia y límites. C17 y C06 siguen sin aceptar; detenerse antes de T52/T19. Los registros siguientes conservan sus resultados históricos.
+
+## T46–T48 para revisión C16 · 2026-10-26
+
+El usuario aprueba la corrección de C06 y pide conservar sentinel de Python 3.15 tras comprobar el límite de basedpyright 1.40.2 de Zed. Empty/Undefined son valores únicos con alias de tipo coherentes; el DAO admite claves int/UUID. Invitaciones comprueban error, tipo de estado y resultado original antes de responder; un duplicado rechazado conserva su rechazo. Los validadores y serializadores compartidos declaran tipos, con fechas, null, ausencia y esquemas JSON conservados. Evidencia, comando del analizador y fuentes en [T46–T48/C16](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t46--t47--t48--2026-10-26--c16-para-revisión-con-límite-estático).
+
+Comprobación nueva: 110 pruebas correctas, ocho probes PostgreSQL/Keycloak correctos, seis esquemas JSON contrastados, build offline y wheel de 152 entradas revisado. El análisis estático conserva 40 errores, incluidos dos en los alias de sentinel por falta de soporte; no se ocultan ni se declara un cierre estático correcto. Sin herramientas nuevas, cambios SQL, consumidores, commits ni despliegue. C16 y C06 siguen sin aceptar; detenerse antes de T49/T19. Los apartados siguientes conservan evidencia histórica de sus bloques.
+
+**Registro previo de C06, 2026-10-26:** C05 aceptado por el usuario al pedir un prompt para continuar en otra sesión. T16–T18 comprobadas; C06 sin aceptar ni habilitar T19.
+
+## T16–T18 para revisión C06
+
+services añade catálogo privado, ofertas por cuenta y resolución de duración. Solo el profesional propietario escribe; miembros leen únicamente las ofertas de su cuenta. Un ajuste nulo toma la base vigente; otro valor entre 1 y 1440 conserva su valor. Inactivar catálogo no cambia estados de ofertas; inactivar una oferta no altera otra. El journal conserva catálogo para owner y proyecciones de ofertas para members, con ambas versiones. Los controles de cuenta se bloquean en orden tras el profesional; un fallo en la segunda proyección revierte todo, incluido recibo y auditoría. Duplicados y consulta del resultado revalidan también el vínculo profesional vigente.
+
+schedule añade las tres operaciones y dos lecturas de reglas semanales. Respeta día ISO, minutos, fechas de vigencia incluidas y fin 1440. Une solapados y contiguos sin borrar el corte de jornada partida. La UQ con NULLS NOT DISTINCT impide duplicar una regla abierta, incluso con SQL directo. Un caso compartido usa la fecha local y la zona de cuenta; el cambio de fecha de Caracas a las 04:00 UTC queda comprobado. No calcula aún huecos libres ni extremos UTC de una recurrencia: T21 debe añadir excepciones, bloqueos, ocupación y resolución explícita de horas ambiguas o inexistentes.
+
+La prueba de cambio incompatible pasa intervalos requeridos ficticios al caso de reglas bajo el bloqueo del profesional. Rechaza antes de escribir y conserva las filas. No hay reservas reales ni tablas de citas: T22 debe aportar esos intervalos desde ocupación vigente y conectar booking_patient/booking_service; T32 debe probar la carrera. La segunda cuenta del profesional es solo una fixture SQL de tipo clinic para comprobar FK, ajuste independiente y proyección. El API sigue limitado a consultas independientes; no se habilita gestión de clínicas.
+
+Comprobaciones: 108 pruebas unittest correctas en 51.714 s, incluidos controles de estructura de los dos componentes, sin excepciones nuevas. Ocho probes reales correctos: acceso, cuentas, sync, equipo, pacientes, servicios, agenda y persistencia. Servicios y agenda se repitieron tras la revisión final. PostgreSQL aplica/revierte/reaplica el head 20261026_08 con 21 tablas y comprueba rollback de una revisión fallida. Build offline correcto. La prueba HTTP separada del wheel se omite, según la instrucción del usuario. No se añaden dependencias, commits, despliegues, consumidores ni cambios a otros repositorios. Las versiones y fuentes oficiales están en [sources.md](../sources.md#fuentes-técnicas-de-t16t18--2026-10-26).
+
+La suite inicial tenía 91 pruebas correctas. El aislamiento de Windows impidió a uv guardar su caché: repetir fuera permitió usar el entorno existente. Un fallo de importación de T16 señaló una ubicación incorrecta de repository; se movieron esos dos archivos a su carpeta y se repitieron las comprobaciones. Las ofertas usan el método del DAO derivado para su clave compuesta; no se modifica el DAO base.
+
+## Estado comprobado y aceptado en C05
 
 patients contiene fichas borrador, documentos declarados opcionales, contactos reutilizables y vínculos por cuenta. RegisterPatient crea una identidad nueva y su ficha; nunca adjunta una identidad global arbitraria ni fusiona coincidencias declaradas. Edición, actividad, completitud y alta posterior de documento usan la aceptación existente, versiones, recibos, auditoría y grupos atómicos. Las siete lecturas aplican permisos vigentes y paginación autorizada en DAO; q busca texto literal de nombre/documento dentro de cuenta. Los vínculos muestran nombres/teléfonos actuales en GET; resultados y journal conservan solo el estado propio del vínculo.
 

@@ -1,6 +1,6 @@
 # T04 · Identidad, permisos y alcance del Hub
 
-**Estado al 2026-10-26:** C04 aceptado; T13–T15 para revisión C05. El [contrato v1](api-v1.md) conserva Keycloak para emitir token opaco sin vencimiento, revocable en API y sin sesiones/renovación propias. Miembros activos con instalación habilitada gestionan pacientes/contactos de su cuenta; una identidad o declaración documental no concede acceso a otras fichas. Solo propietario consulta auditoría de su cuenta. No se registra instalación al aceptar invitación ni se restaura una autorización desde el dispositivo revocado. Hub y consumidores siguen pendientes.
+**Estado al 2026-10-26:** C05 aceptado; T16–T18 comprobadas para revisión C06, sin aceptar. El [contrato v1](api-v1.md) conserva Keycloak para emitir token opaco sin vencimiento, revocable en API y sin sesiones/renovación propias. Miembros activos con instalación habilitada gestionan pacientes/contactos y reglas semanales de su cuenta. Solo profesional propietario modifica catálogo/ofertas; miembros leen solo ofertas de su cuenta. Resultados de servicios vuelven a comprobar el vínculo profesional vigente. Solo propietario consulta auditoría. No se registra instalación al aceptar invitación ni se restaura desde el dispositivo revocado. Hub y consumidores siguen pendientes.
 
 ## Acuerdo vigente de la primera etapa
 

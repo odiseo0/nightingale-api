@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal, Self
 
 from pydantic import (
@@ -10,6 +11,7 @@ from pydantic import (
 )
 
 from src.core.schema import AdministrativeResponse, BaseModel, PageQuery
+from src.core.schema.http import SerializedInstant
 
 
 class OperationAudit(BaseModel):
@@ -46,9 +48,6 @@ class AuditQuery(PageQuery):
     action: str | None = Field(default=None, min_length=1)
     object_type: str | None = Field(default=None, min_length=1)
     object_id: UUID7 | None = None
-    action: str | None = Field(default=None, min_length=1)
-    object_type: str | None = Field(default=None, min_length=1)
-    object_id: UUID7 | None = None
 
     @model_validator(mode="after")
     def valid_range(self) -> Self:
@@ -78,5 +77,5 @@ class AuditEventResponse(AdministrativeResponse):
     occurred_at: AwareDatetime
 
     @field_serializer("occurred_at")
-    def serialize_event_instant(self, value):
+    def serialize_event_instant(self, value: datetime) -> SerializedInstant:
         return self.serialize_instant(value)

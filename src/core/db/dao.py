@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from typing import Any, Literal, TypedDict, Unpack, cast
+from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import asc, desc, insert
@@ -100,7 +101,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
     async def get(
         self,
         db: AsyncSession,
-        _id: int,
+        _id: int | UUID,
         options: list[tuple[str, StrategyOptions]] | None = None,
         *,
         for_update: bool = False,
@@ -126,7 +127,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
     async def get_for_update(
         self,
         db: AsyncSession,
-        _id: int,
+        _id: int | UUID,
         options: list[tuple[str, StrategyOptions]] | None = None,
         **kwargs: Unpack[Kwargs],
     ) -> ModelType | EmptyType:
@@ -222,7 +223,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
         stmt = insert(self.model).values(**obj_in).returning(self.model.id)
 
         with catch_sqlalchemy_exception():
-            obj_id = cast("int", (await db.execute(stmt)).unique().scalar_one())
+            obj_id = (await db.execute(stmt)).unique().scalar_one()
 
             if commit:
                 await db.commit()
@@ -258,7 +259,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
         *,
         objs_in: list[CreateSchema],
         commit: bool = True,
-    ) -> list[int]:
+    ) -> list[int | UUID]:
         objs_in_data = [obj_in.model_dump(mode="python") for obj_in in objs_in]
         stmnt = (
             insert(self.model)
@@ -277,7 +278,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
     async def update(
         self,
         db: AsyncSession,
-        db_obj_id: int,
+        db_obj_id: int | UUID,
         obj_in: UpdateSchema | dict[str, Any],
         commit: bool = True,
         options: list[tuple[str, StrategyOptions]] | None = None,
@@ -319,8 +320,8 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
                 await db.commit()
 
     async def delete_many(
-        self, db: AsyncSession, ids: list[int], *, commit: bool = True
-    ) -> list[int]:
+        self, db: AsyncSession, ids: Sequence[int | UUID], *, commit: bool = True
+    ) -> list[int | UUID]:
         stmnt = (
             sql_delete(self.model)
             .where(self.model.id.in_(ids))

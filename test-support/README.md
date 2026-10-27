@@ -111,7 +111,7 @@ El DAO existente conserva commit=True por defecto. Los casos de aplicación deli
 
 Esto prueba la base técnica con filas ficticias. No demuestra todavía autorización, coordinación de permisos de varias cuentas, orden confirmado del Change Log, idempotencia ni dos procesos de API: corresponden a los casos siguientes y a T32. Los comandos de migración se ejecutan desde este repositorio; no se acredita distribuir ni ejecutar migraciones desde un wheel instalado.
 
-## Acceso, cuentas, equipo, auditoría y pacientes para C05
+## Acceso, cuentas, equipo, pacientes, servicios y agenda para C06
 
 Con PostgreSQL Test y Keycloak Test ya activos:
 
@@ -121,9 +121,12 @@ Con PostgreSQL Test y Keycloak Test ya activos:
 .\.venv\Scripts\python.exe test-support/sync/check.py
 .\.venv\Scripts\python.exe test-support/team/check.py
 .\.venv\Scripts\python.exe test-support/patients/check.py
+.\.venv\Scripts\python.exe test-support/services/check.py
+.\.venv\Scripts\python.exe test-support/schedule/check.py
+.\.venv\Scripts\python.exe test-support/persistence/check.py
 ```
 
-Los cinco probes aplican el head 20261026_05 en bases aleatorias distintas: dieciocho tablas, incluidas las cinco de pacientes/contactos. Acceso comprueba credenciales y su auditoría; cuentas prueba alta/lecturas/script; sync conserva sus pruebas de idempotencia/rollback; equipo usa invitaciones, pertenencias y dispositivos reales y prueba cuenta/perfil, aislamiento y auditoría; pacientes prueba sus recorridos y completitud. Todos validan el clúster y eliminan solo su base. El sexto probe, persistencia, comprueba upgrade/downgrade/reaplicación y fallo de revisión sin DDL parcial.
+Los ocho probes aplican el head 20261026_08 en bases aleatorias distintas: 21 tablas, incluidas las cinco de pacientes/contactos y las tres de catálogo/ofertas/reglas. Acceso comprueba credenciales y auditoría; cuentas prueba alta/lecturas/script; sync conserva idempotencia/rollback; equipo prueba invitaciones, pertenencias y dispositivos; pacientes prueba sus recorridos y completitud. Todos validan el clúster y eliminan solo su base. Persistencia comprueba upgrade/downgrade/reaplicación y fallo de revisión sin DDL parcial.
 
 Cuentas comprueba alta administrativa atómica, rechazo al rol operativo, duplicado concurrente, rollback real tras fallo CHECK en el head, aislamiento por pertenencia, cuenta inactiva, dispositivos no registrados/revocados y paginación con total autorizado. También retiene un head en una sesión mientras otra conexión cambia la época y comprueba su refresco. Ejecuta el script de alta en un proceso hijo: éxito, duplicado, rol operativo denegado, zona inválida y fallos de conexión sin secretos. Usa OIDC real para identificar a los actores; no guarda ni imprime tokens. Las pertenencias y autorizaciones de dispositivo se preparan como fixtures SQL explícitos; no acreditan las futuras operaciones de invitación/registro.
 
@@ -131,7 +134,11 @@ Sync comprueba autorización vigente, versiones, huella canónica y rechazo segu
 
 La zona se contrasta con pg_timezone_names en el DAO antes de escribir; coincide con la restricción del esquema. No requiere instalar tzdata en Python. La migración nueva se aplica solo en bases ficticias; no se aplica nada en una base personal. Los scripts no inician ni detienen servicios por su cuenta.
 
-Pacientes comprueba borradores/documentos, versiones y búsqueda por cuenta, contactos compartidos, FK de cuenta, conservación de constancias y completitud con documentos declarados. Dos conexiones reales intentan retirar los dos teléfonos responsables: solo una confirma. El caso compartido de elegibilidad se prueba en la fecha local de una futura cita, sin afirmar que las rutas de citas estén implementadas. Tres migraciones nuevas llevan el head a 20261026_05 con 18 tablas; el probe de persistencia aplica/revierte/reaplica ese head.
+Pacientes comprueba borradores/documentos, versiones y búsqueda por cuenta, contactos compartidos, FK de cuenta, conservación de constancias y completitud con documentos declarados. Dos conexiones reales intentan retirar los dos teléfonos responsables: solo una confirma. El caso compartido de elegibilidad se prueba en la fecha local de una futura cita, sin afirmar que las rutas de citas estén implementadas. El head de C05 tenía 18 tablas; las tres migraciones de C06 lo llevan a 20261026_08 con 21.
+
+Servicios comprueba catálogo privado, propiedad, duraciones estrictas, versiones/duplicados concurrentes, ofertas, FK de propietario y ajuste nulo. Una segunda cuenta clinic existe solo como fixture SQL: demuestra oferta independiente y proyección sin habilitar su gestión HTTP. Un fallo diferido de su grupo revierte el cambio de catálogo y los recibos/grupos de ambas cuentas. La consulta de resultado y su duplicado vuelven a validar vínculo y cuenta.
+
+Agenda comprueba jornada partida, unión de tramos, fin 1440, vigencia, fecha local en Caracas, paginación, NULLS NOT DISTINCT y dos creaciones concurrentes del mismo intervalo abierto. Observa con pg_blocking_pids que la operación espera al profesional antes de editar. Prueba un cambio incompatible con intervalos requeridos ficticios, sin tabla de reservas. T22/T32 conservan aportar ocupación real y probar su carrera; T21 conserva disponibilidad completa y resolución de horas locales ambiguas.
 
 ## Alta administrativa
 

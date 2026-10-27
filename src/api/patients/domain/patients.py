@@ -28,7 +28,8 @@ class PatientFields(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("birth_date", mode="before")
-    def calendar_date(cls, value):
+    @classmethod
+    def calendar_date(cls, value: object) -> str | date | None:
         if value is not None and (
             not isinstance(value, (str, date)) or isinstance(value, datetime)
         ):
@@ -47,7 +48,7 @@ class PatientFields(BaseModel):
         if (self.phone_code is None) != (self.phone is None):
             raise ValueError("El teléfono requiere prefijo y parte nacional")
 
-        if self.phone is not None:
+        if self.phone is not None and self.phone_code is not None:
             try:
                 number = phonenumbers.parse(self.phone_code + self.phone, None)
             except phonenumbers.NumberParseException as error:
@@ -90,7 +91,8 @@ class IdentifierData(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_default=True)
 
     @field_validator("issuing_country")
-    def assigned_country(cls, value):
+    @classmethod
+    def assigned_country(cls, value: str) -> str:
         if pycountry.countries.get(alpha_2=value) is None:
             raise ValueError("El país no pertenece al catálogo ISO admitido")
 
