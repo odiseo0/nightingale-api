@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy import BigInteger, LargeBinary, Text
@@ -55,3 +55,32 @@ class ChangeLog(Base):
     previous_starts_at: Mapped[datetime | None]
     previous_ends_at: Mapped[datetime | None]
     accepted_at: Mapped[datetime]
+
+
+class SyncSnapshot(Base):
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    account_id: Mapped[UUID]
+    user_id: Mapped[UUID]
+    device_id: Mapped[UUID]
+    contract_version: Mapped[int]
+    model_revision: Mapped[str] = mapped_column(Text)
+    appointments_from: Mapped[date]
+    appointments_until: Mapped[date]
+    window_time_zone: Mapped[str] = mapped_column(Text)
+    window_starts_at: Mapped[datetime]
+    window_ends_at: Mapped[datetime]
+    base_sequence: Mapped[int] = mapped_column(BigInteger)
+    permission_epoch: Mapped[int] = mapped_column(BigInteger)
+    audience: Mapped[str] = mapped_column(Text)
+    item_count: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime]
+    expires_at: Mapped[datetime]
+
+
+class SyncSnapshotItem(Base):
+    snapshot_id: Mapped[UUID] = mapped_column(primary_key=True)
+    ordinal: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    entity_type: Mapped[str] = mapped_column(Text)
+    entity_key: Mapped[object] = mapped_column(JSONB)
+    entity_version: Mapped[int]
+    state_json: Mapped[dict] = mapped_column(JSONB)

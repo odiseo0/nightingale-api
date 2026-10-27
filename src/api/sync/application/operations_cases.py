@@ -642,6 +642,7 @@ async def accept_operation(
 
         if result.status == "accepted":
             targets = sorted({change.account_id or account_id for change in changes})
+            group_id = uuid7()
 
             for target in targets:
                 target_head = (
@@ -656,7 +657,6 @@ async def accept_operation(
                     permission_changed=permission_changed,
                     commit=False,
                 )
-                group_id = uuid7()
                 group = [
                     change
                     for change in changes
@@ -690,8 +690,8 @@ async def accept_operation(
                             "change_kind": "upsert",
                             "audience": change.audience,
                             "projection_json": projection,
-                            "previous_starts_at": None,
-                            "previous_ends_at": None,
+                            "previous_starts_at": change.previous_starts_at,
+                            "previous_ends_at": change.previous_ends_at,
                             "accepted_at": now,
                         },
                         commit=False,

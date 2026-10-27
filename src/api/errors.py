@@ -128,13 +128,17 @@ async def http_error(request: Request, error: HTTPException):
         request,
         error.status_code,
         error.detail
-        if error.status_code == 409
+        if error.status_code in (409, 410)
         and error.detail
         in {
             "NO_CHANGES",
             "INVALID_STATE_TRANSITION",
             "IDEMPOTENCY_CONFLICT",
             "VERSION_CONFLICT",
+            "CURSOR_EXPIRED",
+            "SNAPSHOT_EXPIRED",
+            "SNAPSHOT_SCOPE_CHANGED",
+            "RESULT_EXPIRED",
         }
         else codes.get(error.status_code, "REQUEST_ERROR"),
         "No se puede completar la petición",

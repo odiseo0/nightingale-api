@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.1. **Fecha:** 2026-10-27. **Estado:** C06 aceptado; T19–T27 comprobadas en el [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md). C09 listo para revisión, sin marcar aceptación de C07–C09. Agenda y ciclo de citas operativos en pruebas aisladas, con ocupación global e historia inmutable. Snapshot, descarga y SSE siguen pendientes; no se acredita integración con el escritorio ni operación en producción.
+**Versión de diseño:** 1.1. **Fecha:** 2026-10-27. **Estado:** C09 aceptado; T28–T30 comprobadas en el [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md), para revisión C10. C07/C08 conservaron autorización de paso sin aceptaciones separadas. Descarga, snapshot y recuperación operativos en pruebas aisladas. SSE e integración con el escritorio siguen pendientes; no se acredita producción.
 
 Esta es la única fuente editable del diseño de transporte de esta etapa. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas, sin duplicarlos aquí. Los esquemas Pydantic de domain heredan del BaseModel del proyecto y producirán OpenAPI/JSON Schema; un generado identificará origen y versión y nunca se editará a mano. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -233,6 +233,8 @@ Desconocer si hubo commit no permite declarar rechazo definitivo: consultar/rein
 
 ChangePage = {groups:[ChangeGroup],nextCursor,hasMore}. ChangeGroup = {groupId,operationId,changes:[{entityType,entityKey,entityVersion,changeKind:upsert|remove,state}],acceptedAt}. state es proyección autorizada, no fila SQL arbitraria. La posición interna del grupo no es secuencia asignada antes del commit. Filtrar audiencia no impide avanzar sobre grupos invisibles al usuario; no se devuelve su contenido.
 
+La descarga examina hasta 100 grupos confirmados por petición, sin dividirlos; hasMore indica si quedan grupos aunque sean invisibles. El cursor HMAC queda ligado a contrato, cuenta, usuario, dispositivo, audiencia, época y ventana capturada. Vence a los 90 días de emisión; una descarga válida emite la siguiente posición con nuevo plazo, sin prolongar la retención del journal. Firma inválida, posición futura, alcance distinto o posición anterior a frontera-1 devuelven CURSOR_EXPIRED. La clave API_SYNC_SIGNING_KEY debe ser secreta, tener al menos 32 caracteres y ser igual en todos los procesos; sin configuración la descarga/captura devuelve 503.
+
 Orden de aceptación: controles de usuario/credencial, profesionales, pacientes y cuentas, cada conjunto ordenado por identificador; luego filas de negocio/recibo. Releer tras esperas y reiniciar si cambia conjunto. Todo escritor que afecta una proyección de cuenta bloquea su account_sync_heads hasta commit; incremento transaccional por operación. Un cambio con varias entidades ocupa un grupo y no se corta al paginar. Para globales permitidos se coordinan las cuentas afectadas en el mismo orden, con bloqueo previo del profesional/paciente que estabiliza sus referencias. Estado aceptado y proyección/versiones se conservan juntos.
 
 Audiencia de change_log: members para datos operativos visibles a ambos roles; owner para catálogo privado no ofrecido y equipo/auditoría administrativa si corresponde. Snapshots y páginas aplican la misma audiencia. Ofertar un servicio publica la proyección mínima para miembros, nunca acceso al resto del catálogo. La época de acceso cambia al cambiar pertenencias o autorizaciones, invalidando capturas/cursores de ámbito antiguo; respuesta permite recuperar desde nueva vista sin filtrar datos.
@@ -245,9 +247,15 @@ SnapshotResponse.window incluye las fechas locales, timeZone y límites UTC star
 
 Contenido: datos administrativos operativos de cuenta; fichas activas y draft; contactos y vínculos pertinentes; servicios ofrecidos, reglas/excepciones/bloqueos de ventana; citas que intersectan ventana e historia de esas citas; referencias inactivas necesarias para interpretarlas. Propietario incluye catálogo propio no ofrecido y metadatos de equipo permitidos; asistente no. No copia historia de citas fuera de ventana ni datos de otras cuentas. Las consultas online de historia no cambian el cursor. Una proyección de ocupación global solo expresa indisponibilidad, sin cita/paciente/motivo ajeno.
 
+La historia viaja como appointment_history, con la misma clave de cita y su versión, junto a la proyección appointment. Contiene las entradas hasta esa versión, leídas de historia funcional inmutable; no añade recibos ni reescribe grupos persistidos. Snapshot y delta aplican el mismo criterio. Al salir de ventana se retiran cita e historia del consumidor, sin borrar sus filas funcionales. Los límites UTC de fechas locales usan AT TIME ZONE de PostgreSQL, incluida su regla para medianoches ambiguas, y quedan fijos tras crear la captura.
+
 Cambios fuera de ventana siguen avanzando posición autorizada; cuando una cita deja de pertenecer a la vista emitir remove (retirada de ventana, no borrado real). Cambiar ventana exige nueva captura, conservando Outbox/intentiones del consumidor. Solo el consumidor aplica página y cursor juntos en su SQLite; aquí no se implementa Rust.
 
 Retener grupos completos y resultados completos al menos 90 días desde aceptación; conservar frontera de retención y recibo mínimo. Cursor anterior a la frontera obliga nuevo snapshot. No purgar historia funcional o auditoría en esta etapa. Mantenimiento elimina temporales/resultados vencidos en lotes pequeños, sin borrar el recibo que evita repetir efectos.
+
+El mantenimiento administrativo existente procesa hasta 500 resultados, 100 grupos consecutivos de una cuenta y 100 capturas vencidas por ejecución. El rol operativo no retira resultados ni journal. El recibo mínimo conserva clave, huella, estado y versión; repetir la misma intención vencida devuelve RESULT_EXPIRED y cambiar su contenido conserva IDEMPOTENCY_CONFLICT. SNAPSHOT_EXPIRED y SNAPSHOT_SCOPE_CHANGED exigen otra captura explícita; ningún error permite repetir un efecto con otra identidad de operación.
+
+Una captura ya liberada o retirada físicamente devuelve 404, igual que una captura ajena o un ID inexistente; no se conserva un registro adicional para revelar su existencia. Mientras exista y pertenezca al creador autorizado, el servidor distingue vencimiento y cambio de época con sus errores 410.
 
 ## 8. Canal de avisos
 

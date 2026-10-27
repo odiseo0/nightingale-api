@@ -24,7 +24,9 @@ from src.api.patients.infrastructure.contacts_api import router as contacts_rout
 from src.api.patients.infrastructure.patients_api import router as patients_router
 from src.api.schedule.infrastructure.schedule_api import router as schedule_router
 from src.api.services.infrastructure.services_api import router as services_router
+from src.api.sync.infrastructure.downloads_api import router as downloads_router
 from src.api.sync.infrastructure.operations_api import router as operations_router
+from src.api.sync.infrastructure.snapshots_api import router as snapshots_router
 from src.core.db import DAOError
 from src.settings.api_settings import api_settings
 
@@ -47,6 +49,8 @@ app.include_router(accounts_router)
 app.include_router(invitations_router)
 app.include_router(audit_router)
 app.include_router(operations_router)
+app.include_router(downloads_router)
+app.include_router(snapshots_router)
 app.include_router(patients_router)
 app.include_router(contacts_router)
 app.include_router(services_router)

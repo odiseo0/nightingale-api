@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy.exc import DBAPIError
 
@@ -13,12 +13,18 @@ if TYPE_CHECKING:
 
 
 @asynccontextmanager
-async def transaction(db: AsyncSession) -> AsyncGenerator[None]:
+async def transaction(
+    db: AsyncSession, *, isolation_level: Literal["REPEATABLE READ"] | None = None,
+) -> AsyncGenerator[None]:
     """Own one transaction on the given session; DAO calls must use commit=False."""
     # begin commits on success and rolls back on error; it rejects nested scopes.
     # https://docs.sqlalchemy.org/en/21/orm/extensions/asyncio.html#sqlalchemy.ext.asyncio.AsyncSession.begin
     try:
         async with db.begin():
+            if isolation_level is not None:
+                # Set isolation before the first statement on this connection.
+                # https://docs.sqlalchemy.org/en/21/orm/session_transaction.html#setting-isolation-for-individual-transactions
+                await db.connection(execution_options={"isolation_level": isolation_level})
             yield
     except DBAPIError as error:
         # Include failures at commit (for example, deferred constraints) in the

@@ -177,6 +177,12 @@ async def check_services(runtime, administrative, client, tokens):
         assert row.projection_json["effectiveDurationMinutes"] == 45 and row.audience == "members"
         assert row.projection_json["serviceVersion"] == 2 and row.projection_json["version"] == 1
         assert await db.scalar(text("SELECT count(*) FROM nightingale.change_log WHERE account_id=:account AND entity_type='service'"), {"account": second}) == 0
+        shared = (await db.execute(text("""
+            SELECT count(DISTINCT group_id) FROM nightingale.change_log
+            GROUP BY source_account_id,actor_user_id,operation_id
+            HAVING count(DISTINCT account_id)>1
+        """))).scalars().all()
+        assert shared and all(count == 1 for count in shared)
 
     # A failure in a second account rolls back catalog, both journals and receipt.
     failed_update = envelope("UpdateService", offered, {"name": "Retry after rollback"}, 2)

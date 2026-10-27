@@ -199,6 +199,8 @@ class AccountChange:
     version: int
     audience: Literal["members", "owner"] = "owner"
     account_id: UUID | None = None
+    previous_starts_at: datetime | None = None
+    previous_ends_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

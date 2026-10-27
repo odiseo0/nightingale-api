@@ -342,7 +342,8 @@ async def main(check=check_sync):
                 await admin.execute(f'DROP DATABASE "{postgres.DATABASE}" WITH (FORCE)')
         finally:
             await admin.close()
-    print("Operation checks passed: real PostgreSQL/Keycloak, concurrent duplicate, atomic rollback, lost response, current access and independent batch results.")
+    if check is check_sync:
+        print("Operation checks passed: real PostgreSQL/Keycloak, concurrent duplicate, atomic rollback, lost response, current access and independent batch results.")
 
 
 if __name__ == "__main__":

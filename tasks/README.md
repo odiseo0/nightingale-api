@@ -1,6 +1,6 @@
 # Planes y tareas
 
-Plan actual: [P-20261024-01-desktop-shared-api](P-20261024-01-desktop-shared-api/plan.md), **In progress**. Su [lista de control](P-20261024-01-desktop-shared-api/todo.md) conserva estados, evidencia y revisiones. C01–C06 y C12–C18 aceptados. T19–T27 comprobadas; C09 listo para revisión expresa, sin marcar aceptación. La instrucción permitió pasar C07/C08 sin pausa. Reservas reales, ocupación global, transiciones e historia comprobadas en PostgreSQL aislado. Se conservan 16 diagnósticos estáticos previos y T28–T33 pendientes.
+Plan actual: [P-20261024-01-desktop-shared-api](P-20261024-01-desktop-shared-api/plan.md), **In progress**. Su [lista de control](P-20261024-01-desktop-shared-api/todo.md) conserva estados, evidencia y revisiones. C01–C06, C09 y C12–C18 aceptados. T28–T30 comprobadas; C10 listo para revisión expresa. C07/C08 conservaron autorización de paso sin aceptaciones separadas. Se conservan los 16 diagnósticos estáticos previos y T31–T33 pendientes. No avanzar a T31 sin aceptación de C10.
 
 El [plan anterior](P-20261021-01-api-foundation/plan.md) queda **Superseded** para ejecución. Conserva T24/C14 y toda la evidencia previa; sus tareas pendientes no se marcan terminadas. La tabla de sucesión del plan nuevo asigna el núcleo y conserva Hub, comunicaciones, espera, analítica y producción para etapas posteriores. El esquema sigue en [database-schema.md](../docs/database-schema.md); el borrador lógico permanece retirado.
 

@@ -11,7 +11,7 @@ class AccountsStructureTests(structure.AuthorizationStructureTests):
 
 class SyncStructureTests(structure.AuthorizationStructureTests):
     component = structure.ROOT / "src/api/sync"
-    dao_names = {"AccountSyncHeadDAO", "OperationReceiptDAO", "ChangeLogDAO"}
+    dao_names = {"AccountSyncHeadDAO", "OperationReceiptDAO", "ChangeLogDAO", "SyncSnapshotDAO", "SyncSnapshotItemDAO"}
 
 
 class AuditStructureTests(structure.AuthorizationStructureTests):

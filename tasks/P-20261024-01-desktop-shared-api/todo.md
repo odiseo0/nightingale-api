@@ -37,9 +37,9 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 | T25 | Done | Cancelación conserva historia y libera ocupación |
 | T26 | Done | Asistencia y ausencia con reloj y margen vigentes comprobadas |
 | T27 | Done | Secuencia, igualdad de historia, inmutabilidad y cierre C09 comprobados |
-| T28 | Todo | Descargar cambios confirmados |
-| T29 | Todo | Materializar snapshot coherente |
-| T30 | Todo | Recuperar tras vencimiento |
+| T28 | Done | Grupos confirmados, firma, alcance y retiradas comprobados |
+| T29 | Done | Captura/base coherentes, páginas inmutables y privacidad comprobadas |
+| T30 | Done | Retención, recibo mínimo y recuperación comprobados; revisión C10 pendiente |
 | T31 | Todo | Avisar cambios por SSE |
 | T32 | Todo | Probar colaboración concurrente |
 | T33 | Todo | Entregar el contrato y su evidencia |
@@ -691,15 +691,17 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 ### T28: Descargar cambios confirmados
 
-**Estado:** Todo. **Propietario:** sync. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** sync. **Tamaño previsto:** M por paso.
+
+**Autorización y desglose previo, 2026-10-27:** el usuario autoriza en mensaje directo registrar C09 aceptado y ejecutar T28 → T29 → T30 hasta revisión C10. Git limpio, HEAD 294b207 al inicio. Sin delegación. T28.1 conserva intervalo previo de citas en AccountChange y journal (tres archivos de producto). T28.2 añade esquema de descarga, firma HMAC con biblioteca estándar, configuración y DAO de grupos (cuatro archivos). T28.3 conecta caso, endpoint, composición y errores (cuatro archivos) y prueba permisos, grupos invisibles, retiradas, firma y commits invertidos. Reutilizar autorización y bloqueos existentes; no crear otro contador ni cursor de listados. Comprobar cada paso antes del siguiente.
 
 **Entrada/dependencias:** T27 comprobada y C09 aceptado.
 
 **Aceptación:**
 
-- [ ] Todo escritor usa contador transaccional de cuenta; no omite commits.
-- [ ] Página no divide grupo de una operación y entrega retiradas de vista.
-- [ ] Cursor firmado queda ligado a cuenta, alcance y época de acceso.
+- [x] Todo escritor usa contador transaccional de cuenta; no omite commits.
+- [x] Página no divide grupo de una operación y entrega retiradas de vista.
+- [x] Cursor firmado queda ligado a cuenta, alcance y época de acceso.
 
 **Comprobación:** Commits invertidos y continuación de varias páginas. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -707,19 +709,21 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 **Transacción, datos y consumidores:** No usar secuencia precommit o fecha local como orden; productor responde tras commit.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** cinco pruebas de citas, cuatro nuevas de descarga y 40 controles de estructura correctos. Probe `test-support/downloads/check.py` correcto en PostgreSQL/Keycloak reales: registro de paciente con dos cambios indivisibles, páginas de un grupo, grupos owner ocultos al asistente con avance, catálogo privado ausente, firma/cuenta/actor/dispositivo/época/posición manipulados rechazados, retirada real al reprogramar fuera de ventana y continuación vacía. Dos escritores independientes intentan confirmar en orden inverso: espera observada con pg_blocking_pids, descarga conserva ambas operaciones en el orden confirmado. Contador y bloqueos existentes conservados. Cursor conserva ventana/UTC/zona y vence a 90 días; clave API_SYNC_SIGNING_KEY explícita, común a procesos, sin valor aleatorio por proceso. No hay dependencias nuevas. Zed 1.40.2 analiza 110 archivos con los mismos 16 errores previos; ninguno en código nuevo. Suite final: 135 pruebas correctas en 51.885 s; build offline correcto. Registro .tmp/t28-suite.txt y .tmp/t28-pyright.json. Se corrigió un fallo previo comprobado en HEAD: el validador de duración lanzaba TypeError y escapaba de Pydantic; ValueError conserva la regla y sus 12 pruebas pasan. Sin prueba HTTP del wheel ni consumidores. T28.3 usó cinco archivos de producto; el ajuste aislado del validador usó uno.
 
 ### T29: Materializar snapshot coherente
 
-**Estado:** Todo. **Propietario:** sync. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** sync. **Tamaño previsto:** M por paso.
+
+**Desglose previo:** T29.1 añade esquemas, modelos, migración, DAO y opción de aislamiento en transaction (cinco archivos). T29.2 reutiliza DAOs base y proyecciones de cada propietario en casos de captura de cuentas/pacientes (dos archivos), después servicios/agenda (dos archivos), sin repositorios ajenos. T29.3 captura citas/historia y conecta la descarga de historia en grupos completos (hasta cinco archivos por paso). T29.4 compone materialización, permisos/época, páginas y liberación HTTP (hasta tres archivos). T29.5 prueba coherencia PostgreSQL, inmutabilidad, privacidad, páginas y continuación desde baseCursor. Cada paso se verifica antes del siguiente; no se abre T30 antes de comprobar T29. Reutilizar get_multi y consultas de ventana; no crear una segunda fuente de estado a partir del journal retenido.
 
 **Entrada/dependencias:** T28 comprobada.
 
 **Aceptación:**
 
-- [ ] Datos y cursor base proceden de una vista PostgreSQL coherente.
-- [ ] Páginas inmutables vencen en 15 minutos y no mantienen transacción entre peticiones.
-- [ ] Cambio de ventana conserva protocolo de intenciones pendientes.
+- [x] Datos y cursor base proceden de una vista PostgreSQL coherente.
+- [x] Páginas inmutables vencen en 15 minutos y no mantienen transacción entre peticiones.
+- [x] Cambio de ventana conserva protocolo de intenciones pendientes en el contrato; el consumidor sigue fuera de este repositorio.
 
 **Comprobación:** Crear mientras hay cambios y continuar desde cursor base. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -727,19 +731,21 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 **Transacción, datos y consumidores:** Ventana -30/+180 días por defecto; sin réplica indiscriminada de historia.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** migración 20261027_05 aplicada en base aleatoria; 27 tablas. Captura y baseCursor en REPEATABLE READ real, verificado con SHOW transaction_isolation; escritor concurrente espera al control, no entra en la captura y aparece en su siguiente delta. Snapshot conserva fichas/draft, documentos, contactos/vínculos, referencias inactivas requeridas, servicios ofertados, agenda y citas/historia de ventana. El propietario recibe catálogo/equipo; el asistente no. Historia se agrupa por cita y versión y la descarga incremental la deriva de historia funcional inmutable, sin reescribir journal ni duplicar recibos. SQL rechaza cambiar captura/elementos o borrar un hijo; DELETE de padre libera solo el derivado. Probe de downloads comprueba páginas repetidas con shows=2, LIMIT/OFFSET, total, página vacía, privacidad, creador, vencimiento de 15 minutos, época, zona y límites capturados tras editar zona, nueva ventana explícita y rollback real por captura incompleta. No quedan sesiones idle in transaction entre peticiones. Suite: 136 pruebas correctas en 60.956 s; build offline correcto. Zed mantiene 16 errores previos y ninguno nuevo. Estructura: 40 controles correctos. Registros .tmp/t29-suite.txt y .tmp/t29-pyright.json. No se implementa ni se prueba borrado/conservación de Outbox en Rust; el protocolo lo exige y no hay acción remota que borre intenciones. Sin HTTP del wheel.
 
 ### T30: Recuperar tras vencimiento
 
-**Estado:** Todo. **Propietario:** sync. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** sync. **Tamaño previsto:** M por paso.
+
+**Desglose previo:** T30.1 añade guardia física de retención mínima y adapta la comprobación de recibos tras retirar grupos antiguos (una migración). T30.2 limita recibos a 500, grupos a 100 de una cuenta y capturas a 100 por ejecución; reutiliza el caso/script administrativo existente (hasta tres archivos). T30.3 comprueba reloj, frontera-1, grupos completos, expiraciones distintas, recibo mínimo, repetición sin efectos y recuperación explícita. Después ejecuta el cierre C10 con suite, probes, migraciones con reversión/reaplicación, build/paquete, Zed y diff. Sin purga de historia funcional/auditoría ni avance a T31.
 
 **Entrada/dependencias:** T29 comprobada.
 
 **Aceptación:**
 
-- [ ] Retención mínima de cambios/resultados completos es de 90 días.
-- [ ] Recibo mínimo conservado impide repetir efecto al retirar resultado.
-- [ ] Cursor/snapshot/resultado vencidos requieren recuperación explícita.
+- [x] Retención mínima de cambios/resultados completos es de 90 días.
+- [x] Recibo mínimo conservado impide repetir efecto al retirar resultado.
+- [x] Cursor/snapshot/resultado vencidos requieren recuperación explícita.
 
 **Comprobación:** Avanzar reloj y reintentar misma operación tras purga de resultado. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -747,7 +753,9 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 **Transacción, datos y consumidores:** No purgar historia/auditoría en esta etapa; fechas del cliente no deciden vigencia.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-27:** migración 20261027_06 impide borrar journal con menos de 90 días; mantiene inserciones atómicas y permite retirar detalles de un recibo antiguo después de purgar su grupo. Mantenimiento reutiliza script/caso: máximo 500 resultados, 100 grupos consecutivos de una cuenta y 100 capturas por ejecución; usa SKIP LOCKED solo para mantenimiento. Probe real prepara 605 resultados antiguos y uno reciente con reloj ficticio: primer lote retira 500 resultados/100 grupos y deja frontera 101; cursor 99 vence, 100 continúa. Segundo lote retira 105 resultados/3 grupos y deja frontera 104; cursor 103 continúa hacia el único grupo reciente. SQL rechaza borrar el reciente. Recibos, fichas, auditoría de operaciones e historia conservan sus conteos; la misma intención antigua devuelve RESULT_EXPIRED, contenido distinto IDEMPOTENCY_CONFLICT, sin efectos nuevos. Nueva captura recupera 103 fichas y baseCursor sin delta pendiente. Captura existente vencida y época cambiada tienen errores propios; capturas físicamente retiradas/ajenas/inexistentes comparten 404 para no revelar existencia. El rol operativo no puede purgar resultados/journal. Registros: .tmp/c10/retention.txt y downloads.txt.
+
+**Cierre C10:** suite de 136 pruebas correcta; once probes PostgreSQL/Keycloak correctos en secuencia, con repeticiones enfocadas tras correcciones de revisión. Head 20261027_06 con 27 tablas y btree_gist aplicado/revertido/reaplicado; fallo de revisión sin DDL parcial. Build offline e inspección: wheel 177 entradas/117 fuentes idénticas, sdist 178 entradas, sin archivos privados. OpenAPI local de la app: 43 rutas y 66 esquemas, con origen/versión en .tmp/c10/artifacts.json. Zed basedpyright 1.40.2 conserva 16 errores previos y ninguno nuevo. Sin casts/Any/supresiones nuevos, dependencias ni configuración relajada. Revisión de estándares y contrato en secuencia, sin delegar. Revisión corrigió groupId compartido entre cuentas (probe de servicios), medianoche ambigua America/Havana (probe de descarga) y respuesta 404 uniforme para capturas ausentes/ajenas. C10 queda para revisión y aceptación expresa del usuario. T31–T33 siguen Todo; no se prueban dos procesos de API, SSE, Rust/Hub ni producción. Sin HTTP del wheel, commits, otros repositorios o despliegues. Manifiesto/lock, fábrica, dependencias de sesión y sentinel conservados.
 
 ### T31: Avisar cambios por SSE
 
@@ -1351,12 +1359,12 @@ Fuentes de Pydantic 2.14.1: [validadores](https://github.com/pydantic/pydantic/b
 
 - [x] T25–T27 comprobadas y evidencia registrada.
 - [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Aceptación expresa del usuario el 2026-10-27: «Autorizo registrar C09 como aceptado y ejecutar T28–T30 hasta revisión C10». C07/C08 conservan autorización de paso sin aceptaciones separadas.
 
 ### C10: Descarga y recuperación
 
-- [ ] T28–T30 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] T28–T30 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### C11: Colaboración y entrega de API

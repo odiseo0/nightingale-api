@@ -2,7 +2,7 @@
 
 **Versión:** 1.0, ampliación documental del plan compartido aprobado; C01 aceptado.\
 **Fecha:** 2026-10-27.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C06 aceptado. T19–T27 añaden excepciones, bloques, citas e historia: migraciones hasta 20261027_04, con 25 tablas y btree_gist, probadas solo en bases ficticias aisladas. C09 listo para revisión, sin marcar aceptación de C07–C09. Snapshot/descarga y el resto del diseño siguen pendientes; no se acredita implementación completa.\
+**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09 aceptado. T28–T30 materializan snapshot y retención: migraciones hasta 20261027_06, con 27 tablas y btree_gist, probadas solo en bases ficticias aisladas. C10 listo para revisión expresa. C07/C08 conservaron autorización de paso sin aceptaciones separadas. SSE y consumidores siguen pendientes; no se acredita implementación completa.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.

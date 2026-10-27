@@ -2,7 +2,7 @@
 
 **Versión:** 0.4
 **Fecha:** 2026-10-27
-**Estado:** C01–C06 y C12–C18 aceptados. T19–T27 comprobadas; C09 listo para revisión, sin marcar aceptación de C07–C09. Agenda, disponibilidad con ocupación real y ciclo de citas probado con PostgreSQL/Keycloak aislados. Se conservan credenciales, equipo, auditoría, pacientes/contactos y alta administrativa. Snapshot, descarga, SSE y consumidores siguen pendientes; T32 conserva pruebas conjuntas de procesos y avisos.
+**Estado:** C01–C06, C09 y C12–C18 aceptados. T28–T30 comprobadas; C10 listo para revisión expresa. Descarga por grupos, cursor firmado, snapshot materializado y recuperación/retención probados con PostgreSQL/Keycloak aislados. C07/C08 conservan autorización de paso sin aceptaciones separadas. SSE, dos procesos de API y consumidores siguen pendientes en T31–T33.
 **Decisión:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional).
 
 ## 1. Propósito y tecnología
@@ -44,7 +44,7 @@ Los lotes tienen límites y resultado por operación. Una operación fallida no 
 
 ## 4. Descarga y recuperación
 
-Ofrece páginas de cambios autorizados, versiones, eliminaciones lógicas y cursor. El orden debe impedir omitir cambios por confirmar transacciones en distinto orden; no basta ordenar por la fecha del cliente o por una secuencia asignada antes del commit. D09 selecciona contador transaccional por cuenta y grupos completos, con snapshot materializado coherente, cursor firmado y retención mínima de 90 días. La recuperación conserva recibos mínimos para impedir repetir efectos al vencer resultados. Las garantías siguen pendientes de prueba PostgreSQL.
+Ofrece páginas de cambios autorizados, versiones, retiradas de vista y cursor. El contador transaccional por cuenta y los grupos completos impiden omitir cambios por confirmar transacciones en distinto orden; no usa la fecha del cliente ni una secuencia precommit. T28–T30 prueban snapshot coherente, cursor firmado, retención mínima de 90 días y recibos mínimos que impiden repetir efectos al vencer resultados. La evidencia procede de PostgreSQL aislado; no acredita consumidores.
 
 Define arranque desde snapshot, retención, caducidad del cursor y recuperación. Rust aplica datos y cursor juntos en SQLite, conserva intenciones locales y presenta conflictos. Una caída de API deja operaciones locales pendientes; no elimina ni revierte silenciosamente el trabajo guardado.
 
@@ -77,7 +77,7 @@ Las transacciones son breves, con consultas acotadas e índices adecuados. No in
 
 El repositorio de API posee la fuente OpenAPI y los contratos de eventos/operaciones, con compatibilidad entre versiones y consumidores Rust y Hub. Las migraciones no dependen de que todos los escritorios se actualicen a la vez. El esquema operativo no es un contrato SQL público.
 
-T19–T27 comprueban aislamiento, transiciones inválidas sin Rust, reservas concurrentes, duplicados, revocación vigente, rollback y conservación de historia con PostgreSQL real. El soporte de sync conserva su prueba de respuesta perdida tras commit. La [lista de control](../tasks/P-20261024-01-desktop-shared-api/todo.md) registra comandos, resultados y límites. Descarga sin omisiones, snapshot, SSE entre procesos y consumidores conservan T28–T33. Hub y workers siguen fuera de esta etapa.
+T19–T27 comprueban aislamiento, transiciones inválidas sin Rust, reservas concurrentes, duplicados, revocación vigente, rollback e historia. T28–T30 añaden descarga sin omisiones, snapshot y recuperación con PostgreSQL real. El soporte de sync conserva su prueba de respuesta perdida tras commit. La [lista de control](../tasks/P-20261024-01-desktop-shared-api/todo.md) registra comandos, resultados y límites. SSE entre procesos y consumidores conservan T31–T33. Hub y workers siguen fuera de esta etapa.
 
 Pendientes de producto fuera de esta etapa: autorización del Hub, despliegue/proveedor, cola, política de comunicaciones/espera, objetivos de producción, copias, restauración y RPO/RTO, verificación y corrección global de identidad. D09 concreta identidad, dispositivo, operaciones, cursores, lotes y ventana de recuperación para el escritorio; no demuestra implementación. El objetivo local de avisos no sustituye un SLO de producción. No incluye historia clínica ni lógica de presentación del escritorio o del Hub.
 

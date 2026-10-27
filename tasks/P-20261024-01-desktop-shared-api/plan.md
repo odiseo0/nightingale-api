@@ -1,6 +1,6 @@
 # P-20261024-01-desktop-shared-api: API compartida para escritorio
 
-**Checkpoint actual:** C09 listo para revisión expresa, sin marcar aceptación. T19–T27 verificadas de forma secuencial, sin delegación; la autorización permitió pasar C07/C08 sin pausa. Se conservan los 16 diagnósticos estáticos previos. T28–T33 siguen Todo; T32 conserva pruebas conjuntas de procesos y avisos. Evidencia y límites en todo.md.
+**Checkpoint actual:** C10 listo para revisión expresa; T28–T30 comprobadas en secuencia, sin delegación. C09 aceptado por el usuario el 2026-10-27: «Autorizo registrar C09 como aceptado y ejecutar T28–T30 hasta revisión C10». Trabajo detenido antes de T31. C07/C08 conservan autorización de paso sin aceptaciones separadas. Se conservan los 16 diagnósticos estáticos previos y los límites de T32. Evidencia y desglose en todo.md.
 
 **Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-27. **Lista:** [todo.md](todo.md).
 
@@ -137,9 +137,9 @@ La corrección del 2026-10-26 interrumpe T09: T34–T36 → C12 → T37–T39 �
 
 **C09: Ciclo completo de citas.** Detenerse para revisión.
 
-- [ ] T28: Descargar cambios confirmados.
-- [ ] T29: Materializar snapshot coherente.
-- [ ] T30: Recuperar tras vencimiento.
+- [x] T28: Descargar cambios confirmados.
+- [x] T29: Materializar snapshot coherente.
+- [x] T30: Recuperar tras vencimiento.
 
 **C10: Descarga y recuperación.** Detenerse para revisión.
 

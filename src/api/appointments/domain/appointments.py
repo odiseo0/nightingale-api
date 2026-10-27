@@ -112,6 +112,13 @@ class AppointmentHistoryResponse(AppointmentState):
         return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
+class AppointmentHistoryProjection(AbsoluteInterval):
+    appointment_id: UUID7
+    account_id: UUID7
+    version: int
+    items: list[AppointmentHistoryResponse]
+
+
 class AppointmentQuery(PageQuery):
     professional_id: UUID7 | None = None
     patient_id: UUID7 | None = None

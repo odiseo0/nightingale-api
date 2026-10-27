@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado al 2026-10-27:** C06 aceptado; T19–T27 comprobadas para revisión C09, sin marcar aceptación de C07–C09. El [contrato HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. services posee catálogo/ofertas; schedule agenda y tramos; appointments ocupación, ciclo e historia. accounts conserva permisos, sync recibos/grupos y audit hechos. patients conserva fichas/documentos/contactos. Snapshot, descarga, SSE, clientes generados e integración de consumidores siguen pendientes.
+**Estado al 2026-10-27:** C09 aceptado; T28–T30 comprobadas para revisión C10. C07/C08 conservaron autorización de paso sin aceptaciones separadas. El [contrato HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. Cada componente proyecta sus datos dentro de la captura coordinada por sync; appointments posee también la historia por versión. sync conserva recibos, grupos, posición y captura temporal. SSE, clientes generados e integración de consumidores siguen pendientes.
 
 ## Una fuente por contrato
 
@@ -37,7 +37,7 @@ La autorización se comprueba también para consultas, duplicados, exportaciones
 
 Las listas y elementos del snapshot usan page desde 1 y shows 100 por defecto, máximo 500; DAO aplica LIMIT/OFFSET, autorización y filtros antes de paginar y contar. Reutilizar PaginatedResponse con items/total. No hay cursores de página, firmas ni configuración de paginación. Las listas corrientes pueden variar entre peticiones; una captura materializada conserva su conjunto y orden mientras siga vigente y autorizado.
 
-El avance incremental mantiene orden confirmado, frontera compartida con snapshot, continuidad, bajas, ámbito por cuenta/permisos y recuperación ante posición inválida o vencida. No se expresa mediante OFFSET ni la hora del equipo. Su cursor representa solo la posición del último cambio aplicado, con versión, alcance y vigencia verificables; no se comparte con listados. T28–T30 deben demostrar estas garantías.
+El avance incremental mantiene orden confirmado, frontera compartida con snapshot, continuidad, retiradas, ámbito por cuenta/permisos y recuperación ante posición inválida o vencida. No se expresa mediante OFFSET ni la hora del equipo. Su cursor representa la posición que el consumidor debe aplicar junto a los datos, con versión, alcance y vigencia verificables; no se comparte con listados. T28–T30 prueban estas garantías del servidor con PostgreSQL aislado; la aplicación atómica en SQLite sigue pendiente del consumidor.
 
 Si cambia la autorización, API impide nuevas lecturas fuera de alcance y exige la recuperación definida. El protocolo podrá ordenar retirar datos locales, pero no prueba que un equipo intervenido los haya borrado. Retenciones de cambios, bajas y resultados deben cubrir la ventana de escritorios soportados o forzar recuperación segura. El arranque conserva la intención pendiente en el escritorio; no la sobrescribe con el snapshot.
 

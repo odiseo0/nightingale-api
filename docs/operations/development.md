@@ -1,5 +1,17 @@
 # Desarrollo de la base de proceso
 
+## T28–T30 comprobadas para revisión C10 · 2026-10-27
+
+C09 aceptado por mensaje directo del usuario. Se trabajó T28 → T29 → T30, sin delegación. Descarga por grupos completos con cursor HMAC; captura coherente bajo REPEATABLE READ, inmutable durante 15 minutos; retención mínima de 90 días y recuperación explícita. Configura API_SYNC_SIGNING_KEY con al menos 32 caracteres secretos, igual en cada proceso. Sin clave, los endpoints nuevos que la necesitan devuelven 503. No se guardan claves de prueba en configuración de producto.
+
+Suite final: 136 pruebas correctas en 57.300 s. Once probes correctos en secuencia: access, accounts, sync, team, patients, services, schedule, appointments, persistence, downloads y retention. Se repitieron servicios/descarga/retención tras los ajustes de revisión. Head 20261027_06, 27 tablas y btree_gist; migraciones aplicadas, revertidas y reaplicadas, y fallo de revisión sin DDL parcial. Servicios Test conservados en sus procesos previos. Cada probe valida el clúster y elimina solo su base ficticia.
+
+El probe de descarga comprueba páginas completas e invisibles, firmas/alcances, retirada real de cita/historia, captura/base coherentes con escritor concurrente, páginas repetidas, privacidad, vencimiento/época, medianoche ambigua y rollback de captura incompleta. El de retención usa reloj de fixture para preparar 605 resultados antiguos y uno reciente; prueba límites 500/100, frontera-1, rechazo de borrado reciente por SQL, conservación del recibo mínimo y recuperación desde otro snapshot sin repetir el efecto. Los snapshots liberados o ya retirados por mantenimiento devuelven 404 igual que un ID ajeno; una captura existente vencida devuelve SNAPSHOT_EXPIRED y un cambio de época SNAPSHOT_SCOPE_CHANGED. Así no se revela la existencia de otra captura.
+
+Build offline y revisión de artefactos correctos: wheel de 177 entradas, 117 fuentes Python idénticas al árbol; sdist de 178 entradas. OpenAPI local: 43 rutas y 66 esquemas de componentes, generado desde src.application:app, con origen/versión. No se añade SSE. Zed basedpyright 1.40.2 conserva 16 errores previos; ninguno nuevo. No se declara análisis global correcto ni se relajan controles. Evidencia local ignorada: .tmp/c10, con suite, once probes, pyright.json, artefactos y OpenAPI.
+
+Revisión final corrigió tres puntos concretos: ValueError en el validador previo de duración; un groupId común al proyectar una operación en varias cuentas; límites UTC resueltos por PostgreSQL como en la restricción física. Se conservan app, fábrica, Depends, sentinel, manifiesto y lockfile. Sin dependencias nuevas, HTTP separado del wheel, commits, cambios en otros repositorios ni despliegue. C10 queda para aceptación expresa antes de T31. Dos procesos de API, SSE, Rust/Hub y producción siguen sin comprobar. Los apartados siguientes conservan su evidencia histórica.
+
 ## T19–T27 comprobadas para revisión C09 · 2026-10-27
 
 Agenda y ciclo de citas usan la misma aceptación: versiones, recibo, auditoría, historia y journal atómicos. La disponibilidad resta ocupación real global; consultar no reserva. Crear exige elegibilidad vigente y oferta activa. Confirmar conserva el intervalo; reprogramar conserva duración/datos acordados y retira confirmación; cancelar libera ocupación; completar/ausencia conservan reserva histórica. La ausencia exige acción expresa e inicio más margen vigente. Cambios de agenda o zona incompatibles se revierten y conservan su recibo de conflicto.
@@ -8,7 +20,7 @@ Agenda y ciclo de citas usan la misma aceptación: versiones, recibo, auditoría
 
 Build offline e inspección correctos: wheel de 166 entradas/106 fuentes idénticas, sdist de 167 entradas, sin archivos privados. OpenAPI local de evidencia: 39 rutas/57 esquemas de componentes, con origen/versión. Analizador Zed 1.40.2: 16 errores previos, ninguno nuevo en citas/agenda; no se afirma cierre estático global. git diff --check correcto. Solo tzdata==2026.5 añade datos IANA para Windows; ninguna versión anterior cambia. Servicios existentes y cambios del usuario conservados. Sin HTTP separado del wheel, commits ni despliegue.
 
-[T27/C09](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t27-proteger-historia-funcional) conserva evidencia y límites. C09 espera revisión expresa; T28–T33 continúan Todo. Snapshot, descarga, SSE, dos procesos de API, consumidores Rust/Hub y operación siguen pendientes. Los apartados siguientes son registros históricos.
+[T27/C09](../../tasks/P-20261024-01-desktop-shared-api/todo.md#t27-proteger-historia-funcional) conserva la evidencia histórica. El usuario aceptó C09 después; el estado actual figura en C10 arriba. SSE, dos procesos de API, consumidores Rust/Hub y operación siguen pendientes.
 
 ## T19–T21 comprobadas para C07 · 2026-10-27
 

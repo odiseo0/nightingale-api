@@ -1,10 +1,12 @@
 from typing import Literal
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class APISettings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
+    sync_signing_key: SecretStr | None = Field(default=None, min_length=32)
     cors_allowed_origins: list[str] = [
         "http://127.0.0.1:4321",
         "http://localhost:4321",

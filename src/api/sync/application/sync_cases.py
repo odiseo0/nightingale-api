@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Never
 from uuid import UUID
 
-from src.api.sync.repository.dao import dao_heads, dao_receipts
+from src.api.sync.repository.dao import dao_changes, dao_heads, dao_receipts, dao_snapshots
 from src.api.audit.application.audit_cases import record_control
 from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.domain.errors import AccessDenied
@@ -37,7 +37,9 @@ async def purge_expired_results(db: AsyncSession) -> Result[int, AccessDenied]:
     async with transaction(db):
         if not await dao_receipts.can_purge(db):
             return Err(AccessDenied())
+        await dao_changes.purge_expired(db)
         count = await dao_receipts.purge_expired(db)
+        await dao_snapshots.purge_expired(db)
         now = await dao_heads.get_server_time(db)
         await record_control(db, ControlAudit(
             operator_ref="administrative-purge-results", action="PurgeExpiredResults", object_type="result",

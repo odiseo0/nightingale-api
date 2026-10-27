@@ -19,6 +19,7 @@ from src.api.accounts.domain.errors import (
     AccountRuleError,
 )
 from src.api.appointments.domain.appointments import (
+    AppointmentHistoryProjection,
     AppointmentHistoryQuery,
     AppointmentHistoryResponse,
     AppointmentInterval,
@@ -201,6 +202,7 @@ async def apply_appointment_operation(
         if action == "ConfirmAppointment":
             changes["confirmed_at"] = now
 
+        previous_starts_at, previous_ends_at = row.starts_at, row.ends_at
         row = await dao_appointments.revise(db, row, changes, now)
         state = AppointmentResponse.model_validate(appointment_response(row))
         reason = (
@@ -216,7 +218,13 @@ async def apply_appointment_operation(
                 state.version,
                 [
                     AccountChange(
-                        "appointment", str(entity_key), state, state.version, "members"
+                        "appointment",
+                        str(entity_key),
+                        state,
+                        state.version,
+                        "members",
+                        previous_starts_at=previous_starts_at,
+                        previous_ends_at=previous_ends_at,
                     )
                 ],
                 False,
@@ -404,6 +412,31 @@ def history_response(row: AppointmentHistory) -> dict[str, object]:
         "change_reason": row.change_reason,
         "changed_at": row.changed_at,
     }
+
+
+async def captured_history(
+    db: AsyncSession, state: AppointmentResponse
+) -> AppointmentHistoryProjection:
+    """Project only history confirmed by this appointment version."""
+    rows, _ = await dao_histories.get_multi(
+        db,
+        where={"appointment_id": state.id, "account_id": state.account_id},
+        ordering=[("version", False)],
+        shows=None,
+    )
+
+    return AppointmentHistoryProjection(
+        appointment_id=state.id,
+        account_id=state.account_id,
+        version=state.version,
+        starts_at=state.starts_at,
+        ends_at=state.ends_at,
+        items=[
+            AppointmentHistoryResponse.model_validate(history_response(row))
+            for row in rows
+            if row.version <= state.version
+        ],
+    )
 
 
 async def read_appointments(

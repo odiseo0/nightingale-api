@@ -1,6 +1,6 @@
 # Arquitectura de API
 
-**Actualizada:** 2026-10-27. **Estado:** C01–C06 y C12–C18 aceptados. T19–T27 comprobadas para revisión C09, sin marcar aceptación de C07–C09. schedule posee reglas, excepciones, bloques y cálculo de tramos; appointments combina ocupación real y agenda en la consulta autorizada, sin dependencia circular entre sus casos. La aceptación coordina profesional y controles de cuenta, conserva primera historia/transiciones y guarda grupos por destino. Un savepoint sobre la misma sesión revierte una propuesta de agenda incompatible y permite guardar solo su recibo de conflicto. Catálogo privado para propietario y ofertas para miembros. Snapshot, descarga, SSE y consumidores siguen pendientes. Límites en [la especificación](nightingale-api.md).
+**Actualizada:** 2026-10-27. **Estado:** C09 aceptado; T28–T30 comprobadas para revisión C10. Cada componente aporta su proyección a la captura que sync coordina bajo REPEATABLE READ. application sigue sin SQL; los DAOs usan la sesión recibida y commit=False. appointments posee citas/historia por versión; sync posee grupos, cursores y derivados temporales. La aceptación conserva un groupId al proyectar la operación en varias cuentas. Catálogo privado para propietario y ofertas para miembros. SSE y consumidores siguen pendientes. Límites en [la especificación](nightingale-api.md).
 
 ## Tres proyectos
 
@@ -95,7 +95,7 @@ Las restricciones finales protegen versiones, referencias por cuenta y reservas 
 
 Los listados y los elementos del snapshot usan page/shows y LIMIT/OFFSET en DAO; devuelven items/total, con orden estable y filtros de autorización antes de paginar y contar. No hay cursores de página, firmas ni configuración para ellos. Una lista normal puede cambiar entre peticiones; el snapshot materializado ofrece una descarga coherente.
 
-El avance incremental de sync se conserva separado de esa paginación: D09 fija un contador transaccional por cuenta y grupos completos, con frontera compartida por snapshot y cambios. OFFSET no sustituye la posición del último cambio aplicado. Una secuencia asignada antes de confirmar no prueba el orden de commit; [PostgreSQL documenta ese comportamiento](https://www.postgresql.org/docs/18/transaction-iso.html). Sus pruebas siguen pendientes de T28–T30. El escritorio aplica datos y avance juntos en SQLite y conserva sus intenciones; ese código pertenece a su repositorio.
+El avance incremental de sync se conserva separado de esa paginación: D09 fija un contador transaccional por cuenta y grupos completos, con frontera compartida por snapshot y cambios. OFFSET no sustituye la posición del último cambio aplicado. Una secuencia asignada antes de confirmar no prueba el orden de commit; [PostgreSQL documenta ese comportamiento](https://www.postgresql.org/docs/18/transaction-iso.html). T28–T30 comprueban espera de escritores, grupos completos, captura/base coherentes y retención en PostgreSQL aislado. El escritorio debe aplicar datos y avance juntos en SQLite y conservar sus intenciones; ese código pertenece a su repositorio y sigue sin prueba de consumidor.
 
 ## Hub y trabajo posterior
 

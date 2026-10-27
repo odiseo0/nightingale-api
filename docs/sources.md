@@ -1,5 +1,19 @@
 # Fuentes, diferencias y revisión documental
 
+## Fuentes técnicas de T28–T30 · 2026-10-27
+
+Versiones contrastadas con pyproject.toml, uv.lock y el entorno: Python 3.15.1, SQLAlchemy 2.1.6, FastAPI 0.159.1, Pydantic 2.14.1, Alembic 1.20.1 y asyncpg 0.32.0. No hay dependencias nuevas ni cambios de versiones.
+
+- [SQLAlchemy 2.1.6: aislamiento de una transacción](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html#setting-isolation-for-individual-transactions): begin delimita la sesión; connection(execution_options=...) selecciona REPEATABLE READ antes de la primera consulta y el pool repone el nivel al terminar. El soporte de core/db conserva sesión, motor y fábrica existentes.
+- [PostgreSQL 18: REPEATABLE READ](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ): vista estable y posible fallo de serialización al esperar una fila cambiada. El servidor revierte y devuelve 503; no publica una captura parcial. Probado con PostgreSQL 18.3 aislado.
+- [SQLAlchemy 2.1.6: with_for_update](https://docs.sqlalchemy.org/en/21/core/selectable.html#sqlalchemy.sql.expression.Select.with_for_update): SKIP LOCKED y LIMIT acotan el mantenimiento; no se usan para omitir cambios en la descarga del consumidor.
+- [PostgreSQL 18: tiempos ambiguos](https://www.postgresql.org/docs/18/datetime-invalid-input.html) y [AT TIME ZONE](https://www.postgresql.org/docs/18/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT): la captura resuelve medianoche con la misma regla de su CHECK. Probe real con America/Havana, 2026-11-01, inicio 05:00 UTC, y conservación de la zona anterior tras editar cuenta.
+- [Python 3.15: HMAC y compare_digest](https://docs.python.org/3.15/library/hmac.html#hmac.compare_digest): firma SHA-256 antes de interpretar el cuerpo. Clave secreta configurada, sin dependencia ni clave aleatoria por proceso; cursor ligado a cuenta/actor/dispositivo/audiencia/época/ventana y plazo de 90 días.
+- [Pydantic 2.14.1: validadores](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/validators.md) y [TypeError en validadores de v2](https://docs.pydantic.dev/latest/migration/#typeerror-is-no-longer-converted-to-validationerror-in-validators): los tipos de proyección se comprueban antes de guardar. Se corrigió una excepción previa de duración: ValueError conserva la regla y da ValidationError; TypeError escapaba de ella.
+- [FastAPI: modelos de query y parámetros extra](https://fastapi.tiangolo.com/tutorial/query-param-models/): Query con modelo, extra=forbid, page/shows solo en elementos de captura. La página del tag 0.159.1 no estuvo disponible; se leyó la guía oficial actual y se comprobó el patrón con FastAPI 0.159.1 instalado, HTTP y OpenAPI local. No se afirma haber leído el tag.
+
+Los casos de captura consumen solo casos/tipos de otros componentes. Reutilizan DAOs y esquemas existentes. La historia descargada agrupa entradas hasta la versión de cita y procede de historia funcional inmutable; no añade otra historia SQL ni modifica grupos antiguos. Límites y evidencia de C10 en todo.md y la guía de desarrollo. La revisión de estándares y contrato se realizó en secuencia, sin agentes, por instrucción del usuario.
+
 ## Fuentes técnicas de T23–T27 · 2026-10-27
 
 Se reutilizan las versiones de T22. Confirmación, reprogramación y estados terminales usan las transacciones y actualización ORM ya contrastadas con SQLAlchemy 2.1.6. El reloj procede del DAO y el margen de la cuenta releída; el cliente no fija el instante funcional. No hay nueva dependencia ni acción fuera del catálogo aprobado.

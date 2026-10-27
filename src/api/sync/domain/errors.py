@@ -9,3 +9,8 @@ class OperationNotFound:
 @dataclass(frozen=True, slots=True)
 class ResultExpired:
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class SyncReadError:
+    code: str

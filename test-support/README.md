@@ -2,6 +2,19 @@
 
 Solo datos ficticios. Estos comandos no usan Docker, no registran servicios de Windows y no acceden al PostgreSQL personal. Los datos y descargas viven en `.tmp/test-services/`, que Git ignora. No borres una carpeta de datos mientras su proceso siga activo.
 
+## Descarga, snapshot y retención · C10
+
+Con los servicios Test existentes, desde la raíz:
+
+```powershell
+.\.venv\Scripts\python.exe test-support/downloads/check.py
+.\.venv\Scripts\python.exe test-support/retention/check.py
+```
+
+Ambos reutilizan la preparación de sync, comprueban la ruta del clúster, aplican head 20261027_06 en bases aleatorias y las eliminan al terminar. Head actual: 27 tablas y btree_gist. Descarga prueba grupos completos, audiencia, firma/alcance, retiradas, escritor concurrente y captura/base coherentes; snapshot prueba inmutabilidad, páginas, zona, época, vencimiento y rollback. Retención prepara resultados ficticios con reloj controlado, comprueba lotes de 500 resultados/100 grupos, frontera-1, recibo mínimo y recuperación sin repetir efectos. La clave HMAC de cada probe existe solo en su proceso.
+
+C10 ejecutó estos dos probes y los nueve existentes en secuencia. No inicia ni detiene servicios. Las conexiones separadas y ASGI no acreditan dos procesos de API, SSE o consumidores; eso sigue en T31–T33. No se ejecuta HTTP separado del wheel. Evidencia y límites en [T30/C10](../tasks/P-20261024-01-desktop-shared-api/todo.md#t30-recuperar-tras-vencimiento).
+
 ## PostgreSQL
 
 Herramientas locales comprobadas: PostgreSQL **18.3**, en `C:\Program Files\PostgreSQL\18\bin`. La referencia 18.6 del plan no describe la versión instalada. El soporte usa la familia 18 y no actualiza la instalación del usuario.
@@ -113,7 +126,7 @@ Esto prueba la base técnica con filas ficticias. No demuestra todavía autoriza
 
 ## Citas y cierre C09 · 2026-10-27
 
-El head actual es 20261027_04: 25 tablas y btree_gist en el esquema dedicado. El probe de persistencia aplica, revierte y reaplica; no usa una base personal ni instala una extensión fuera de la base ficticia. Los ocho probes del bloque siguiente siguen disponibles y se añade:
+El head histórico de C09 fue 20261027_04: 25 tablas y btree_gist en el esquema dedicado. El probe de persistencia ahora aplica, revierte y reaplica el head actual indicado en C10; no usa una base personal ni instala una extensión fuera de la base ficticia. Los ocho probes del bloque siguiente siguen disponibles y C09 añadió:
 
 ```powershell
 .\.venv\Scripts\python.exe test-support/appointments/check.py
@@ -154,7 +167,7 @@ Agenda comprueba jornada partida, unión de tramos, fin 1440, vigencia, fecha lo
 
 ## Alta administrativa
 
-El mantenimiento usa otro flujo pequeño: `scripts/purge_expired_results.py`, sin subcomandos. Exige `MAINTENANCE_DATABASE_URI` administrativa explícita y no toma la URI de ejecución como sustituto. Retira solo detalles de resultados vencidos; conserva recibos mínimos, journal y auditoría. Debe ejecutarse con este repositorio en PYTHONPATH, igual que el alta. No lo ejecuta el servidor ni un proceso periódico de esta entrega.
+El mantenimiento reutiliza `scripts/purge_expired_results.py`, sin subcomandos. Exige `MAINTENANCE_DATABASE_URI` administrativa explícita y no toma la URI de ejecución como sustituto. Cada ejecución retira hasta 500 resultados completos, 100 grupos consecutivos de una cuenta con al menos 90 días y 100 capturas vencidas. Conserva recibos mínimos, historia funcional y auditoría; avanza la frontera junto al borrado de grupos. Devuelve purgedResults para conservar la salida anterior; ese número solo cuenta resultados, no grupos ni capturas. Se puede repetir para procesar los lotes restantes. Debe ejecutarse con este repositorio en PYTHONPATH, igual que el alta. No lo ejecuta el servidor ni un proceso periódico de esta entrega.
 
 Desde la raíz, prepara un JSON local con el esquema BootstrapPracticeInput de accounts. Ejemplo solo con datos ficticios:
 

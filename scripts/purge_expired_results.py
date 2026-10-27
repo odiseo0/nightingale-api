@@ -21,7 +21,7 @@ async def purge():
 
 
 def main() -> int:
-    argparse.ArgumentParser(description="Retirar detalles de resultados vencidos; conservar recibos e historia").parse_args()
+    argparse.ArgumentParser(description="Retirar lotes de resultados, grupos y capturas vencidos; conservar recibos, historia y auditoría").parse_args()
     uri = os.environ.get("MAINTENANCE_DATABASE_URI", "")
     try:
         url = make_url(uri)
