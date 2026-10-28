@@ -4,11 +4,23 @@ from uuid import uuid7
 
 from pydantic import ValidationError
 
-from src.api.sync.domain.downloads import ChangeQuery, SnapshotRequest, SyncChange, SyncPosition, SyncWindow
+from src.api.sync.domain.downloads import ChangeGroup, ChangeQuery, SnapshotRequest, SnapshotResponse, SyncChange, SyncPosition, SyncWindow
+from src.api.sync.domain.events import Heartbeat
 from src.core.services.sync_signatures import sign_position, verify_position
 
 
 class DownloadSchemaTests(unittest.TestCase):
+    def test_public_instants_use_utc_z_with_an_offset_input(self):
+        instant = "2026-11-01T03:00:00-04:00"
+        expected = "2026-11-01T07:00:00Z"
+        group = ChangeGroup(group_id=uuid7(), operation_id=uuid7(), changes=[], accepted_at=instant)
+        self.assertEqual(group.model_dump(mode="json", by_alias=True)["acceptedAt"], expected)
+        capture = SnapshotResponse(snapshot_id=uuid7(), account_id=uuid7(), model_revision="api-v1.1", base_cursor="fixture",
+                                   window=SyncWindow(appointments_from="2026-11-01", appointments_until="2026-11-02", time_zone="America/Caracas",
+                                                     starts_at="2026-11-01T04:00:00Z", ends_at="2026-11-02T04:00:00Z"), expires_at=instant, item_count=0)
+        self.assertEqual(capture.model_dump(mode="json", by_alias=True)["expiresAt"], expected)
+        self.assertEqual(Heartbeat(server_time=instant).model_dump(mode="json", by_alias=True)["serverTime"], expected)
+
     def test_snapshot_dates_are_explicit_bounded_and_separate_from_page_parameters(self):
         self.assertIsNone(SnapshotRequest().appointments_from)
         self.assertEqual(SnapshotRequest(appointmentsFrom="2026-11-01").appointments_from.isoformat(), "2026-11-01")

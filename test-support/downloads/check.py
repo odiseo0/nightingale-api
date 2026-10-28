@@ -109,6 +109,16 @@ async def check_downloads(runtime, administrative, client, tokens):
     assert len(history["state"]["items"]) == history["entityVersion"] == 1
     assert await snapshot_get(captured["snapshotId"]) == captured
     assert not (await get_changes(captured["baseCursor"]))["groups"]
+    async with administrative() as db:
+        snapshots_before = await db.scalar(text("SELECT count(*) FROM nightingale.sync_snapshots"))
+    with patch.object(api_settings, "sync_signing_key", None):
+        assert (await get_changes(captured["baseCursor"], status=503))["code"] == "DEPENDENCY_UNAVAILABLE"
+        assert (await snapshot_get(captured["snapshotId"], status=503))["code"] == "DEPENDENCY_UNAVAILABLE"
+        response = await client.post(base + "/sync/snapshots", headers=access.authorization(owner), json={})
+        access.expect(response, 503)
+        assert response.json()["code"] == "DEPENDENCY_UNAVAILABLE"
+    async with administrative() as db:
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_snapshots")) == snapshots_before
     assistant_snapshot = await snapshot(assistant)
     assistant_items = await snapshot_get(assistant_snapshot["snapshotId"], "/items?shows=500", assistant)
     assert "Fixture secret catalog" not in str(assistant_items)
@@ -168,6 +178,15 @@ async def check_downloads(runtime, administrative, client, tokens):
             raise AssertionError("Download did not reach the committed head")
     assert invisible > 0
     assert len(next(group for group in visible if group["operationId"] == registration["operationId"])["changes"]) == 2
+    # Version two already exists; downloading version one must not expose its history.
+    appointment_groups = [group for group in visible if any(change["entityType"] == "appointment" for change in group["changes"])]
+    assert len(appointment_groups) == 2
+    original_history = next(change for change in appointment_groups[0]["changes"] if change["entityType"] == "appointment_history")
+    assert original_history["entityVersion"] == original_history["state"]["version"] == 1
+    assert [item["version"] for item in original_history["state"]["items"]] == [1]
+    assert [(change["entityType"], change["changeKind"], change["state"]) for change in appointment_groups[1]["changes"]] == [
+        ("appointment", "remove", None), ("appointment_history", "remove", None),
+    ]
     assert "Fixture secret catalog" not in str(visible)
     assert all(change["entityType"] not in {"membership", "invitation", "account_device", "service"} for group in visible for change in group["changes"])
     for invalid in (value + "x", await cursor(assistant, sequence=10**6), await cursor(assistant, permission_epoch=1), await cursor(assistant, account_id=uuid7())):
@@ -293,6 +312,12 @@ async def check_downloads(runtime, administrative, client, tokens):
     assert (await get_changes(captured["baseCursor"], status=410))["code"] == "CURSOR_EXPIRED"
     access.expect(await client.delete(base + f'/sync/snapshots/{captured["snapshotId"]}', headers=access.authorization(owner)), 204)
     assert (await snapshot_get(captured["snapshotId"], status=404))["code"] == "NOT_FOUND"
+    authorized_snapshot = await snapshot()
+    await submit(envelope("RevokeAccountDevice", owner["deviceId"], {}, 1), extra)
+    await snapshot_get(authorized_snapshot["snapshotId"], status=403)
+    await snapshot_get(authorized_snapshot["snapshotId"], "/items", status=403)
+    await get_changes(authorized_snapshot["baseCursor"], status=403)
+    print("C10 review checks passed: missing signing key returns 503 without a capture, old-version history excludes newer entries, and revoked account devices cannot read captures/pages/deltas.")
     print("Snapshot checks passed: coherent RR capture/base, immutable pages, privacy, UTC window, scoped access, expiry, rollback and release.")
     print("Download checks passed: complete groups, hidden audiences, fixed scope, view removal and commit-order coordination.")
 

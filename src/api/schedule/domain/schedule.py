@@ -380,7 +380,7 @@ class AvailabilityQuery(BaseModel):
     @classmethod
     def integer_duration(cls, value: object) -> object:
         if isinstance(value, (bool, float)):
-            raise TypeError("La duración requiere minutos enteros")
+            raise ValueError("La duración requiere minutos enteros")
 
         return value
 

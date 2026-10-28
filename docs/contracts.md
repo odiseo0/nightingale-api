@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado al 2026-10-27:** C09 aceptado; T28–T30 comprobadas para revisión C10. C07/C08 conservaron autorización de paso sin aceptaciones separadas. El [contrato HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. Cada componente proyecta sus datos dentro de la captura coordinada por sync; appointments posee también la historia por versión. sync conserva recibos, grupos, posición y captura temporal. SSE, clientes generados e integración de consumidores siguen pendientes.
+**Estado al 2026-10-28:** C09/C10 aceptados; T31–T33 para revisión C11. C07/C08 conservaron autorización de paso sin aceptaciones separadas. El [contrato HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales, con origen y huella. Los ejemplos de la [guía Rust](rust-api-guide.md) se comprueban contra PostgreSQL/Keycloak aislados. SSE y colaboración de API usan dos procesos reales en pruebas; clientes Rust/Hub y producción siguen pendientes. C11 no está aceptado.
 
 ## Una fuente por contrato
 

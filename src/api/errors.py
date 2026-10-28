@@ -121,6 +121,7 @@ async def http_error(request: Request, error: HTTPException):
         410: "RESULT_EXPIRED",
         413: "REQUEST_TOO_LARGE",
         422: "VALIDATION_ERROR",
+        429: "CONNECTION_LIMIT",
         503: "DEPENDENCY_UNAVAILABLE",
     }
 

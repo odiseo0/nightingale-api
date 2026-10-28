@@ -1,13 +1,22 @@
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal, Self
 
-from pydantic import UUID7, AwareDatetime, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    UUID7,
+    AwareDatetime,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
-from src.api.schedule.domain.schedule import AbsoluteInterval, ScheduleRuleFields
-from src.api.sync.domain.operations import OperationState
-from src.api.sync.domain import operations as projections
 from src.api.appointments.domain.appointments import AppointmentHistoryProjection
+from src.api.schedule.domain.schedule import AbsoluteInterval, ScheduleRuleFields
+from src.api.sync.domain import operations as projections
+from src.api.sync.domain.operations import OperationState
 from src.core.schema import BaseModel
+from src.core.schema.http import SerializedInstant
 
 PROJECTION_SCHEMAS: dict[str, type[BaseModel]] = {
     "account": projections.AccountResponse,
@@ -83,7 +92,12 @@ class SyncChange(BaseModel):
             raise ValueError("La retirada no contiene estado")
 
         schema = PROJECTION_SCHEMAS.get(self.entity_type)
-        if schema is None or self.state is not None and not isinstance(self.state, schema):
+
+        if (
+            schema is None
+            or self.state is not None
+            and not isinstance(self.state, schema)
+        ):
             raise ValueError("El estado no corresponde al tipo de entidad")
 
         return self
@@ -94,6 +108,10 @@ class ChangeGroup(BaseModel):
     operation_id: UUID7
     changes: list[SyncChange]
     accepted_at: AwareDatetime
+
+    @field_serializer("accepted_at", when_used="json")
+    def utc_acceptance(self, value: datetime) -> SerializedInstant:
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 class ChangePage(BaseModel):
@@ -118,8 +136,10 @@ class SnapshotRequest(BaseModel):
 
     @model_validator(mode="after")
     def bounded_dates(self) -> Self:
-        if self.appointments_from is not None and self.appointments_until is not None and not (
-            0 < (self.appointments_until - self.appointments_from).days <= 366
+        if (
+            self.appointments_from is not None
+            and self.appointments_until is not None
+            and not (0 < (self.appointments_until - self.appointments_from).days <= 366)
         ):
             raise ValueError("La ventana debe incluir entre 1 y 366 días")
 
@@ -136,6 +156,10 @@ class SnapshotResponse(BaseModel):
     expires_at: AwareDatetime
     item_count: int = Field(ge=0)
 
+    @field_serializer("expires_at", when_used="json")
+    def utc_expiry(self, value: datetime) -> SerializedInstant:
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
 
 class SyncItem(BaseModel):
     entity_type: str
@@ -146,6 +170,7 @@ class SyncItem(BaseModel):
     @model_validator(mode="after")
     def typed_state(self) -> Self:
         schema = PROJECTION_SCHEMAS.get(self.entity_type)
+
         if schema is None or not isinstance(self.state, schema):
             raise ValueError("El estado no corresponde al tipo de entidad")
 

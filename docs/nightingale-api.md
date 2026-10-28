@@ -1,8 +1,8 @@
 # Especificación técnica breve: Nightingale API
 
 **Versión:** 0.4
-**Fecha:** 2026-10-27
-**Estado:** C01–C06, C09 y C12–C18 aceptados. T28–T30 comprobadas; C10 listo para revisión expresa. Descarga por grupos, cursor firmado, snapshot materializado y recuperación/retención probados con PostgreSQL/Keycloak aislados. C07/C08 conservan autorización de paso sin aceptaciones separadas. SSE, dos procesos de API y consumidores siguen pendientes en T31–T33.
+**Fecha:** 2026-10-28
+**Estado:** C01–C06, C09/C10 y C12–C18 aceptados. T31–T33 para revisión expresa C11: SSE y recuperación entre dos procesos, diez streams y contratos generados con ejemplos comprobados. C07/C08 conservan autorización de paso sin aceptaciones separadas. Consumidores Rust/Hub y producción siguen fuera; C11 no está aceptado.
 **Decisión:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional).
 
 ## 1. Propósito y tecnología
@@ -77,7 +77,7 @@ Las transacciones son breves, con consultas acotadas e índices adecuados. No in
 
 El repositorio de API posee la fuente OpenAPI y los contratos de eventos/operaciones, con compatibilidad entre versiones y consumidores Rust y Hub. Las migraciones no dependen de que todos los escritorios se actualicen a la vez. El esquema operativo no es un contrato SQL público.
 
-T19–T27 comprueban aislamiento, transiciones inválidas sin Rust, reservas concurrentes, duplicados, revocación vigente, rollback e historia. T28–T30 añaden descarga sin omisiones, snapshot y recuperación con PostgreSQL real. El soporte de sync conserva su prueba de respuesta perdida tras commit. La [lista de control](../tasks/P-20261024-01-desktop-shared-api/todo.md) registra comandos, resultados y límites. SSE entre procesos y consumidores conservan T31–T33. Hub y workers siguen fuera de esta etapa.
+T19–T27 comprueban aislamiento, transiciones inválidas sin Rust, reservas concurrentes, duplicados, revocación vigente, rollback e historia. T28–T30 añaden descarga, snapshot y recuperación con PostgreSQL real. T31/T32 prueban SSE, reservas, duplicados, revocación con stream abierto y recuperación con dos procesos reales; p95 local 120.1 ms y cota superior que incluye commit 122.5 ms, con diez streams y 20 commits. T33 genera [contratos](../contracts/README.md) y comprueba los ejemplos de la [guía Rust](rust-api-guide.md). El soporte de sync conserva su prueba de respuesta perdida tras commit. La [lista de control](../tasks/P-20261024-01-desktop-shared-api/todo.md) registra comandos, resultados y límites. Estas pruebas no acreditan consumidores, saturación ni producción. Hub y workers siguen fuera.
 
 Pendientes de producto fuera de esta etapa: autorización del Hub, despliegue/proveedor, cola, política de comunicaciones/espera, objetivos de producción, copias, restauración y RPO/RTO, verificación y corrección global de identidad. D09 concreta identidad, dispositivo, operaciones, cursores, lotes y ventana de recuperación para el escritorio; no demuestra implementación. El objetivo local de avisos no sustituye un SLO de producción. No incluye historia clínica ni lógica de presentación del escritorio o del Hub.
 

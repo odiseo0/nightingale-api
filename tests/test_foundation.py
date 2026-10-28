@@ -94,6 +94,27 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(len(result["errors"]), 7)
         self.assertNotIn("not-a-url-fixture-secret", json.dumps(result))
 
+    def test_signing_key_errors_and_settings_repr_do_not_expose_values(self):
+        result = self.run_python("""
+            from pydantic import ValidationError
+            from src.settings.api_settings import APISettings
+
+            short_key = "FICTIVE-SHORT-ONLY"
+            valid_key = "fictional-signing-key-for-tests-only-long-enough"
+            try:
+                APISettings(_env_file=None, sync_signing_key=short_key)
+            except ValidationError as error:
+                hidden = short_key not in str(error)
+            else:
+                raise AssertionError("A short key was accepted")
+            settings = APISettings(_env_file=None, sync_signing_key=valid_key)
+            print(json.dumps({"short_key_error_hides_value": hidden,
+                              "repr_hides_value": valid_key not in repr(settings),
+                              "value_preserved": settings.sync_signing_key.get_secret_value() == valid_key,
+                              "missing_key_is_none": APISettings(_env_file=None).sync_signing_key is None}))
+        """)
+        self.assertTrue(all(result.values()))
+
     def test_password_is_preserved_without_being_exposed(self):
         result = self.run_python("""
             from sqlalchemy.engine import make_url
@@ -149,7 +170,7 @@ class FoundationTests(unittest.TestCase):
 
         self.assertEqual(result["environment"], "test")
 
-    def test_import_and_startup_do_not_connect_to_postgresql(self):
+    def test_import_does_not_connect_and_startup_only_starts_the_listener(self):
         result = self.run_python("""
             from unittest.mock import AsyncMock, patch
 
@@ -158,9 +179,12 @@ class FoundationTests(unittest.TestCase):
                 from fastapi.testclient import TestClient
                 from src.application import app
                 from src.core.db.session import engine
+                from src.core.services.pg_notifications import notifications
 
-                with TestClient(app) as client:
-                    status = client.get("/health/live").status_code
+                with patch.object(type(notifications), "start", AsyncMock()) as start:
+                    with TestClient(app) as client:
+                        status = client.get("/health/live").status_code
+                    start.assert_awaited_once()
                 connect.assert_not_awaited()
             print(json.dumps({"status": status, "connections": connect.await_count}))
         """, self.database_settings())
@@ -183,7 +207,9 @@ class FoundationTests(unittest.TestCase):
 
             with patch("src.core.db.deps.async_session_factory", factory):
                 with TestClient(app) as client:
-                    response = client.get("/health/ready")
+                    with patch("src.api.health.notifications") as listener:
+                        listener.ready = True
+                        response = client.get("/health/ready")
             print(json.dumps({
                 "status": response.status_code,
                 "body": response.json(),
@@ -293,6 +319,13 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(result["sessions"], 2)
         self.assertEqual(result["closed"], 2)
         self.assertEqual(result["commits"], 0)
+
+    def test_production_has_no_docs_or_openapi_http_routes(self):
+        result = self.run_python("""
+            from src.application import app
+            print(json.dumps({"openapi": app.openapi_url, "docs": app.docs_url, "redoc": app.redoc_url}))
+        """, {**self.database_settings(), "API_ENVIRONMENT": "production"})
+        self.assertEqual(result, {"openapi": None, "docs": None, "redoc": None})
 
     def test_uvicorn_loads_the_module_app_without_a_custom_entrypoint(self):
         result = self.run_python("""

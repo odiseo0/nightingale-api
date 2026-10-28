@@ -15,7 +15,8 @@ from src.core.db import get_db
 from src.core.schema import ApiError
 
 router = APIRouter(
-    prefix="/v1/accounts/{account_id}/sync", tags=["sync"],
+    prefix="/v1/accounts/{account_id}/sync",
+    tags=["sync"],
     responses={code: {"model": ApiError} for code in (401, 403, 404, 410, 422, 503)},
 )
 bearer = HTTPBearer(auto_error=False)
@@ -28,7 +29,13 @@ async def download_changes(
     db: Annotated[AsyncSession, Depends(get_db)],
     authorization: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
 ) -> ChangePage:
-    result = await read_changes(db, authorization.credentials if authorization else None, account_id, query.cursor)
+    result = await read_changes(
+        db,
+        authorization.credentials if authorization else None,
+        account_id,
+        query.cursor,
+    )
+
     match result:
         case Ok(response):
             return response
@@ -39,6 +46,8 @@ async def download_changes(
         case Err(AccountNotFound() | AccountObjectNotFound()):
             raise HTTPException(404)
         case Err(SyncReadError(code)):
-            raise HTTPException(503 if code == "DEPENDENCY_UNAVAILABLE" else 410, detail=code)
+            raise HTTPException(
+                503 if code == "DEPENDENCY_UNAVAILABLE" else 410, detail=code
+            )
         case unexpected:
             assert_never(unexpected)

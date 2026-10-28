@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Annotated, TypeVar, overload
+from typing import Annotated, Literal, TypeVar, overload
 
 from pydantic import UUID7, ConfigDict, Field, WithJsonSchema, field_serializer
 
@@ -70,6 +70,16 @@ class ApiError(BaseModel):
     message: str
     correlation_id: UUID7
     details: list[FieldError] = Field(default_factory=list)
+
+
+class LiveResponse(BaseModel):
+    status: Literal["alive"]
+
+
+class ReadyResponse(BaseModel):
+    status: Literal["ready", "not_ready"]
+    database: Literal["available", "unavailable", "not_configured"]
+    notifications: Literal["available", "unavailable"] | None = None
 
 
 UNAUTHORIZED_RESPONSE: dict[str, type[ErrorResponse] | str] = {

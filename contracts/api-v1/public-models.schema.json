@@ -1,0 +1,3766 @@
+{
+  "$defs": {
+    "AbsoluteInterval": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "title": "Endsat",
+          "type": "string"
+        },
+        "startsAt": {
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt"
+      ],
+      "title": "AbsoluteInterval",
+      "type": "object"
+    },
+    "AccessResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "allowedActions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowedactions",
+          "type": "array"
+        },
+        "deviceId": {
+          "format": "uuid7",
+          "title": "Deviceid",
+          "type": "string"
+        },
+        "permissionEpoch": {
+          "title": "Permissionepoch",
+          "type": "integer"
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "registration_required",
+            "revoked",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "userId",
+        "deviceId",
+        "role",
+        "status",
+        "permissionEpoch",
+        "allowedActions"
+      ],
+      "title": "AccessResponse",
+      "type": "object"
+    },
+    "AccountDeviceResponse": {
+      "properties": {
+        "clientVersion": {
+          "title": "Clientversion",
+          "type": "string"
+        },
+        "deviceId": {
+          "format": "uuid7",
+          "title": "Deviceid",
+          "type": "string"
+        },
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "lastSeenAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lastseenat"
+        },
+        "localSchemaVersion": {
+          "title": "Localschemaversion",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "revoked"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "deviceId",
+        "displayName",
+        "status",
+        "clientVersion",
+        "localSchemaVersion",
+        "lastSeenAt",
+        "version"
+      ],
+      "title": "AccountDeviceResponse",
+      "type": "object"
+    },
+    "AccountResponse": {
+      "properties": {
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "independent",
+          "title": "Kind",
+          "type": "string"
+        },
+        "locationAddress": {
+          "title": "Locationaddress",
+          "type": "string"
+        },
+        "locationCity": {
+          "title": "Locationcity",
+          "type": "string"
+        },
+        "locationCountry": {
+          "title": "Locationcountry",
+          "type": "string"
+        },
+        "locationName": {
+          "title": "Locationname",
+          "type": "string"
+        },
+        "locationState": {
+          "title": "Locationstate",
+          "type": "string"
+        },
+        "noShowGraceMinutes": {
+          "title": "Noshowgraceminutes",
+          "type": "integer"
+        },
+        "ownerUserId": {
+          "format": "uuid7",
+          "title": "Owneruserid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "timeZone": {
+          "title": "Timezone",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "ownerUserId",
+        "displayName",
+        "timeZone",
+        "locationName",
+        "locationAddress",
+        "locationCountry",
+        "locationState",
+        "locationCity",
+        "status",
+        "noShowGraceMinutes",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "AccountResponse",
+      "type": "object"
+    },
+    "AccountSummary": {
+      "properties": {
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "displayName",
+        "status",
+        "role"
+      ],
+      "title": "AccountSummary",
+      "type": "object"
+    },
+    "ApiError": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "correlationId": {
+          "format": "uuid7",
+          "title": "Correlationid",
+          "type": "string"
+        },
+        "details": {
+          "items": {
+            "$ref": "#/$defs/FieldError"
+          },
+          "title": "Details",
+          "type": "array"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "correlationId"
+      ],
+      "title": "ApiError",
+      "type": "object"
+    },
+    "AppointmentHistoryProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "appointmentId": {
+          "format": "uuid7",
+          "title": "Appointmentid",
+          "type": "string"
+        },
+        "endsAt": {
+          "title": "Endsat",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AppointmentHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "startsAt": {
+          "title": "Startsat",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "appointmentId",
+        "accountId",
+        "version",
+        "items"
+      ],
+      "title": "AppointmentHistoryProjection",
+      "type": "object"
+    },
+    "AppointmentHistoryResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "created",
+            "confirmed",
+            "rescheduled",
+            "cancelled",
+            "completed",
+            "no_show"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "actorContactPersonId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actorcontactpersonid"
+        },
+        "actorKind": {
+          "enum": [
+            "staff",
+            "patient",
+            "contact"
+          ],
+          "title": "Actorkind",
+          "type": "string"
+        },
+        "actorUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actoruserid"
+        },
+        "appointmentId": {
+          "format": "uuid7",
+          "title": "Appointmentid",
+          "type": "string"
+        },
+        "changeReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Changereason"
+        },
+        "changedAt": {
+          "title": "Changedat",
+          "type": "string"
+        },
+        "confirmedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Confirmedat"
+        },
+        "endsAt": {
+          "title": "Endsat",
+          "type": "string"
+        },
+        "locationAddressSnapshot": {
+          "minLength": 1,
+          "title": "Locationaddresssnapshot",
+          "type": "string"
+        },
+        "locationCitySnapshot": {
+          "minLength": 1,
+          "title": "Locationcitysnapshot",
+          "type": "string"
+        },
+        "locationCountrySnapshot": {
+          "maxLength": 2,
+          "minLength": 2,
+          "title": "Locationcountrysnapshot",
+          "type": "string"
+        },
+        "locationNameSnapshot": {
+          "minLength": 1,
+          "title": "Locationnamesnapshot",
+          "type": "string"
+        },
+        "locationStateSnapshot": {
+          "minLength": 1,
+          "title": "Locationstatesnapshot",
+          "type": "string"
+        },
+        "offeredDurationMinutesSnapshot": {
+          "maximum": 1440.0,
+          "minimum": 1.0,
+          "title": "Offereddurationminutessnapshot",
+          "type": "integer"
+        },
+        "professionalNameSnapshot": {
+          "minLength": 1,
+          "title": "Professionalnamesnapshot",
+          "type": "string"
+        },
+        "responsibleContactId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Responsiblecontactid"
+        },
+        "serviceNameSnapshot": {
+          "minLength": 1,
+          "title": "Servicenamesnapshot",
+          "type": "string"
+        },
+        "startsAt": {
+          "title": "Startsat",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "scheduled",
+            "confirmed",
+            "cancelled",
+            "completed",
+            "no_show"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "timeZoneSnapshot": {
+          "minLength": 1,
+          "title": "Timezonesnapshot",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "responsibleContactId",
+        "status",
+        "confirmedAt",
+        "version",
+        "serviceNameSnapshot",
+        "offeredDurationMinutesSnapshot",
+        "professionalNameSnapshot",
+        "locationNameSnapshot",
+        "locationAddressSnapshot",
+        "locationCountrySnapshot",
+        "locationStateSnapshot",
+        "locationCitySnapshot",
+        "timeZoneSnapshot",
+        "appointmentId",
+        "accountId",
+        "action",
+        "actorKind",
+        "actorUserId",
+        "actorContactPersonId",
+        "changeReason",
+        "changedAt"
+      ],
+      "title": "AppointmentHistoryResponse",
+      "type": "object"
+    },
+    "AppointmentResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "confirmedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Confirmedat"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "endsAt": {
+          "title": "Endsat",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "locationAddressSnapshot": {
+          "minLength": 1,
+          "title": "Locationaddresssnapshot",
+          "type": "string"
+        },
+        "locationCitySnapshot": {
+          "minLength": 1,
+          "title": "Locationcitysnapshot",
+          "type": "string"
+        },
+        "locationCountrySnapshot": {
+          "maxLength": 2,
+          "minLength": 2,
+          "title": "Locationcountrysnapshot",
+          "type": "string"
+        },
+        "locationNameSnapshot": {
+          "minLength": 1,
+          "title": "Locationnamesnapshot",
+          "type": "string"
+        },
+        "locationStateSnapshot": {
+          "minLength": 1,
+          "title": "Locationstatesnapshot",
+          "type": "string"
+        },
+        "offeredDurationMinutesSnapshot": {
+          "maximum": 1440.0,
+          "minimum": 1.0,
+          "title": "Offereddurationminutessnapshot",
+          "type": "integer"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "professionalNameSnapshot": {
+          "minLength": 1,
+          "title": "Professionalnamesnapshot",
+          "type": "string"
+        },
+        "responsibleContactId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Responsiblecontactid"
+        },
+        "serviceId": {
+          "format": "uuid7",
+          "title": "Serviceid",
+          "type": "string"
+        },
+        "serviceNameSnapshot": {
+          "minLength": 1,
+          "title": "Servicenamesnapshot",
+          "type": "string"
+        },
+        "startsAt": {
+          "title": "Startsat",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "scheduled",
+            "confirmed",
+            "cancelled",
+            "completed",
+            "no_show"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "timeZoneSnapshot": {
+          "minLength": 1,
+          "title": "Timezonesnapshot",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "responsibleContactId",
+        "status",
+        "confirmedAt",
+        "version",
+        "serviceNameSnapshot",
+        "offeredDurationMinutesSnapshot",
+        "professionalNameSnapshot",
+        "locationNameSnapshot",
+        "locationAddressSnapshot",
+        "locationCountrySnapshot",
+        "locationStateSnapshot",
+        "locationCitySnapshot",
+        "timeZoneSnapshot",
+        "id",
+        "accountId",
+        "patientId",
+        "professionalId",
+        "serviceId",
+        "createdAt",
+        "updatedAt"
+      ],
+      "title": "AppointmentResponse",
+      "type": "object"
+    },
+    "AuditEventResponse": {
+      "properties": {
+        "accountId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Accountid"
+        },
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "actorDeviceId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actordeviceid"
+        },
+        "actorKind": {
+          "enum": [
+            "staff",
+            "operator",
+            "anonymous"
+          ],
+          "title": "Actorkind",
+          "type": "string"
+        },
+        "actorUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actoruserid"
+        },
+        "correlationId": {
+          "format": "uuid7",
+          "title": "Correlationid",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "objectKey": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Objectkey"
+        },
+        "objectType": {
+          "title": "Objecttype",
+          "type": "string"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "operationId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Operationid"
+        },
+        "operatorRef": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Operatorref"
+        },
+        "outcome": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "conflict"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "accountId",
+        "actorKind",
+        "actorUserId",
+        "actorDeviceId",
+        "operatorRef",
+        "action",
+        "objectType",
+        "objectKey",
+        "outcome",
+        "operationId",
+        "correlationId",
+        "occurredAt"
+      ],
+      "title": "AuditEventResponse",
+      "type": "object"
+    },
+    "AuthConfigResponse": {
+      "properties": {
+        "audience": {
+          "title": "Audience",
+          "type": "string"
+        },
+        "authorizationFlow": {
+          "const": "authorization_code",
+          "default": "authorization_code",
+          "title": "Authorizationflow",
+          "type": "string"
+        },
+        "issuer": {
+          "title": "Issuer",
+          "type": "string"
+        },
+        "pkceMethod": {
+          "const": "S256",
+          "default": "S256",
+          "title": "Pkcemethod",
+          "type": "string"
+        },
+        "publicClientId": {
+          "title": "Publicclientid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "issuer",
+        "publicClientId",
+        "audience"
+      ],
+      "title": "AuthConfigResponse",
+      "type": "object"
+    },
+    "AvailabilityResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "availableIntervals": {
+          "items": {
+            "$ref": "#/$defs/AbsoluteInterval"
+          },
+          "title": "Availableintervals",
+          "type": "array"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "referenceDurationMinutes": {
+          "maximum": 1440.0,
+          "minimum": 1.0,
+          "title": "Referencedurationminutes",
+          "type": "integer"
+        },
+        "requestedDurationMinutes": {
+          "maximum": 1440.0,
+          "minimum": 1.0,
+          "title": "Requesteddurationminutes",
+          "type": "integer"
+        },
+        "serviceId": {
+          "format": "uuid7",
+          "title": "Serviceid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "professionalId",
+        "serviceId",
+        "referenceDurationMinutes",
+        "requestedDurationMinutes",
+        "availableIntervals"
+      ],
+      "title": "AvailabilityResponse",
+      "type": "object"
+    },
+    "CapabilitiesResponse": {
+      "properties": {
+        "contractVersion": {
+          "const": 1,
+          "default": 1,
+          "title": "Contractversion",
+          "type": "integer"
+        },
+        "defaultAppointmentWindow": {
+          "$ref": "#/$defs/DefaultAppointmentWindow",
+          "default": {
+            "daysAfter": 180,
+            "daysBefore": 30,
+            "maxDays": 366
+          }
+        },
+        "maxBatchOperations": {
+          "const": 100,
+          "default": 100,
+          "title": "Maxbatchoperations",
+          "type": "integer"
+        },
+        "maxBodyBytes": {
+          "const": 1048576,
+          "default": 1048576,
+          "title": "Maxbodybytes",
+          "type": "integer"
+        },
+        "maxOperationBytes": {
+          "const": 65536,
+          "default": 65536,
+          "title": "Maxoperationbytes",
+          "type": "integer"
+        },
+        "maxPageSize": {
+          "const": 500,
+          "default": 500,
+          "title": "Maxpagesize",
+          "type": "integer"
+        },
+        "modelRevision": {
+          "const": "api-v1.1",
+          "default": "api-v1.1",
+          "title": "Modelrevision",
+          "type": "string"
+        },
+        "onlineOnlyActions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Onlineonlyactions",
+          "type": "array"
+        },
+        "operationCatalog": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Operationcatalog",
+          "type": "array"
+        },
+        "recoveryRequiredCodes": {
+          "items": {
+            "enum": [
+              "CURSOR_EXPIRED",
+              "SNAPSHOT_EXPIRED",
+              "SNAPSHOT_SCOPE_CHANGED",
+              "RESULT_EXPIRED"
+            ],
+            "type": "string"
+          },
+          "title": "Recoveryrequiredcodes",
+          "type": "array"
+        },
+        "snapshotTtlSeconds": {
+          "const": 900,
+          "default": 900,
+          "title": "Snapshotttlseconds",
+          "type": "integer"
+        },
+        "syncRetentionDays": {
+          "const": 90,
+          "default": 90,
+          "title": "Syncretentiondays",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operationCatalog",
+        "onlineOnlyActions",
+        "recoveryRequiredCodes"
+      ],
+      "title": "CapabilitiesResponse",
+      "type": "object"
+    },
+    "ChangeGroup": {
+      "properties": {
+        "acceptedAt": {
+          "format": "date-time",
+          "title": "Acceptedat",
+          "type": "string"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/SyncChange"
+          },
+          "title": "Changes",
+          "type": "array"
+        },
+        "groupId": {
+          "format": "uuid7",
+          "title": "Groupid",
+          "type": "string"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "groupId",
+        "operationId",
+        "changes",
+        "acceptedAt"
+      ],
+      "title": "ChangeGroup",
+      "type": "object"
+    },
+    "ChangePage": {
+      "properties": {
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/ChangeGroup"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "hasMore": {
+          "title": "Hasmore",
+          "type": "boolean"
+        },
+        "nextCursor": {
+          "title": "Nextcursor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "groups",
+        "nextCursor",
+        "hasMore"
+      ],
+      "title": "ChangePage",
+      "type": "object"
+    },
+    "ContactResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "documentNumber": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Documentnumber"
+        },
+        "documentType": {
+          "anyOf": [
+            {
+              "enum": [
+                "national_id",
+                "passport"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Documenttype"
+        },
+        "fullName": {
+          "title": "Fullname",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "issuingCountry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Issuingcountry"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phonecode"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "accountId",
+        "fullName",
+        "phoneCode",
+        "phone",
+        "issuingCountry",
+        "documentType",
+        "documentNumber",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ContactResponse",
+      "type": "object"
+    },
+    "DefaultAppointmentWindow": {
+      "properties": {
+        "daysAfter": {
+          "const": 180,
+          "default": 180,
+          "title": "Daysafter",
+          "type": "integer"
+        },
+        "daysBefore": {
+          "const": 30,
+          "default": 30,
+          "title": "Daysbefore",
+          "type": "integer"
+        },
+        "maxDays": {
+          "const": 366,
+          "default": 366,
+          "title": "Maxdays",
+          "type": "integer"
+        }
+      },
+      "title": "DefaultAppointmentWindow",
+      "type": "object"
+    },
+    "DeviceRegistrationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "clientVersion": {
+          "minLength": 1,
+          "title": "Clientversion",
+          "type": "string"
+        },
+        "deviceName": {
+          "minLength": 1,
+          "title": "Devicename",
+          "type": "string"
+        },
+        "localSchemaVersion": {
+          "exclusiveMinimum": 0.0,
+          "title": "Localschemaversion",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "deviceName",
+        "clientVersion",
+        "localSchemaVersion"
+      ],
+      "title": "DeviceRegistrationRequest",
+      "type": "object"
+    },
+    "DeviceResponse": {
+      "properties": {
+        "clientVersion": {
+          "title": "Clientversion",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "lastSeenAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lastseenat"
+        },
+        "localSchemaVersion": {
+          "title": "Localschemaversion",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "revoked"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "displayName",
+        "status",
+        "clientVersion",
+        "localSchemaVersion",
+        "lastSeenAt",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "DeviceResponse",
+      "type": "object"
+    },
+    "DeviceTokenIssued": {
+      "properties": {
+        "accessToken": {
+          "title": "Accesstoken",
+          "type": "string"
+        },
+        "deviceId": {
+          "format": "uuid7",
+          "title": "Deviceid",
+          "type": "string"
+        },
+        "issuedAt": {
+          "title": "Issuedat",
+          "type": "string"
+        },
+        "tokenId": {
+          "format": "uuid7",
+          "title": "Tokenid",
+          "type": "string"
+        },
+        "tokenType": {
+          "const": "Bearer",
+          "default": "Bearer",
+          "title": "Tokentype",
+          "type": "string"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accessToken",
+        "tokenId",
+        "deviceId",
+        "userId",
+        "issuedAt"
+      ],
+      "title": "DeviceTokenIssued",
+      "type": "object"
+    },
+    "FieldError": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Loc",
+          "type": "array"
+        }
+      },
+      "required": [
+        "loc",
+        "code"
+      ],
+      "title": "FieldError",
+      "type": "object"
+    },
+    "InvitationAcceptRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId"
+      ],
+      "title": "InvitationAcceptRequest",
+      "type": "object"
+    },
+    "InvitationAcceptanceResult": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "invitationId": {
+          "format": "uuid7",
+          "title": "Invitationid",
+          "type": "string"
+        },
+        "membershipVersion": {
+          "title": "Membershipversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "duplicate"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "status",
+        "invitationId",
+        "accountId",
+        "membershipVersion"
+      ],
+      "title": "InvitationAcceptanceResult",
+      "type": "object"
+    },
+    "InvitationResponse": {
+      "properties": {
+        "acceptedAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Acceptedat"
+        },
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "createdByUserId": {
+          "format": "uuid7",
+          "title": "Createdbyuserid",
+          "type": "string"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "title": "Expiresat",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "inviteeUserId": {
+          "format": "uuid7",
+          "title": "Inviteeuserid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "accepted",
+            "revoked",
+            "expired"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "accountId",
+        "inviteeUserId",
+        "createdByUserId",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "acceptedAt",
+        "version"
+      ],
+      "title": "InvitationResponse",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "LiveResponse": {
+      "properties": {
+        "status": {
+          "const": "alive",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "LiveResponse",
+      "type": "object"
+    },
+    "MeResponse": {
+      "properties": {
+        "accounts": {
+          "$ref": "#/$defs/PaginatedResponse_AccountSummary_"
+        },
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "oidcIssuer": {
+          "title": "Oidcissuer",
+          "type": "string"
+        },
+        "oidcSubject": {
+          "title": "Oidcsubject",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "status",
+        "oidcIssuer",
+        "oidcSubject",
+        "accounts"
+      ],
+      "title": "MeResponse",
+      "type": "object"
+    },
+    "MemberResponse": {
+      "properties": {
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "role",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "MemberResponse",
+      "type": "object"
+    },
+    "OperationBatch": {
+      "additionalProperties": false,
+      "properties": {
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/OperationEnvelope"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Operations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "operations"
+      ],
+      "title": "OperationBatch",
+      "type": "object"
+    },
+    "OperationBatchResult": {
+      "properties": {
+        "correlationId": {
+          "format": "uuid7",
+          "title": "Correlationid",
+          "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/OperationResult"
+          },
+          "title": "Results",
+          "type": "array"
+        }
+      },
+      "required": [
+        "results",
+        "correlationId"
+      ],
+      "title": "OperationBatchResult",
+      "type": "object"
+    },
+    "OperationEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "contractVersion": {
+          "maximum": 1.0,
+          "minimum": 1.0,
+          "title": "Contractversion",
+          "type": "integer"
+        },
+        "dependsOn": {
+          "items": {
+            "format": "uuid7",
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Dependson",
+          "type": "array"
+        },
+        "entityKey": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "format": "uuid7",
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Entitykey"
+        },
+        "expectedVersion": {
+          "minimum": 0.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "occurredAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Occurredatlocal"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Payload",
+          "type": "object"
+        }
+      },
+      "required": [
+        "operationId",
+        "contractVersion",
+        "action",
+        "entityKey",
+        "expectedVersion",
+        "payload"
+      ],
+      "title": "OperationEnvelope",
+      "type": "object"
+    },
+    "OperationRecord": {
+      "properties": {
+        "entityVersion": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Entityversion"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApiError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperationState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "conflict",
+            "rejected",
+            "retryable_failure"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "status",
+        "entityVersion",
+        "state",
+        "error"
+      ],
+      "title": "OperationRecord",
+      "type": "object"
+    },
+    "OperationResult": {
+      "properties": {
+        "entityVersion": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Entityversion"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApiError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "originalResult": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperationRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperationState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "duplicate",
+            "conflict",
+            "rejected",
+            "retryable_failure"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "status",
+        "entityVersion",
+        "state",
+        "error"
+      ],
+      "title": "OperationResult",
+      "type": "object"
+    },
+    "OperationState": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AccountDeviceResponse"
+        },
+        {
+          "$ref": "#/$defs/AccountResponse"
+        },
+        {
+          "$ref": "#/$defs/InvitationResponse"
+        },
+        {
+          "$ref": "#/$defs/InvitationAcceptanceResult"
+        },
+        {
+          "$ref": "#/$defs/MemberResponse"
+        },
+        {
+          "$ref": "#/$defs/ProfessionalResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientProfileResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientIdentifierResponse"
+        },
+        {
+          "$ref": "#/$defs/ContactResponse"
+        },
+        {
+          "$ref": "#/$defs/RelationshipResponse"
+        },
+        {
+          "$ref": "#/$defs/ServiceResponse"
+        },
+        {
+          "$ref": "#/$defs/ServiceOfferResponse"
+        },
+        {
+          "$ref": "#/$defs/ScheduleRuleResponse"
+        },
+        {
+          "$ref": "#/$defs/ScheduleExceptionResponse"
+        },
+        {
+          "$ref": "#/$defs/ScheduleBlockResponse"
+        },
+        {
+          "$ref": "#/$defs/AppointmentResponse"
+        }
+      ]
+    },
+    "PaginatedResponse_AccountDeviceResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AccountDeviceResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[AccountDeviceResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_AccountSummary_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AccountSummary"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[AccountSummary]",
+      "type": "object"
+    },
+    "PaginatedResponse_AppointmentHistoryResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AppointmentHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[AppointmentHistoryResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_AppointmentResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AppointmentResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[AppointmentResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_AuditEventResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/AuditEventResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[AuditEventResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ContactResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ContactResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ContactResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_DeviceResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DeviceResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[DeviceResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_InvitationResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/InvitationResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[InvitationResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_MemberResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/MemberResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[MemberResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientContactResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientContactResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientContactResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientIdentifierResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientIdentifierResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientIdentifierResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientProfileResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientProfileResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientProfileResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ProfessionalResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProfessionalResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ProfessionalResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ScheduleBlockResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ScheduleBlockResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ScheduleBlockResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ScheduleExceptionResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ScheduleExceptionResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ScheduleExceptionResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ScheduleRuleResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ScheduleRuleResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ScheduleRuleResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ServiceOfferResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ServiceOfferResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ServiceOfferResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ServiceResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ServiceResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ServiceResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_SyncItem_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/SyncItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[SyncItem]",
+      "type": "object"
+    },
+    "PatientContactResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "contactFullName": {
+          "title": "Contactfullname",
+          "type": "string"
+        },
+        "contactPersonId": {
+          "format": "uuid7",
+          "title": "Contactpersonid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "isResponsibleContact": {
+          "title": "Isresponsiblecontact",
+          "type": "boolean"
+        },
+        "patientFullName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Patientfullname"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phonecode"
+        },
+        "relationshipKind": {
+          "enum": [
+            "mother",
+            "father",
+            "guardian",
+            "other"
+          ],
+          "title": "Relationshipkind",
+          "type": "string"
+        },
+        "representationStatus": {
+          "enum": [
+            "unverified",
+            "verified"
+          ],
+          "title": "Representationstatus",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "validFrom": {
+          "format": "date-time",
+          "title": "Validfrom",
+          "type": "string"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Validuntil"
+        },
+        "verifiedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedat"
+        },
+        "verifiedByUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedbyuserid"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "patientId",
+        "contactPersonId",
+        "relationshipKind",
+        "isResponsibleContact",
+        "representationStatus",
+        "verifiedAt",
+        "verifiedByUserId",
+        "validFrom",
+        "validUntil",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version",
+        "patientFullName",
+        "contactFullName",
+        "phoneCode",
+        "phone"
+      ],
+      "title": "PatientContactResponse",
+      "type": "object"
+    },
+    "PatientIdentifierResponse": {
+      "properties": {
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "documentNumber": {
+          "title": "Documentnumber",
+          "type": "string"
+        },
+        "documentType": {
+          "enum": [
+            "national_id",
+            "passport"
+          ],
+          "title": "Documenttype",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "issuingCountry": {
+          "title": "Issuingcountry",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "verificationStatus": {
+          "enum": [
+            "declared",
+            "verified",
+            "invalidated"
+          ],
+          "title": "Verificationstatus",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "patientId",
+        "issuingCountry",
+        "documentType",
+        "documentNumber",
+        "verificationStatus",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientIdentifierResponse",
+      "type": "object"
+    },
+    "PatientProfileResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "birthDate": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Birthdate"
+        },
+        "completionStatus": {
+          "enum": [
+            "draft",
+            "complete"
+          ],
+          "title": "Completionstatus",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "fullName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fullname"
+        },
+        "identificationBasis": {
+          "anyOf": [
+            {
+              "enum": [
+                "own_document",
+                "minor_without_document"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Identificationbasis"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phonecode"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "patientId",
+        "fullName",
+        "birthDate",
+        "phoneCode",
+        "phone",
+        "identificationBasis",
+        "completionStatus",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientProfileResponse",
+      "type": "object"
+    },
+    "ProfessionalResponse": {
+      "properties": {
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "publicName": {
+          "title": "Publicname",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "publicName",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ProfessionalResponse",
+      "type": "object"
+    },
+    "ReadyResponse": {
+      "properties": {
+        "database": {
+          "enum": [
+            "available",
+            "unavailable",
+            "not_configured"
+          ],
+          "title": "Database",
+          "type": "string"
+        },
+        "notifications": {
+          "anyOf": [
+            {
+              "enum": [
+                "available",
+                "unavailable"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Notifications"
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "not_ready"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "database"
+      ],
+      "title": "ReadyResponse",
+      "type": "object"
+    },
+    "RelationshipResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "contactPersonId": {
+          "format": "uuid7",
+          "title": "Contactpersonid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "isResponsibleContact": {
+          "title": "Isresponsiblecontact",
+          "type": "boolean"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "relationshipKind": {
+          "enum": [
+            "mother",
+            "father",
+            "guardian",
+            "other"
+          ],
+          "title": "Relationshipkind",
+          "type": "string"
+        },
+        "representationStatus": {
+          "enum": [
+            "unverified",
+            "verified"
+          ],
+          "title": "Representationstatus",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "validFrom": {
+          "format": "date-time",
+          "title": "Validfrom",
+          "type": "string"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Validuntil"
+        },
+        "verifiedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedat"
+        },
+        "verifiedByUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedbyuserid"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "patientId",
+        "contactPersonId",
+        "relationshipKind",
+        "isResponsibleContact",
+        "representationStatus",
+        "verifiedAt",
+        "verifiedByUserId",
+        "validFrom",
+        "validUntil",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "RelationshipResponse",
+      "type": "object"
+    },
+    "ScheduleBlockResponse": {
+      "properties": {
+        "accountId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Accountid"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "endsAt": {
+          "title": "Endsat",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "reasonCode": {
+          "anyOf": [
+            {
+              "enum": [
+                "vacation",
+                "administrative",
+                "unavailable"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoncode"
+        },
+        "startsAt": {
+          "title": "Startsat",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "accountId",
+        "professionalId",
+        "startsAt",
+        "endsAt",
+        "reasonCode",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ScheduleBlockResponse",
+      "type": "object"
+    },
+    "ScheduleExceptionResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "closed",
+            "replacement"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "localDate": {
+          "format": "date",
+          "title": "Localdate",
+          "type": "string"
+        },
+        "localEndMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Localendminute"
+        },
+        "localStartMinute": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Localstartminute"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "accountId",
+        "professionalId",
+        "localDate",
+        "kind",
+        "localStartMinute",
+        "localEndMinute",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ScheduleExceptionResponse",
+      "type": "object"
+    },
+    "ScheduleRuleResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "isoWeekday": {
+          "title": "Isoweekday",
+          "type": "integer"
+        },
+        "localEndMinute": {
+          "title": "Localendminute",
+          "type": "integer"
+        },
+        "localStartMinute": {
+          "title": "Localstartminute",
+          "type": "integer"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "validFrom": {
+          "format": "date",
+          "title": "Validfrom",
+          "type": "string"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Validuntil"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "accountId",
+        "professionalId",
+        "isoWeekday",
+        "localStartMinute",
+        "localEndMinute",
+        "validFrom",
+        "validUntil",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ScheduleRuleResponse",
+      "type": "object"
+    },
+    "ServiceOfferResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "defaultDurationMinutes": {
+          "title": "Defaultdurationminutes",
+          "type": "integer"
+        },
+        "durationMinutesOverride": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Durationminutesoverride"
+        },
+        "effectiveDurationMinutes": {
+          "title": "Effectivedurationminutes",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "serviceId": {
+          "format": "uuid7",
+          "title": "Serviceid",
+          "type": "string"
+        },
+        "serviceStatus": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Servicestatus",
+          "type": "string"
+        },
+        "serviceVersion": {
+          "title": "Serviceversion",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "professionalId",
+        "serviceId",
+        "name",
+        "defaultDurationMinutes",
+        "durationMinutesOverride",
+        "effectiveDurationMinutes",
+        "status",
+        "serviceStatus",
+        "serviceVersion",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ServiceOfferResponse",
+      "type": "object"
+    },
+    "ServiceResponse": {
+      "properties": {
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "defaultDurationMinutes": {
+          "title": "Defaultdurationminutes",
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "professionalId",
+        "name",
+        "defaultDurationMinutes",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ServiceResponse",
+      "type": "object"
+    },
+    "SnapshotRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "appointmentsFrom": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentsfrom"
+        },
+        "appointmentsUntil": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentsuntil"
+        }
+      },
+      "title": "SnapshotRequest",
+      "type": "object"
+    },
+    "SnapshotResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "baseCursor": {
+          "title": "Basecursor",
+          "type": "string"
+        },
+        "contractVersion": {
+          "const": 1,
+          "default": 1,
+          "title": "Contractversion",
+          "type": "integer"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "title": "Expiresat",
+          "type": "string"
+        },
+        "itemCount": {
+          "minimum": 0.0,
+          "title": "Itemcount",
+          "type": "integer"
+        },
+        "modelRevision": {
+          "title": "Modelrevision",
+          "type": "string"
+        },
+        "snapshotId": {
+          "format": "uuid7",
+          "title": "Snapshotid",
+          "type": "string"
+        },
+        "window": {
+          "$ref": "#/$defs/SyncWindow"
+        }
+      },
+      "required": [
+        "snapshotId",
+        "accountId",
+        "modelRevision",
+        "window",
+        "baseCursor",
+        "expiresAt",
+        "itemCount"
+      ],
+      "title": "SnapshotResponse",
+      "type": "object"
+    },
+    "SyncChange": {
+      "properties": {
+        "changeKind": {
+          "enum": [
+            "upsert",
+            "remove"
+          ],
+          "title": "Changekind",
+          "type": "string"
+        },
+        "entityKey": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "format": "uuid7",
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Entitykey"
+        },
+        "entityType": {
+          "title": "Entitytype",
+          "type": "string"
+        },
+        "entityVersion": {
+          "minimum": 1.0,
+          "title": "Entityversion",
+          "type": "integer"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperationState"
+            },
+            {
+              "$ref": "#/$defs/AppointmentHistoryProjection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "State"
+        }
+      },
+      "required": [
+        "entityType",
+        "entityKey",
+        "entityVersion",
+        "changeKind",
+        "state"
+      ],
+      "title": "SyncChange",
+      "type": "object"
+    },
+    "SyncItem": {
+      "properties": {
+        "entityKey": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "format": "uuid7",
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Entitykey"
+        },
+        "entityType": {
+          "title": "Entitytype",
+          "type": "string"
+        },
+        "entityVersion": {
+          "minimum": 1.0,
+          "title": "Entityversion",
+          "type": "integer"
+        },
+        "state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperationState"
+            },
+            {
+              "$ref": "#/$defs/AppointmentHistoryProjection"
+            }
+          ],
+          "title": "State"
+        }
+      },
+      "required": [
+        "entityType",
+        "entityKey",
+        "entityVersion",
+        "state"
+      ],
+      "title": "SyncItem",
+      "type": "object"
+    },
+    "SyncWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "appointmentsFrom": {
+          "format": "date",
+          "title": "Appointmentsfrom",
+          "type": "string"
+        },
+        "appointmentsUntil": {
+          "format": "date",
+          "title": "Appointmentsuntil",
+          "type": "string"
+        },
+        "endsAt": {
+          "title": "Endsat",
+          "type": "string"
+        },
+        "startsAt": {
+          "title": "Startsat",
+          "type": "string"
+        },
+        "timeZone": {
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "appointmentsFrom",
+        "appointmentsUntil",
+        "timeZone"
+      ],
+      "title": "SyncWindow",
+      "type": "object"
+    },
+    "TokenRotationRequest": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "TokenRotationRequest",
+      "type": "object"
+    }
+  },
+  "$id": "urn:nightingale:public-models:1.1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Public HTTP model definitions",
+  "x-generated": {
+    "contractVersion": 1,
+    "generator": "scripts/export_contracts.py",
+    "modelRevision": "api-v1.1",
+    "origin": "src.application:app and src/api/*/domain",
+    "packages": {
+      "asyncpg": "0.32.0",
+      "fastapi": "0.159.1",
+      "nightingale-api": "0.1.0",
+      "pydantic": "2.14.1",
+      "sqlalchemy": "2.1.6"
+    },
+    "sourceHead": "52cabb83f44ff46c750dcbb5ec3981990ee4707b",
+    "sourceSha256": "cdb22845b3f5561a2df811fa2f14d21b4b8a8e907dac4c34eedf2ca76e44dfc4"
+  }
+}

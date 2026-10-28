@@ -1,8 +1,8 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.1. **Fecha:** 2026-10-27. **Estado:** C09 aceptado; T28–T30 comprobadas en el [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md), para revisión C10. C07/C08 conservaron autorización de paso sin aceptaciones separadas. Descarga, snapshot y recuperación operativos en pruebas aisladas. SSE e integración con el escritorio siguen pendientes; no se acredita producción.
+**Versión de diseño:** 1.1. **Fecha:** 2026-10-28. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 en el [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md). C07/C08 conservaron autorización de paso sin aceptaciones separadas. SSE, snapshot, descarga y recuperación comprobados en entorno aislado con dos procesos API. [Contratos generados](../contracts/README.md): 46 rutas/47 operaciones HTTP, 70 esquemas y 42 acciones por lote. C11, consumidores y producción conservan sus límites.
 
-Esta es la única fuente editable del diseño de transporte de esta etapa. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas, sin duplicarlos aquí. Los esquemas Pydantic de domain heredan del BaseModel del proyecto y producirán OpenAPI/JSON Schema; un generado identificará origen y versión y nunca se editará a mano. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
+Este documento conserva explicación de transporte, permisos y recuperación. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas. Los esquemas Pydantic de domain, derivados del BaseModel del proyecto, son la fuente de OpenAPI/JSON Schema exportados por scripts/export_contracts.py. Los generados identifican origen/versión/huella y no se editan a mano. La [guía Rust](rust-api-guide.md) explica su uso y enlaza ejemplos comprobados. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
 ## 1. Alcance y autenticación
 
@@ -83,7 +83,7 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 | DELETE | `A/sync/snapshots/{snapshot_id}` | creador | sin cuerpo | 204; libera derivado temporal; no borra negocio ni recibos |
 | GET | `A/sync/events` | miembro | text/event-stream | SSE de avisos; Last-Event-ID es una pista, nunca cursor aplicado |
 
-GET /openapi.json y GET /docs se habilitarán solo en desarrollo/prueba al existir el contrato generado, sin añadir acciones de negocio. No se presenta su estado actual como contrato v1.
+GET /openapi.json, GET /docs y GET /redoc se habilitan solo en desarrollo/prueba. Producción no registra esas rutas. La ruta de bienvenida se conserva fuera del contrato público generado, sin acciones de negocio.
 
 ## 4. Modelos públicos
 
@@ -258,6 +258,12 @@ El mantenimiento administrativo existente procesa hasta 500 resultados, 100 grup
 Una captura ya liberada o retirada físicamente devuelve 404, igual que una captura ajena o un ID inexistente; no se conserva un registro adicional para revelar su existencia. Mientras exista y pertenezca al creador autorizado, el servidor distingue vencimiento y cambio de época con sus errores 410.
 
 ## 8. Canal de avisos
+
+T31 implementa GET A/sync/events con query cursor obligatorio, validado igual que GET changes. No acepta page/shows ni sustituye ese cursor por Last-Event-ID. Los errores de entrada/acceso ocurren antes de abrir HTTP 200: 401/403/404, 410 CURSOR_EXPIRED, 422, 429 CONNECTION_LIMIT y 503 DEPENDENCY_UNAVAILABLE. La clave de firma es la misma de descarga/capturas.
+
+changes_available entrega {accountId,cursor}. Ese cursor conserva la posición aplicada que dio el cliente, ventana y época; no salta al head que provocó el aviso. El id SSE contiene la posición observada solo como referencia. heartbeat entrega {serverTime}; access_revoked no contiene data y cierra el stream. El cliente conserva su cursor aplicado tras cada descarga y lo usa al volver a conectar.
+
+El límite de dos conexiones rige entre procesos mediante registros con plazo de 45 segundos renovados al revalidar. No mantiene sesiones SQL por cliente. El listener usa una conexión dedicada por proceso; confirma LISTEN y despierta a los streams tras cada recuperación para releer el journal. Cada stream admite un aviso pendiente; al excederlo termina. Un envío de red que tarda más de tres segundos provoca desconexión. La preparación devuelve 503 mientras falta el listener; las rutas de datos siguen disponibles.
 
 GET A/sync/events usa EventSourceResponse/ServerSentEvent de FastAPI instalado; no nueva biblioteca SSE. Emite changes_available con cursor de referencia para solicitar datos, access_revoked sin datos y heartbeat con tiempo del servidor. Heartbeat cada 15 s y revisión de posición/acceso. Reconexión sugerida 3 s; Last-Event-ID no prueba aplicación ni permite saltar descarga.
 

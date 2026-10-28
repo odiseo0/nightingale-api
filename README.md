@@ -2,7 +2,7 @@
 
 API de autorización, aceptación del estado compartido y sincronización de Nightingale. Python y FastAPI; PostgreSQL operativo privado. Este repositorio también tendrá los módulos y workers de recordatorios, entregas, integración con n8n e indicadores básicos.
 
-**Estado al 2026-10-27:** C09 aceptado; T28–T30 comprobadas para revisión C10. Credenciales, equipo, pacientes/contactos, servicios, agenda, citas/historia, descarga por grupos, snapshot y recuperación probados en PostgreSQL/Keycloak aislados. Migraciones hasta 20261027_06, con 27 tablas y btree_gist. Se conserva la aceptación atómica y el alta mediante [scripts/create_practice.py](scripts/create_practice.py). Para captura/descarga se requiere API_SYNC_SIGNING_KEY, común a los procesos. SSE, dos procesos de API, consumidores y producción siguen pendientes. Evidencia y límites en la [lista de control](tasks/P-20261024-01-desktop-shared-api/todo.md).
+**Estado al 2026-10-28:** C10 aceptado; T31–T33 para revisión expresa C11. SSE, descarga y recuperación comprobados con PostgreSQL/Keycloak aislados y dos procesos API reales. Diez streams/20 commits/200 avisos: p95 local 120.1 ms, con cota superior que incluye commit de 122.5 ms. Migración 20261028_01: 28 tablas y btree_gist. [Contratos generados](contracts/README.md): 46 rutas, 47 operaciones HTTP y 70 esquemas, más los 42 payloads por lote. [Guía para Rust](docs/rust-api-guide.md) con ejemplos comprobados. Se conserva la aceptación atómica y el alta mediante [scripts/create_practice.py](scripts/create_practice.py). API_SYNC_SIGNING_KEY es secreta y común a procesos. C11 sigue sin aceptar; consumidores Rust/Hub y producción siguen fuera. Evidencia y límites en la [lista de control](tasks/P-20261024-01-desktop-shared-api/todo.md).
 
 El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient Hub tiene su web, backend y datos propios; usa esta API para consultar y cambiar citas autorizadas. Ninguno recibe acceso SQL al PostgreSQL operativo.
 
@@ -17,6 +17,8 @@ El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient 
 | [Arquitectura](docs/architecture.md) | Componentes, datos, dependencias y flujos propuestos |
 | [Contratos](docs/contracts.md) | Propiedad, criterios de diseño y acuerdos por cerrar |
 | [Contrato de diseño HTTP v1](docs/api-v1.md) | Rutas, operaciones, modelos públicos, permisos y recuperación de esta etapa |
+| [Artefactos de contrato](contracts/README.md) | OpenAPI/JSON Schema generados desde código, origen y huellas |
+| [Guía para Rust](docs/rust-api-guide.md) | Acceso, lotes, conflictos, SSE, cursores y recuperación; consumidor pendiente |
 | [Esquema físico de diseño](docs/database-schema.md) | Única fuente del modelo; implementación parcial en migraciones y pruebas aisladas |
 | [Calidad y pruebas](docs/quality.md) | Requisitos verificables y pruebas futuras |
 | [Decisiones](docs/decisions.md) | Qué está confirmado, propuesto o pendiente |

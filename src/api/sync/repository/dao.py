@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from sqlalchemy import delete, func, select, text, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from .models import (
     OperationReceipt,
     SyncSnapshot,
     SyncSnapshotItem,
+    SyncStreamLease,
 )
 
 
@@ -224,6 +225,7 @@ class ChangeLogDAO(DAO[ChangeLog, BaseModel, BaseModel]):
         for sequence, accepted_at in groups:
             if accepted_at > cutoff:
                 break
+
             retained_from = sequence + 1
 
         count = retained_from - head.retained_from_sequence
@@ -340,3 +342,78 @@ class SyncSnapshotItemDAO(DAO[SyncSnapshotItem, BaseModel, BaseModel]):
 
 dao_snapshots = SyncSnapshotDAO(SyncSnapshot)
 dao_snapshot_items = SyncSnapshotItemDAO(SyncSnapshotItem)
+
+
+class SyncStreamLeaseDAO(DAO[SyncStreamLease, BaseModel, BaseModel]):
+    async def acquire(
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        user_id: UUID,
+        device_id: UUID,
+        now: datetime,
+    ) -> UUID | None:
+        """The caller holds the account head, including while counting slots."""
+        await db.execute(
+            delete(self.model).where(
+                self.model.account_id == account_id,
+                self.model.device_id == device_id,
+                self.model.expires_at <= now,
+            )
+        )
+        count = await db.scalar(
+            select(func.count())
+            .select_from(self.model)
+            .where(
+                self.model.account_id == account_id,
+                self.model.device_id == device_id,
+            )
+        )
+
+        if count is not None and count >= 2:
+            return None
+
+        row = await self.add(
+            db,
+            self.model(
+                id=uuid7(),
+                account_id=account_id,
+                user_id=user_id,
+                device_id=device_id,
+                expires_at=now + timedelta(seconds=45),
+            ),
+        )
+
+        return row.id
+
+    async def renew(self, db: AsyncSession, lease_id: UUID, now: datetime) -> bool:
+        renewed = await db.scalar(
+            update(self.model)
+            .where(self.model.id == lease_id, self.model.expires_at > now)
+            .values(expires_at=now + timedelta(seconds=45))
+            .returning(self.model.id)
+        )
+
+        return renewed is not None
+
+    async def release(self, db: AsyncSession, lease_id: UUID) -> None:
+        await db.execute(delete(self.model).where(self.model.id == lease_id))
+
+    async def purge_expired(self, db: AsyncSession) -> int:
+        expired = (
+            select(self.model.id)
+            .where(self.model.expires_at <= func.clock_timestamp())
+            .order_by(self.model.expires_at, self.model.id)
+            .limit(100)
+            .with_for_update(skip_locked=True)
+        )
+        rows = await db.scalars(
+            delete(self.model)
+            .where(self.model.id.in_(expired))
+            .returning(self.model.id)
+        )
+
+        return len(rows.all())
+
+
+dao_streams = SyncStreamLeaseDAO(SyncStreamLease)

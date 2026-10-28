@@ -2,6 +2,27 @@
 
 Solo datos ficticios. Estos comandos no usan Docker, no registran servicios de Windows y no acceden al PostgreSQL personal. Los datos y descargas viven en `.tmp/test-services/`, que Git ignora. No borres una carpeta de datos mientras su proceso siga activo.
 
+## SSE y colaboración · T31/T32
+
+```powershell
+.\.venv\Scripts\python.exe test-support/events/check.py
+.\.venv\Scripts\python.exe test-support/collaboration/check.py
+```
+
+Cada comando valida el clúster Test, crea una base aleatoria, aplica 20261028_01 (28 tablas y btree_gist), inicia dos procesos Uvicorn reales en loopback y cierra solo sus procesos/conexiones al terminar. Los servicios Test existentes permanecen activos. La clave de firma ficticia existe solo en memoria/entorno; access logs desactivados. La base se elimina al terminar.
+
+events comprueba LISTEN/NOTIFY tras commit y sin señal tras rollback, cursor, límite global de streams, heartbeat y revocación. collaboration añade diez streams, reservas y duplicados entre procesos, pérdida/recuperación del listener, revocación global por heartbeat y medida local de 20 commits/200 avisos. Informes y límites en .tmp/t31 y .tmp/t32 y en [desarrollo](../docs/operations/development.md). api_process.py contiene solo instrumentación de pruebas; el producto no lo importa. No equivalen a integración Rust/Hub ni a garantía de producción.
+
+## Contratos y ejemplos · T33
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.export_contracts
+.\.venv\Scripts\python.exe -m scripts.export_contracts --check
+.\.venv\Scripts\python.exe test-support/contracts/check.py
+```
+
+Los dos primeros no conectan a servicios ni leen .env local. El tercero usa PostgreSQL/Keycloak Test reales y cliente ASGI para validar ejemplos, OpenAPI, referencias de JSON Schema, permisos de propietario/asistente, duplicados, conflictos, captura y descarga. Ese cliente no prueba dos procesos; los probes SSE/colaboración de arriba sí. Fuentes, artefactos y límites en [contracts/README.md](../contracts/README.md).
+
 ## Descarga, snapshot y retención · C10
 
 Con los servicios Test existentes, desde la raíz:
@@ -11,9 +32,9 @@ Con los servicios Test existentes, desde la raíz:
 .\.venv\Scripts\python.exe test-support/retention/check.py
 ```
 
-Ambos reutilizan la preparación de sync, comprueban la ruta del clúster, aplican head 20261027_06 en bases aleatorias y las eliminan al terminar. Head actual: 27 tablas y btree_gist. Descarga prueba grupos completos, audiencia, firma/alcance, retiradas, escritor concurrente y captura/base coherentes; snapshot prueba inmutabilidad, páginas, zona, época, vencimiento y rollback. Retención prepara resultados ficticios con reloj controlado, comprueba lotes de 500 resultados/100 grupos, frontera-1, recibo mínimo y recuperación sin repetir efectos. La clave HMAC de cada probe existe solo en su proceso.
+Ambos reutilizan la preparación de sync, comprueban la ruta del clúster, aplican head en bases aleatorias y las eliminan al terminar. El cierre C10 usó 20261027_06 (27 tablas); el head actual es 20261028_01 (28 tablas y btree_gist). Descarga prueba grupos completos, audiencia, firma/alcance, retiradas, escritor concurrente y captura/base coherentes; snapshot prueba inmutabilidad, páginas, zona, época, vencimiento y rollback. Retención comprueba lotes 500 resultados/100 grupos, frontera-1, recibo mínimo y recuperación; C11 añade un lote de 101 leases vencidos para probar el límite 100 y conservar uno vigente. La clave HMAC de cada probe existe solo en su proceso.
 
-C10 ejecutó estos dos probes y los nueve existentes en secuencia. No inicia ni detiene servicios. Las conexiones separadas y ASGI no acreditan dos procesos de API, SSE o consumidores; eso sigue en T31–T33. No se ejecuta HTTP separado del wheel. Evidencia y límites en [T30/C10](../tasks/P-20261024-01-desktop-shared-api/todo.md#t30-recuperar-tras-vencimiento).
+C10 ejecutó estos dos probes y los nueve existentes en secuencia. Las conexiones separadas y ASGI de aquel cierre no acreditaban dos procesos API; T31/T32 añadieron los probes reales indicados arriba. Consumidores siguen pendientes. No se ejecuta HTTP separado del wheel. Evidencia histórica en [T30/C10](../tasks/P-20261024-01-desktop-shared-api/todo.md#t30-recuperar-tras-vencimiento) y actual en T31–T33.
 
 ## PostgreSQL
 

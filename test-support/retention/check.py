@@ -95,6 +95,13 @@ async def check_retention(runtime, administrative, client, tokens):
                        (SELECT count(DISTINCT sequence) FROM nightingale.change_log),
                        retained_from_sequence FROM nightingale.account_sync_heads WHERE account_id=:id
             """), {"id": account_id})).one())
+    fresh_lease = uuid7()
+    async with administrative() as db:
+        async with db.begin():
+            statement = text("INSERT INTO nightingale.sync_stream_leases(id,account_id,user_id,device_id,expires_at) VALUES (:id,:account,:user,:device,clock_timestamp()-interval '1 minute')")
+            await db.execute(statement, [{"id": uuid7(), "account": account_id, "user": UUID(owner["userId"]), "device": UUID(owner["deviceId"])} for _ in range(101)])
+            await db.execute(text("INSERT INTO nightingale.sync_stream_leases(id,account_id,user_id,device_id,expires_at) VALUES (:id,:account,:user,:device,clock_timestamp()+interval '45 seconds')"),
+                             {"id": fresh_lease, "account": account_id, "user": UUID(owner["userId"]), "device": UUID(owner["deviceId"])})
     before = await counts()
     assert before[4:] == (606, 104, 1), before
     assert (await changes(expired_snapshot["baseCursor"], 410))["code"] == "CURSOR_EXPIRED"
@@ -112,6 +119,9 @@ async def check_retention(runtime, administrative, client, tokens):
     async with administrative() as db:
         result = await purge_expired_results(db)
     assert isinstance(result, Ok) and result.value == 500
+    async with administrative() as db:
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_stream_leases")) == 2
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_stream_leases WHERE id=:id"), {"id": fresh_lease}) == 1
     after = await counts()
     assert after[:4] == before[:4] and after[4:] == (106, 4, 101), after
     assert (await changes(cursor(99), 410))["code"] == "CURSOR_EXPIRED"
@@ -124,6 +134,8 @@ async def check_retention(runtime, administrative, client, tokens):
     assert (await submit([changed]))[0]["error"]["code"] == "IDEMPOTENCY_CONFLICT"
     async with administrative() as db:
         assert (await purge_expired_results(db)).value == 105
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_stream_leases")) == 1
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_stream_leases WHERE id=:id"), {"id": fresh_lease}) == 1
     after_second = await counts()
     assert after_second[:4] == before[:4] and after_second[4:] == (1, 1, 104), after_second
     assert len((await changes(cursor(103)))["groups"]) == 1

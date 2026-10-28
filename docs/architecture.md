@@ -1,6 +1,6 @@
 # Arquitectura de API
 
-**Actualizada:** 2026-10-27. **Estado:** C09 aceptado; T28–T30 comprobadas para revisión C10. Cada componente aporta su proyección a la captura que sync coordina bajo REPEATABLE READ. application sigue sin SQL; los DAOs usan la sesión recibida y commit=False. appointments posee citas/historia por versión; sync posee grupos, cursores y derivados temporales. La aceptación conserva un groupId al proyectar la operación en varias cuentas. Catálogo privado para propietario y ofertas para miembros. SSE y consumidores siguen pendientes. Límites en [la especificación](nightingale-api.md).
+**Actualizada:** 2026-10-28. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11. Cada componente aporta su proyección a la captura REPEATABLE READ. application sigue sin SQL; DAOs con la sesión recibida y commit=False. appointments posee citas/historia por versión; sync grupos, cursores y derivados temporales. La aceptación conserva un groupId al proyectar en varias cuentas. SSE usa NOTIFY transaccional y un listener dedicado por proceso; consultas breves reautorizan cada aviso/heartbeat sin sesión SQL por cliente. Leases de 45 segundos imponen dos streams por dispositivo/cuenta entre procesos. La app de módulo conserva su fábrica y gestiona solo el listener en el ciclo de proceso. Dos procesos/diez streams comprobados; consumidores y producción pendientes. Límites en [la especificación](nightingale-api.md).
 
 ## Tres proyectos
 

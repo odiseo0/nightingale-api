@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import groupby
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import ValidationError
 
+from src.api.accounts.domain.accounts import AccountContext
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.appointments.application.appointments_cases import captured_history
 from src.api.appointments.domain.appointments import AppointmentResponse
@@ -34,7 +35,39 @@ from src.settings.api_settings import api_settings
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from src.api.sync.repository.models import ChangeLog
+    from src.api.sync.repository.models import AccountSyncHead, ChangeLog
+
+
+def position_for_scope(
+    context: AccountContext,
+    head: AccountSyncHead,
+    cursor: str,
+    key: bytes,
+    now: datetime,
+) -> Result[SyncPosition, SyncReadError]:
+    body = verify_position(cursor, key)
+    if body is None:
+        return Err(SyncReadError("CURSOR_EXPIRED"))
+
+    try:
+        position = SyncPosition.model_validate_json(body)
+    except ValidationError:
+        return Err(SyncReadError("CURSOR_EXPIRED"))
+
+    if (
+        position.account_id != context.account.id
+        or position.user_id != context.actor.user_id
+        or position.device_id != context.actor.device_id
+        or position.audience != ("owner" if context.owner else "members")
+        or position.permission_epoch != head.permission_epoch
+        or position.sequence < head.retained_from_sequence - 1
+        or position.sequence > head.last_sequence
+        or position.expires_at <= now
+        or position.issued_at > now
+    ):
+        return Err(SyncReadError("CURSOR_EXPIRED"))
+
+    return Ok(position)
 
 
 def visible_change(row: ChangeLog, window: SyncWindow) -> SyncChange | None:
@@ -103,45 +136,35 @@ async def read_changes(
 ]:
     async with transaction(db):
         scope = await authorized_context(db, credential, account_id)
+
         if isinstance(scope, Err):
             return scope
 
         context, head = scope.value
         secret = api_settings.sync_signing_key
+
         if secret is None:
             return Err(SyncReadError("DEPENDENCY_UNAVAILABLE"))
 
         key = secret.get_secret_value().encode("utf-8")
-        body = verify_position(cursor, key)
-        if body is None:
-            return Err(SyncReadError("CURSOR_EXPIRED"))
-
-        try:
-            position = SyncPosition.model_validate_json(body)
-        except ValidationError:
-            return Err(SyncReadError("CURSOR_EXPIRED"))
-
         now = await dao_heads.get_server_time(db)
-        if (
-            position.account_id != account_id
-            or position.user_id != context.actor.user_id
-            or position.device_id != context.actor.device_id
-            or position.audience != ("owner" if context.owner else "members")
-            or position.permission_epoch != head.permission_epoch
-            or position.sequence < head.retained_from_sequence - 1
-            or position.sequence > head.last_sequence
-            or position.expires_at <= now
-            or position.issued_at > now
-        ):
-            return Err(SyncReadError("CURSOR_EXPIRED"))
+        checked = position_for_scope(context, head, cursor, key, now)
+
+        if isinstance(checked, Err):
+            return checked
+
+        position = checked.value
 
         rows, has_more = await dao_changes.groups_after(
             db, account_id, position.sequence, head.last_sequence
         )
+
         groups: list[ChangeGroup] = []
+
         for _, entries in groupby(rows, key=lambda row: row.sequence):
             group = list(entries)
             changes: list[SyncChange] = []
+
             for row in group:
                 if row.audience == "owner" and not context.owner:
                     continue
@@ -153,6 +176,7 @@ async def read_changes(
 
                 if change is not None:
                     changes.append(change)
+
                     if isinstance(change.state, AppointmentResponse):
                         history = await captured_history(db, change.state)
                         changes.append(

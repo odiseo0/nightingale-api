@@ -9,9 +9,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.schema.http import LiveResponse, ReadyResponse
+from src.core.services.pg_notifications import notifications
 from src.settings.db_settings import db_settings
 
-router = APIRouter(prefix="/health", include_in_schema=False)
+router = APIRouter(prefix="/health", tags=["health"])
 
 
 async def get_ready_db() -> AsyncIterator[AsyncSession | None]:
@@ -26,13 +28,21 @@ async def get_ready_db() -> AsyncIterator[AsyncSession | None]:
             yield db
 
 
-@router.get("/live")
-async def live() -> dict[str, str]:
-    return {"status": "alive"}
+@router.get("/live", operation_id="getLiveness", response_model=LiveResponse)
+async def live() -> LiveResponse:
+    return LiveResponse(status="alive")
 
 
-@router.get("/ready")
-async def ready(db: Annotated[AsyncSession | None, Depends(get_ready_db)]):
+@router.get(
+    "/ready",
+    operation_id="getReadiness",
+    response_model=ReadyResponse,
+    response_model_exclude_none=True,
+    responses={503: {"model": ReadyResponse}},
+)
+async def ready(
+    db: Annotated[AsyncSession | None, Depends(get_ready_db)],
+) -> ReadyResponse | JSONResponse:
     if db is None:
         return JSONResponse(
             {"status": "not_ready", "database": "not_configured"},
@@ -42,10 +52,22 @@ async def ready(db: Annotated[AsyncSession | None, Depends(get_ready_db)]):
     try:
         async with asyncio.timeout(db_settings.pool_timeout):
             await db.execute(text("SELECT 1"))
-    except (SQLAlchemyError, OSError, TimeoutError):
+    except SQLAlchemyError, OSError, TimeoutError:
         return JSONResponse(
             {"status": "not_ready", "database": "unavailable"},
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-    return {"status": "ready", "database": "available"}
+    if not notifications.ready:
+        return JSONResponse(
+            {
+                "status": "not_ready",
+                "database": "available",
+                "notifications": "unavailable",
+            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    return ReadyResponse(
+        status="ready", database="available", notifications="available"
+    )

@@ -1,6 +1,6 @@
 # Estado y evidencia: P-20261024-01-desktop-shared-api
 
-**Plan:** [plan.md](plan.md). **Estado:** In progress. **Actualizado:** 2026-10-27.
+**Plan:** [plan.md](plan.md). **Estado:** In progress. **Actualizado:** 2026-10-28.
 
 El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usuario aceptó después C01 al decir «Válido, puedes continuar con el objetivo, por favor». Tras revertir la primera continuación, autorizó retomar el trabajo con su estilo de código. C01 conserva su aceptación. Una tarea a la vez, sin delegación. Los estados se registran solo tras comprobar.
 
@@ -39,10 +39,10 @@ El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usua
 | T27 | Done | Secuencia, igualdad de historia, inmutabilidad y cierre C09 comprobados |
 | T28 | Done | Grupos confirmados, firma, alcance y retiradas comprobados |
 | T29 | Done | Captura/base coherentes, páginas inmutables y privacidad comprobadas |
-| T30 | Done | Retención, recibo mínimo y recuperación comprobados; revisión C10 pendiente |
-| T31 | Todo | Avisar cambios por SSE |
-| T32 | Todo | Probar colaboración concurrente |
-| T33 | Todo | Entregar el contrato y su evidencia |
+| T30 | Done | Retención, recibo mínimo y recuperación comprobados; C10 aceptado |
+| T31 | Done | SSE con dos procesos, límite compartido y recuperación comprobados |
+| T32 | Done | Dos procesos/diez streams, reservas y p95 local comprobados |
+| T33 | Done | Contratos generados, ejemplos y cierre C11 comprobados |
 | T34 | Done | Reglas y ampliación comprobadas; 45 tareas y 15 checkpoints |
 | T35 | Done | Contrato 1.1: camelCase, page/shows y avance incremental separado |
 | T36 | Done | Errores comunes y transacción comprobados; C12 para revisión |
@@ -759,15 +759,17 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 ### T31: Avisar cambios por SSE
 
-**Estado:** Todo. **Propietario:** sync. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** sync. **Tamaño previsto:** M por paso.
+
+**Desglose previo, 2026-10-28:** C10 aceptado con «Aprobado, puedes continuar con el plan». T31.1 añade NOTIFY transaccional al head y registros de conexión de 45 segundos para imponer dos conexiones por dispositivo/cuenta entre procesos sin retener sesiones SQL; reutiliza validación del cursor de descarga (hasta cinco archivos de producto). T31.2 añade listener técnico con conexión dedicada, reconexión, aviso de recuperación y cola de capacidad uno; control de envío lento y ciclo del listener/preparación (hasta cinco archivos). T31.3 conecta casos de acceso/renovación/liberación y ruta SSE, con heartbeat de 15 segundos y retry de 3000 ms (hasta cinco archivos). T31.4 comprueba estructura, pruebas enfocadas y probe HTTP real con dos procesos, pérdida del listener y revocación. Cada paso se comprueba antes del siguiente. El ciclo de proceso gestiona solo el listener: conserva la fábrica, Depends(get_db) y la app de módulo. No inicia T32 antes de comprobar T31.
 
 **Entrada/dependencias:** T30 comprobada y C10 aceptado.
 
 **Aceptación:**
 
-- [ ] SSE autentica cada conexión y revalida acceso sin sesión SQL abierta por cliente.
-- [ ] LISTEN/NOTIFY funciona entre procesos y el journal permite recuperar pérdidas.
-- [ ] Señales no contienen datos personales y consumidores lentos no acumulan colas.
+- [x] SSE autentica cada conexión y revalida acceso sin sesión SQL abierta por cliente.
+- [x] LISTEN/NOTIFY funciona entre procesos y el journal permite recuperar pérdidas.
+- [x] Señales no contienen datos personales y consumidores lentos no acumulan colas.
 
 **Comprobación:** Dos procesos, caída del listener y revocación con stream abierto. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -775,19 +777,25 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 **Transacción, datos y consumidores:** Aviso tras commit; no sustituye páginas ni avanza cursor aplicado.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-28:** migración 20261028_01 aplicada/revertida/reaplicada en base aleatoria, 28 tablas y btree_gist, fallo DDL sin revisión parcial. T31.1 comprobó 40 controles de estructura y cinco pruebas de descarga. T31.2 comprobó cuatro pruebas técnicas y 12 de fundación; el primer bloqueo de asyncio ocurrió en socketpair de Windows antes del código, diagnosticado con faulthandler y resuelto ejecutando fuera del aislamiento, sin cambiar el producto para evitarlo. T31.3 conserva cursores en el probe de descargas PostgreSQL/Keycloak. T31.4 ejecutó test-support/events/check.py con dos procesos Uvicorn reales: límite de dos streams entre procesos, heartbeat de unos 15 segundos, retry=3000, payload NOTIFY mínimo, ausencia de señal antes del commit/tras rollback, cursor aplicado intacto aunque Last-Event-ID sea futuro, pérdida/recuperación de ambos listeners y preparación 503/200, revocación con stream abierto y cero leases tras cerrar. Cola de capacidad uno y envío de red con plazo de tres segundos comprobados con pruebas técnicas; no se presenta el ASGI de esa prueba como dos procesos. El listener confirmado precede cada lectura inicial y despierta a los suscriptores tras reconectar. No hay sesión SQL por cliente.
+
+Suite final: 140 pruebas correctas en 58.800 s. Detectó y corrigió un fallo previo real en HEAD: TypeError de duración (true/1.5) escapaba de Pydantic; ValueError conserva la regla, con 12 pruebas de agenda correctas. La revisión C10 anterior no lo detectó; no se conserva como éxito de aquel cierre. Build offline correcto. Zed 1.40.2: 122 archivos, los 16 errores previos, ninguno nuevo en SSE. Sin supresiones/cast/Any nuevos ni dependencias. Evidencia .tmp/t31/: suite.txt (fallo previo), suite-final.txt, pyright.json, events.json, logs de dos procesos y build/. Se preservan los servicios Test 9400/32092. Sin HTTP del wheel, commits, consumidores o despliegues. T32 conserva carga de diez conexiones, reservas conjuntas y medidas; no se acredita producción.
 
 ### T32: Probar colaboración concurrente
 
-**Estado:** Todo. **Propietario:** integración API. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** integración API. **Tamaño previsto:** M por paso.
+
+**Desglose previo, 2026-10-28:** T32.1 amplía el soporte de procesos de prueba con registro de commit por operación (identificador e instante monotónico, sin payload/token) y lectura continua de diez conexiones SSE, dos por cada uno de cinco dispositivos. T32.2 recorre reserva concurrente, versión antigua, mismo duplicado y contenido distinto entre los dos procesos; contrasta estado/historia y recibos. T32.3 mide al menos 20 commits y sus diez avisos, p95 local menor de dos segundos; prueba pérdida de listener, recuperación, revocación global sin señal por cuenta y estado final. Solo archivos de soporte y evidencia, sin cambios de producto previstos. Se ejecuta y registra cada paso antes de pasar a T33; no renumera IDs ni delega.
+
+**Hallazgo de T32.1:** diez streams/avisos y liberación correctos, pero cerrar los clientes provoca cancelaciones durante el cierre SQL (logs del primer intento). Antes de T32.2, corregir solo la revisión breve y la liberación SSE en events_cases/sse, con scopes protegidos de AnyIO 4.15.1 ya instalado y plazo de tres segundos; probar cancelación y repetir T32.1. No cambiar la fábrica ni debilitar controles.
 
 **Entrada/dependencias:** T31 comprobada.
 
 **Aceptación:**
 
-- [ ] Clientes independientes prueban reservas, versiones, duplicados y revocaciones.
-- [ ] Dos procesos cumplen recuperación y objetivo local SSE con diez conexiones.
-- [ ] Pruebas PostgreSQL y fallos controlados conservan estado final e historia.
+- [x] Clientes independientes prueban reservas, versiones, duplicados y revocaciones.
+- [x] Dos procesos cumplen recuperación y objetivo local SSE con diez conexiones.
+- [x] Pruebas PostgreSQL y fallos controlados conservan estado final e historia.
 
 **Comprobación:** Ejecutar matriz contractual con conexiones independientes. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -795,19 +803,27 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 **Transacción, datos y consumidores:** Solo API; no se presenta como integración Rust/Hub ni producción.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-28:** T32.1 pasó con dos procesos reales instrumentados y diez streams. El cierre detectó cancelación de recursos SQL; se corrigieron solo events_cases/sse con protección acotada, cinco pruebas técnicas correctas y repetición real con ambos logs vacíos. T32.2 comprobó reserva disputada entre propietario/asistente (accepted/SLOT_UNAVAILABLE), confirmación duplicada entre procesos con un efecto, VERSION_CONFLICT y contenido distinto IDEMPOTENCY_CONFLICT; GET/historia/SQL conservan una cita con versiones 1/2. T32.3: 20 commits y 200 avisos, p95 desde after_commit 120.104 ms; cota superior p95 desde before_commit 122.523 ms, máximo 292.254 ms, cero muestras negativas. Se informa el margen del callback, sin afirmar marca interna exacta de PostgreSQL. Objetivo local <2 s cumplido incluso con cota superior. Diez streams recuperan cambio tras pérdida de ambos listeners y preparación 503/200; nueva captura con 22 fichas y sin delta pendiente. Revocación global sin aviso por cuenta cierra dos streams vía heartbeat en 8.839 s, rechaza lecturas/duplicados/resultados con 401 y conserva acceso autorizado desde otra instalación. Cierre: 1 cita, 2 historias, 39 recibos y 39 auditorías de operación, cero leases e idle in transaction. Configuración, muestras y logs ignorados en .tmp/t32; comandos/fuentes/límites en desarrollo. Suite de 141 pruebas correcta en 59.123 s. Zed 1.40.2 conserva 16 errores previos y ninguno nuevo. Sin integración Rust/Hub, HTTP de wheel, producción, dependencias nuevas, commits ni cambios a servicios existentes.
 
 ### T33: Entregar el contrato y su evidencia
 
-**Estado:** Todo. **Propietario:** contratos e integración API. **Tamaño previsto:** M.
+**Estado:** Done. **Propietario:** contratos e integración API. **Tamaño previsto:** M por paso.
+
+**Desglose previo, 2026-10-28:** T33.1 contrasta catálogo HTTP/acciones/permisos con rutas y esquemas reales; prepara generación reproducible en scripts/ y contracts/ con origen, versión y huella de fuentes, sin edición manual del generado (hasta dos archivos de producto/soporte). T33.2 prepara guía Rust y ejemplos ficticios, comprobados con cliente de prueba contra la API; documenta reproducción, migraciones y límites sin tocar consumidores. T33.3 ejecuta comprobaciones finales pertinentes, build/inspección de paquetes, contraste de contratos generados y revisión secuencial de normas/contrato. Detenerse en C11 sin aceptarlo; no crea otro plan ni delega.
+
+**Hallazgo previo de T33.1:** falta GET /v1/capabilities aprobado en el catálogo; salud no tiene los modelos públicos descritos. Antes de exportar, T33.1a añade capacidades desde el registro real de operaciones (domain/application/endpoint/composición: cuatro archivos); T33.1b tipa salud y la incluye en OpenAPI (dos archivos). La composición conserva app/fábrica y desactiva docs/OpenAPI en producción conforme al contrato. Comprobar ambos antes de generar. No se añaden operaciones de negocio ni se amplía el acceso.
+
+**Revisión final T33:** falta de listener rechaza SSE antes de consultar el journal (comprobado sin listener y con guardia de la llamada de autorización). Un valor ficticio de clave corta aparecía en str(ValidationError); añadir hide_input_in_errors=True en APISettings y una prueba de rechazo/ocultación/conservación de clave, sin imprimir valores reales. Repetir suite/build/exportación por ese cambio; no debilita validación ni cambia dependencias.
+
+**Contraste de instantes T33:** acceptedAt de grupos, expiresAt de capturas y serverTime de heartbeat carecen del serializador UTC de otros modelos; con el codec existente conservan -04:00 en JSON y violan §2. Corregir esos tres campos en dos archivos de dominio, con SerializedInstant existente y prueba de modelo/HTTP; no cambiar instantes guardados, ventanas ni huellas de operaciones. Reexportar y comprobar el código final.
 
 **Entrada/dependencias:** T32 comprobada.
 
 **Aceptación:**
 
-- [ ] OpenAPI/JSON Schema generados coinciden con rutas, registro de acciones y permisos.
-- [ ] Guía para Rust explica auth, lotes, conflicto, SSE, cursor y recuperación.
-- [ ] Instalación/migraciones/pruebas/build reproducibles y faltantes externos constan.
+- [x] OpenAPI/JSON Schema generados coinciden con rutas, registro de acciones y permisos.
+- [x] Guía para Rust explica auth, lotes, conflicto, SSE, cursor y recuperación.
+- [x] Instalación/migraciones/pruebas/build reproducibles y faltantes externos constan.
 
 **Comprobación:** Consumir ejemplos desde cliente de prueba y contrastar catálogo completo. Pruebas enfocadas del componente y `uv run --locked python -m unittest discover -s tests -v`; `uv build` al cambiar composición/paquete y al cerrar el checkpoint. Los módulos enfocados y comandos de integración aún no existen: definirlos y comprobarlos en T05/T06 antes de citarlos como disponibles.
 
@@ -815,7 +831,11 @@ Se conservan los cambios iniciales del usuario, el formato nuevo de src/api/erro
 
 **Transacción, datos y consumidores:** Artefactos generados con origen/versión; no modifica consumidor ni habilita producción.
 
-**Evidencia:** pendiente.
+**Evidencia, 2026-10-28:** T33.1 completó capacidades aprobadas y modelos de salud, con 40 controles de estructura y 14 de fundación tras la prueba de clave. T33.2 exporta desde app/modelos reales mediante scripts/export_contracts.py: 46 rutas, 47 operaciones HTTP, 70 esquemas y 42 acciones por lote; referencias y SHA-256 verificadas, segunda generación y --check correctos. Los generados conservan origen/versión/HEAD/huella de código y no se editan a mano. test-support/contracts/check.py comprueba ejemplos de contracts/examples.json con PostgreSQL/Keycloak reales y cliente ASGI: acceso, listas de acciones propietario/asistente (42/27), duplicado, conflicto, rechazo, captura/página/delta, liberación y modelos de avisos. docs/rust-api-guide.md explica almacenamiento/aplicación atómica y conservación de Outbox como deberes del consumidor, sin afirmar su implementación.
+
+T33.3 corrigió y comprobó guardia de LISTEN antes del journal, ocultación de clave corta en errores y salida UTC con Z de grupos/capturas/heartbeat. Las pruebas HTTP de contratos y SSE real se repitieron tras esos cambios. Suite final: 144 pruebas correctas en 75.103 s. Build offline final: wheel 185 entradas, sdist 186; 125 fuentes Python idénticas al árbol en ambos, sin archivos privados. No se ejecuta HTTP separado del wheel. Retención final añade 101 leases vencidos/uno vigente y comprueba lote 100 con conservación de recibos/historia/auditoría. Migración 20261028_01 aplicada/revertida/reaplicada con 28 tablas/btree_gist y fallo DDL sin revisión parcial. Analizador Zed 1.40.2: 125 archivos, mismos 16 errores previos y cero diagnósticos nuevos por comparación archivo/mensaje/regla. No se declara correcto el análisis global. git diff --check correcto; sin supresiones/cast/Any nuevos, cambios en manifiesto/lock, fábrica, dependencia de sesión o sentinel.
+
+Revisión secuencial final: normas (estructura y tipos) y contrato (rutas, acciones, permisos, cursores, fechas, expiraciones y SSE), sin hallazgos de producto abiertos en el bloque. Se conservan el fallo previo TypeError y los hallazgos de cierre/fecha/clave en sus registros, sin convertir sus primeros intentos en éxitos. Evidencia local ignorada en .tmp/c11; configuración/medidas T32 en .tmp/t32. PostgreSQL/Keycloak Test conservan sus PID 9400/32092; bases y procesos propios de probes cerrados. Sin Rust/Hub, datos reales, commits, remotos, despliegues ni garantía de producción. C11 listo para revisión expresa, sin aceptarlo; el plan general sigue In progress.
 
 ## Corrección aprobada el 2026-10-26
 
@@ -1365,12 +1385,21 @@ Fuentes de Pydantic 2.14.1: [validadores](https://github.com/pydantic/pydantic/b
 
 - [x] T28–T30 comprobadas y evidencia registrada.
 - [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Revisión y aceptación expresa del usuario el 2026-10-28: «Aprobado, puedes continuar con el plan». Habilita T31 → T32 → T33 hasta revisión C11.
+
+**Revisión técnica, 2026-10-28:** el usuario solicita revisar C10 sin aceptarlo. Inicio comprobado: HEAD 52cabb8, árbol limpio. Se revisan normas y contrato en secuencia, sin delegación. No se encuentran fallos de producto que exijan corregir T28–T30.
+
+- **Normas:** casos sin SQL ni acceso directo a sesiones; consultas en DAOs derivados; colaboración mediante casos/tipos de dominio; endpoints con modelos de respuesta. Misma sesión y transaction(db), sin commits parciales. No se cambia src/, migraciones, dependencias, fábrica, app ni sentinel.
+- **Contrato:** se recorren contador/bloqueos y grupos, groupId entre cuentas, audiencia/época, cursor HMAC y su ventana, captura REPEATABLE READ, páginas inmutables con LIMIT/OFFSET, fechas/zona capturadas, historia por versión y retiradas. Se revisan purga acotada, frontera-1, guardia física de 90 días, conservación de recibos/historia/auditoría y errores 410/404. La revisión de retención usa código, migraciones y evidencia histórica; no se repite su probe sin un fallo o cambio nuevo.
+- **Dudas de cobertura resueltas:** se amplía test-support/downloads/check.py. Sin clave, crear/consultar metadatos de captura y descargar cambios devuelven 503 DEPENDENCY_UNAVAILABLE; no queda una captura nueva. Con versión 2 ya confirmada, descargar el grupo de versión 1 entrega solo historia 1; el grupo de salida retira cita e historia. Tras revocar el dispositivo de cuenta desde otro autorizado, metadatos/páginas/delta rechazan con 403.
+- **Evidencia nueva:** `.venv/Scripts/python.exe test-support/downloads/check.py` correcto con PostgreSQL/Keycloak reales y base aleatoria eliminada al terminar. `.venv/Scripts/python.exe -m unittest discover -s tests -p test_downloads.py -v`: cinco pruebas correctas. `.venv/Scripts/python.exe -m unittest discover -s tests -p test_accounts_structure.py -v`: 40 controles correctos. `git diff --check` correcto. No se repiten suite completa, once probes, build, migraciones ni analizador: el código de producto conserva HEAD. Los 136 tests, paquetes y 16 errores del analizador del cierre anterior siguen como evidencia histórica, sin declarar análisis global correcto.
+- **Fuentes contrastadas:** SQLAlchemy 2.1.6 resuelto y [aislamiento por transacción](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html#setting-isolation-for-individual-transactions), PostgreSQL 18.3 Test y [REPEATABLE READ](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-REPEATABLE-READ), Python 3.15.1 y [HMAC/compare_digest de la familia 3.15](https://docs.python.org/3.15/library/hmac.html#hmac.compare_digest). No se cambia ningún patrón ni API de producto.
+- **Límites:** Windows ocultó los servicios dentro del aislamiento; la consulta fuera confirmó los PID 9400/32092 y el probe real usó esos servicios sin iniciarlos ni detenerlos. Sin prueba HTTP separada del wheel, dos procesos de API, SSE, Rust/Hub, datos reales, commits, remotos ni despliegues. C07/C08 conservan autorización de paso, sin aceptaciones inventadas. C10 espera aceptación expresa; T31–T33 siguen Todo.
 
 ### C11: Colaboración y entrega de API
 
-- [ ] T31–T33 comprobadas y evidencia registrada.
-- [ ] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
+- [x] T31–T33 comprobadas y evidencia registrada.
+- [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### C12: Reglas, contrato y soporte

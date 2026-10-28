@@ -1,0 +1,50 @@
+{
+  "deviceRegistration": {
+    "deviceName": "Equipo de prueba",
+    "clientVersion": "0.1.0",
+    "localSchemaVersion": 1
+  },
+  "registerAccountDevice": {
+    "operationId": "019f0000-0000-7000-8000-000000000001",
+    "contractVersion": 1,
+    "action": "RegisterAccountDevice",
+    "entityKey": "{{deviceId}}",
+    "expectedVersion": 0,
+    "payload": {}
+  },
+  "registerPatient": {
+    "operationId": "019f0000-0000-7000-8000-000000000002",
+    "contractVersion": 1,
+    "action": "RegisterPatient",
+    "entityKey": "019f0000-0000-7000-8000-000000000101",
+    "expectedVersion": 0,
+    "payload": {"fullName": "Paciente de prueba"}
+  },
+  "updatePatient": {
+    "operationId": "019f0000-0000-7000-8000-000000000003",
+    "contractVersion": 1,
+    "action": "UpdatePatientProfile",
+    "entityKey": "019f0000-0000-7000-8000-000000000101",
+    "expectedVersion": 1,
+    "payload": {"phoneCode": "+58", "phone": "4125550101"}
+  },
+  "staleUpdatePatient": {
+    "operationId": "019f0000-0000-7000-8000-000000000004",
+    "contractVersion": 1,
+    "action": "UpdatePatientProfile",
+    "entityKey": "019f0000-0000-7000-8000-000000000101",
+    "expectedVersion": 1,
+    "payload": {"fullName": "Nombre de prueba cambiado"}
+  },
+  "invalidPayload": {
+    "operationId": "019f0000-0000-7000-8000-000000000005",
+    "contractVersion": 1,
+    "action": "UpdatePatientProfile",
+    "entityKey": "019f0000-0000-7000-8000-000000000101",
+    "expectedVersion": 2,
+    "payload": {"unknownField": "dato ficticio"}
+  },
+  "snapshotRequest": {"appointmentsFrom": "2026-11-02", "appointmentsUntil": "2026-11-03"},
+  "heartbeat": {"event": "heartbeat", "data": {"serverTime": "2026-10-28T12:00:00Z"}},
+  "accessRevoked": {"event": "access_revoked"}
+}

@@ -1,8 +1,8 @@
 # Esquema de base de datos de Nightingale
 
-**Versión:** 1.0, ampliación documental del plan compartido aprobado; C01 aceptado.\
-**Fecha:** 2026-10-27.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09 aceptado. T28–T30 materializan snapshot y retención: migraciones hasta 20261027_06, con 27 tablas y btree_gist, probadas solo en bases ficticias aisladas. C10 listo para revisión expresa. C07/C08 conservaron autorización de paso sin aceptaciones separadas. SSE y consumidores siguen pendientes; no se acredita implementación completa.\
+**Versión:** 1.1; conserva la ampliación 1.0 aceptada en C01 y añade el soporte de T31.\
+**Fecha:** 2026-10-28.\
+**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09/C10 aceptados. T31 añade soporte SSE: migración 20261028_01, 28 tablas y btree_gist, probada en bases ficticias aisladas. T31–T33 para revisión C11. C07/C08 conservaron autorización de paso sin aceptaciones separadas. Consumidores y producción siguen pendientes.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.
@@ -1575,7 +1575,25 @@ PK id; F50 cuenta opcional, F51 actor opcional, F52 (actor_device_id,actor_user_
 
 ### 9.4 Referencias físicas nuevas
 
-F01–F30 del núcleo se conservan. F31–F53 añaden soporte técnico; las FK diferidas deben cumplirse al cierre del mismo límite atómico, sin llamadas externas. No se puede purgar un recibo para eludir referencias históricas.
+T31 añade F54–F56 y la tabla siguiente, sin dar a cada stream una sesión SQL persistente.
+
+#### `sync_stream_leases` · T31
+
+**Propietario:** sync. **Ámbito:** conexión SSE por cuenta/usuario/dispositivo; derivado temporal sin datos personales ni credenciales.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave | Significado |
+|---|---|---|---|---|---|
+| id | uuid | Sí | Sin valor | PK; CHECK UUIDv7 | Identidad servidor de la conexión. |
+| account_id | uuid | Sí | Sin valor | F54/F56 | Cuenta autorizada al abrir. |
+| user_id | uuid | Sí | Sin valor | F54/F55 | Actor validado. |
+| device_id | uuid | Sí | Sin valor | F55/F56 | Dispositivo validado. |
+| expires_at | timestamptz | Sí | Sin valor | CHECK finito | Reloj servidor más 45 segundos; renovar al revalidar. |
+
+Índices (account_id,device_id,expires_at), (account_id,user_id), (device_id,user_id) y expires_at. La aplicación adquiere el bloqueo de account_sync_heads antes de retirar vencidos de ese ámbito, contar y crear: máximo dos registros vigentes por dispositivo/cuenta entre procesos. Cada aviso/heartbeat reautoriza y renueva mediante una transacción breve. Cierre libera el registro; una caída deja solo 45 segundos de vigencia. Mantenimiento retira hasta 100 registros vencidos por ejecución. No guarda cursor aplicado ni altera journal, recibos, auditoría o historia.
+
+La migración 20261028_01 añade un trigger AFTER UPDATE de last_sequence/permission_epoch en account_sync_heads. pg_notify usa nightingale_sync y payload account_id:sequence, sin cuerpos ni datos personales. La transacción confirma antes de entregar el aviso; no crea grupos de negocio por conectar o renovar un stream.
+
+F01–F30 del núcleo se conservan. F31–F56 añaden soporte técnico; las FK diferidas deben cumplirse al cierre del mismo límite atómico, sin llamadas externas. No se puede purgar un recibo para eludir referencias históricas.
 
 | Referencia | Origen | Destino | Eliminación |
 |---|---|---|---|
@@ -1602,6 +1620,9 @@ F01–F30 del núcleo se conservan. F31–F53 añaden soporte técnico; las FK d
 | F51 | `audit_events.actor_user_id` | `app_users.id` | RESTRICT |
 | F52 | `audit_events.(actor_device_id,actor_user_id)` | `devices.(id,user_id)` | RESTRICT |
 | F53 | `audit_events.(account_id,actor_user_id,operation_id)` | `operation_receipts.(account_id,actor_user_id,operation_id)` | NO ACTION diferida |
+| F54 | `sync_stream_leases.(account_id,user_id)` | `account_memberships.(account_id,user_id)` | RESTRICT |
+| F55 | `sync_stream_leases.(device_id,user_id)` | `devices.(id,user_id)` | RESTRICT |
+| F56 | `sync_stream_leases.(account_id,device_id)` | `account_device_accesses.(account_id,device_id)` | RESTRICT |
 
 La referencia de historia a su versión actual sigue diferida F26. F40/F53 se difieren para registrar en la misma transacción aceptación de invitación/auditoría y recibo. F33 permite crear sucesor de rotación de forma coherente. Para F49, CASCADE solo elimina una materialización derivada, nunca persona/cita/historia/recibo. Las FK opcionales de actor/aceptación/sucesor exigen los CHECK de contexto descritos; no presuponer MATCH FULL cuando otras columnas de cuenta/usuario sean obligatorias.
 
@@ -1627,7 +1648,7 @@ Token no vence: no columna expires_at en device_tokens, ninguna sesión API ni r
 
 ### 9.7 Diagramas y comprobación documental
 
-Inventario vigente de diseño 1.0: 27 tablas, 300 columnas y 53 FK; núcleo de 17 tablas/189 columnas y soporte de diez tablas/111 columnas. Las cifras de §§7–8 conservan el inventario histórico de la base 0.9. Los diagramas de detalle del núcleo incorporan las columnas añadidas; el diagrama siguiente muestra solo las diez tablas técnicas y sus extremos, sin repetir atributos del diccionario. No se afirma un render nuevo ni ejecución SQL. El control de esta entrega cuenta diccionarios, columnas, FK y coincidencia de atributos del núcleo; la evidencia vive en la lista del plan.
+Inventario documental 1.1: 28 tablas, 305 columnas y 56 FK; núcleo de 17 tablas/189 columnas y soporte de once tablas/116 columnas. Las cifras de §§7–8 conservan el inventario histórico de la base 0.9. El diagrama siguiente conserva las diez tablas técnicas de 1.0; sync_stream_leases y sus tres referencias se describen en §9.4. No se afirma un render nuevo. T31 aplica, revierte y reaplica 20261028_01 en PostgreSQL Test aislado con 28 tablas; la evidencia vive en la lista del plan.
 
 ```mermaid
 erDiagram

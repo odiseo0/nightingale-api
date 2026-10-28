@@ -1,5 +1,31 @@
 # Fuentes, diferencias y revisión documental
 
+## Fuentes técnicas de T33 · 2026-10-28
+
+- [Pydantic models_json_schema](https://docs.pydantic.dev/latest/api/json_schema/#pydantic.json_schema.models_json_schema): colección de pares modelo/modo, referencias y definiciones comunes para los payloads de operaciones. Se conserva Pydantic 2.14.1 resuelto; guía actual contrastada con la firma instalada y exportación real. No se afirma lectura de un tag de documentación no disponible.
+- [FastAPI: modelos de respuesta](https://fastapi.tiangolo.com/tutorial/response-model/) y [URLs de OpenAPI/docs](https://fastapi.tiangolo.com/tutorial/metadata/#openapi-url): modelos públicos de capacidades/salud, esquema desde app.openapi() y desactivación HTTP de documentación en producción. Se conservan FastAPI 0.159.1 y app de módulo; pruebas de fundación y ejemplos HTTP contrastan el comportamiento.
+- [Pydantic hide_input_in_errors](https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.hide_input_in_errors): la representación de un error mostraba una clave corta ficticia. APISettings oculta valores de entrada en errores, como DBSettings, sin cambiar la restricción de 32 caracteres ni el valor de la clave válida. La prueba solo informa booleanos y usa datos ficticios.
+- [Pydantic: serializadores de campos](https://docs.pydantic.dev/latest/concepts/serialization/#field-serializers): se reutilizan el patrón UTC y SerializedInstant del proyecto para acceptedAt de grupos, expiresAt de capturas y serverTime de heartbeat. La salida usa Z sin cambiar el instante ni la representación en Python; prueba con offset -04:00 y comprobación HTTP real. Se conservan Pydantic 2.14.1, la validación y los esquemas de fecha/hora.
+
+El exportador usa biblioteca estándar para JSON, SHA-256, rutas, entorno temporal y lectura de versiones. No conecta ni crea otra fábrica; toma la app existente con URI ficticia solo durante su propio proceso. Los contratos contienen origen/versión/HEAD/huella de código y hashes de archivos; se comprueban con --check y con cliente de prueba contra PostgreSQL/Keycloak. La matriz de rutas y acciones coincide con el catálogo; permisos actuales se contrastan con las 42 acciones del propietario y 27 del asistente, sin tomar esa lista como autorización para objetos concretos.
+
+## Fuentes técnicas de T32 · 2026-10-28
+
+- [SQLAlchemy 2.1.6 before_commit/after_commit](https://docs.sqlalchemy.org/en/21/orm/events.html#sqlalchemy.orm.SessionEvents.after_commit): instrumentación solo en test-support/events/api_process.py, sin SQL en after_commit ni cambios en el servidor de producto. Se guarda el intervalo anterior/posterior al commit, no una marca interna de PostgreSQL.
+- [Python 3.15 perf_counter](https://docs.python.org/3.15/library/time.html#time.perf_counter): reloj monotónico común a procesos Windows para callback y recepción. Se informa p95 por rango más cercano, con 20 commits/200 avisos y cota superior conservadora.
+- [AnyIO 4.15.1: shielding y cierre](https://anyio.readthedocs.io/en/stable/cancellation.html#shielding): la cancelación de Starlette alcanza cada await; los recursos necesitan cierre protegido y acotado. Se usa la versión que FastAPI/Starlette ya requieren y uv.lock resuelve, sin instalar ni actualizar dependencias. No se cambia la fábrica de sesiones ni se oculta el diagnóstico global del analizador.
+
+## Fuentes técnicas de T31 · 2026-10-28
+
+Versiones resueltas conservadas: FastAPI 0.159.1, Starlette 1.9.0, asyncpg 0.32.0, SQLAlchemy 2.1.6 y Python 3.15.1. Sin nuevas dependencias.
+
+- [FastAPI SSE](https://fastapi.tiangolo.com/tutorial/server-sent-events/) y [respuestas directas](https://fastapi.tiangolo.com/advanced/response-directly/): se usan EventSourceResponse, ServerSentEvent y el formateador del paquete instalado. Se devuelve una respuesta directa para validar acceso antes de los encabezados; el marcador automático de FastAPI exige un generador de endpoint. El transporte concreto añade plazo al envío y cierre de recursos. El archivo del tag 0.159.1 no estuvo disponible por web; se contrastó la guía actual con fastapi/sse.py y routing.py instalados y HTTP real, sin afirmar lectura del tag.
+- [Dependencias con scope function](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/#early-exit-and-scope): get_db cierra antes de devolver la respuesta de stream; cada aviso/heartbeat usa una transacción breve desde la misma fábrica existente.
+- [Ciclo de proceso](https://fastapi.tiangolo.com/advanced/events/#lifespan): gestiona solo el listener; conserva app de módulo, motor/fábrica del usuario y Uvicorn directo. No mueve la base a lifespan ni crea otra fábrica.
+- [asyncpg: add_listener](https://magicstack.github.io/asyncpg/current/api/index.html#asyncpg.connection.Connection.add_listener) y [add_termination_listener](https://magicstack.github.io/asyncpg/current/api/index.html#asyncpg.connection.Connection.add_termination_listener): conexión dedicada y detección de pérdida; callbacks sin SQL ni datos personales.
+- [PostgreSQL 18 LISTEN](https://www.postgresql.org/docs/18/sql-listen.html) y [NOTIFY](https://www.postgresql.org/docs/18/sql-notify.html): confirmar LISTEN antes de consultar, releer tras recuperación y entregar avisos solo tras commit. Trigger del contador evita otra vía de publicación precommit.
+- [SQLAlchemy 2.1 UPDATE returning](https://docs.sqlalchemy.org/en/21/core/dml.html#sqlalchemy.sql.expression.Update.returning) y [asyncio timeout de Python 3.15](https://docs.python.org/3.15/library/asyncio-task.html#asyncio.timeout): renovación breve y envío de red acotado, sin cast/Any/supresiones.
+
 ## Fuentes técnicas de T28–T30 · 2026-10-27
 
 Versiones contrastadas con pyproject.toml, uv.lock y el entorno: Python 3.15.1, SQLAlchemy 2.1.6, FastAPI 0.159.1, Pydantic 2.14.1, Alembic 1.20.1 y asyncpg 0.32.0. No hay dependencias nuevas ni cambios de versiones.

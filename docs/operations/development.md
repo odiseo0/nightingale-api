@@ -1,5 +1,64 @@
 # Desarrollo de la base de proceso
 
+## Entrega para revisión C11 · 2026-10-28
+
+T31 → T32 → T33 comprobadas en secuencia, sin delegación. C10 aceptado por el usuario; C11 espera revisión expresa. No se marca completo el plan general. El estado de Git conserva HEAD 52cabb8 y los cambios de la revisión C10 previa; no hay commits, remotos ni despliegues.
+
+T33 completa GET /v1/capabilities desde las 42 acciones reales del lote y los modelos públicos de salud. El exportador contrasta 46 rutas/47 operaciones HTTP con el catálogo y genera 70 esquemas HTTP, JSON Schema de payloads y SSE, capacidades y manifiesto con origen, versión y huellas. Se comprueba por segunda generación y --check, sin editar JSON generado a mano. [Artefactos](../../contracts/README.md) y [guía Rust](../rust-api-guide.md) enlazan ejemplos ficticios comprobados con cliente ASGI y PostgreSQL/Keycloak reales. Sus permisos coinciden con las listas vigentes de propietario (42) y asistente (27), sin sustituir autorización por objeto.
+
+```powershell
+uv run --locked python -m scripts.export_contracts
+uv run --locked python -m scripts.export_contracts --check
+.\.venv\Scripts\python.exe test-support/contracts/check.py
+uv run --locked python -m unittest discover -s tests -v
+uv build --offline
+git diff --check
+```
+
+La exportación usa la app real sin conectar, con URI ficticia y sin .env local; no crea otra fábrica. Las migraciones se prueban con test-support/persistence/check.py: head 20261028_01, 28 tablas, btree_gist, aplicación/reversión/reaplicación y fallo sin DDL parcial. El servidor no migra al arrancar. Para aplicar fuera de pruebas, un operador debe proporcionar ALEMBIC_DATABASE_URI de migraciones y ejecutar `uv run --locked alembic upgrade head` en el entorno que le corresponda; no usar la identidad SQL operativa para migrar. La etapa no aplica nada en la base personal ni exige Docker.
+
+Correcciones finales: la ausencia de listener impide abrir SSE antes de consultar journal; APISettings oculta entradas de error para no mostrar una clave corta; acceptedAt/expiresAt/serverTime salen en UTC con Z. Se conservan el valor de claves válidas, validación, instantes, ventanas y recibos previos. Esos puntos se prueban con valores ficticios, modelos y HTTP. El arreglo previo de duración y el cierre protegido SSE constan en T31/T32. No se ocultan fallos históricos como éxitos.
+
+Cierre final: 144 pruebas correctas en 75.103 s, incluidos controles de estructura. Probe final SSE con dos procesos correcto; ejemplos HTTP y retención correctos. Retención comprueba 101 leases vencidos: retira 100, conserva el vigente y retira el vencido restante en la ejecución siguiente; recibos/historia/auditoría conservados. Zed basedpyright 1.40.2 analiza 125 archivos: mismos 16 diagnósticos previos y cero nuevos por comparación de archivo/mensaje/regla; no es un análisis global correcto. Sin cast/Any/supresiones nuevos ni cambios de dependencias o configuración del analizador.
+
+Build offline e inspección final: wheel 185 entradas, sdist 186 y 125 fuentes Python idénticas al árbol en ambos paquetes, sin archivos privados. Manifiesto de contratos y sus referencias locales verificados. No se ejecuta HTTP separado del wheel. Evidencia ignorada .tmp/c11/: suite-final.txt, pyright-final.json, contracts.txt, events.txt, retention.txt, artifacts.json y build/. Las medidas de T32 permanecen en .tmp/t32 y se describen en el bloque siguiente; no se presenta una muestra local como SLO de producción.
+
+PostgreSQL Test 55433/PID 9400 y Keycloak Test 18443/PID 32092 conservados. Los probes eliminan sus bases aleatorias y cierran sus procesos Uvicorn. Fábrica, dependencia de sesiones, sentinel, manifiesto y lockfile conservados. No se cambia Rust/Hub, no se genera un cliente externo ni se acredita operación con datos reales, saturación, despliegue, copias/restauración o producción. C11 se detiene para revisión del usuario.
+
+## Pruebas conjuntas · T32 · 2026-10-28
+
+```powershell
+.\.venv\Scripts\python.exe test-support/collaboration/check.py
+```
+
+Usa una base ficticia nueva en PostgreSQL Test 18.3 y Keycloak Test existentes. Inicia dos procesos Uvicorn 0.54.0 en puertos libres de loopback, Python 3.15.1, FastAPI 0.159.1, Starlette 1.9.0, SQLAlchemy 2.1.6 y asyncpg 0.32.0. Cinco dispositivos de propietario mantienen dos streams cada uno, repartidos entre procesos. Otro dispositivo revoca y un asistente participa en reservas. No conserva tokens ni payloads en los registros de medida.
+
+El soporte exclusivo de pruebas api_process.py registra before_commit/after_commit y el identificador de operación. Un lector continuo por cliente toma perf_counter al recibir cada evento completo. El reloj es común a los procesos en Windows. after_commit incluye el retorno del commit al cliente SQL; no se presenta como la marca interna exacta de PostgreSQL. Se conserva también la cota superior desde before_commit, que incluye confirmación y retorno. Así no se oculta ese margen ni se atribuye a HTTP el tiempo de un commit aún pendiente.
+
+Resultado de .tmp/t32/measurements.json y samples.json: 20 commits, 200 avisos, p95 posterior al commit 120.1 ms; cota superior p95 122.5 ms y máximo 292.3 ms. Cero muestras negativas. El objetivo local menor de dos segundos se cumple incluso con esa cota superior. Es una muestra pequeña, local y secuencial, con diez streams activos; no mide saturación ni garantiza producción o integración Rust/Hub.
+
+Ambos procesos disputan la misma reserva con propietario/asistente: una aceptación y un conflicto SLOT_UNAVAILABLE. Dos confirmaciones con igual identidad dan accepted/duplicate y una sola versión nueva; la versión antigua da VERSION_CONFLICT y cambiar contenido conserva IDEMPOTENCY_CONFLICT. Se contrastan GET, historia y SQL. Tras perder ambas conexiones de escucha, preparación degrada a 503 y los diez streams recuperan un cambio confirmado durante la pérdida. Una nueva captura contiene 22 fichas y no deja delta pendiente. Revocar globalmente un dispositivo, sin aviso por cuenta, cierra sus dos streams en el siguiente heartbeat (8.84 s en la muestra), rechaza nuevas lecturas/duplicados/resultados con 401 y conserva acceso desde otra instalación permitida. Estado final: una cita, dos entradas de historia, 39 recibos y 39 hechos de auditoría de operación; cero leases y cero idle in transaction al cerrar.
+
+La primera ejecución de diez streams mostró cancelaciones al cerrar recursos SQL. Se protegen solo la consulta breve y la liberación SSE con scopes acotados de AnyIO 4.15.1 ya instalado. Cinco pruebas técnicas pasan, incluida cancelación dentro del scope de Starlette. La repetición real deja ambos logs de API vacíos, sin ocultar errores ni cambiar motor/fábrica. El probe espera observar el cierre TCP del listener antes de exigir preparación degradada; pg_terminate_backend no prueba que el callback del proceso ya haya corrido al devolver.
+
+## Avisos SSE · T31 · 2026-10-28
+
+C10 aceptado expresamente. T31 conserva la app de módulo, fábrica, Depends(get_db) y Uvicorn directo. El ciclo de proceso abre solo una conexión asyncpg dedicada a LISTEN; no administra el motor ni mantiene una sesión SQL por cliente. API_SYNC_SIGNING_KEY sigue siendo secreta, común a todos los procesos y de al menos 32 caracteres. Iniciar Uvicorn no instala ni migra nada.
+
+La revisión 20261028_01 añade sync_stream_leases y el trigger de aviso del head. Migraciones aplicadas/revertidas/reaplicadas con 28 tablas y btree_gist en base aleatoria, sin DDL parcial tras una revisión fallida. Dos conexiones por dispositivo/cuenta entre procesos; los registros vencen en 45 segundos y cada revisión de acceso renueva ese plazo. El mantenimiento existente retira hasta 100 registros vencidos, además de sus límites anteriores; conserva historia, recibos y auditoría.
+
+Desde la raíz, con PostgreSQL/Keycloak Test activos:
+
+```powershell
+.\.venv\Scripts\python.exe test-support/events/check.py
+```
+
+Este probe prepara una base aleatoria validada, inicia dos procesos Uvicorn reales en puertos libres de loopback, desactiva sus access logs y cierra sus procesos al terminar. La clave ficticia de firma vive solo en memoria/entorno del proceso; no la guarda en el informe. Comprueba cursor HTTP, heartbeat de 15 segundos, retry de 3000 ms, límite global de dos streams, ausencia de transacciones idle por cliente, 503 al perder listeners, recuperación del aviso desde journal y revocación con stream abierto. Solo termina conexiones pg_stat_activity con nombre de listener en su base ficticia, nunca los servicios PostgreSQL/Keycloak. Evidencia ignorada: .tmp/t31/events.json y api-0.log/api-1.log. No acredita Rust/Hub ni producción.
+
+La suite detectó en HEAD un fallo previo que C10 describía como corregido: AvailabilityQuery.integer_duration aún lanzaba TypeError. Se cambia solo a ValueError para que true/1.5 produzcan ValidationError y HTTP 422; 12 pruebas de agenda correctas, después suite completa de 140 pruebas correcta. Primer fallo y cierre en .tmp/t31/suite.txt y suite-final.txt. El límite de Windows socketpair apareció antes de ejecutar las pruebas asyncio: el diagnóstico y la repetición fuera del aislamiento separan ese límite del código de producto. No se actualizan herramientas para evitarlo.
+
+T31 incorpora cuatro pruebas unitarias de cola, orden de LISTEN/preparación, formato SSE y envío lento. Zed basedpyright 1.40.2 conserva 16 errores previos; ninguno nuevo en los archivos SSE. No se declara correcto el análisis global ni se usan supresiones/cast/Any nuevos. Build offline correcto; la inspección y entrega final se completa en C11. T32 conserva diez conexiones, casos conjuntos y medición de commit a aviso.
+
 ## T28–T30 comprobadas para revisión C10 · 2026-10-27
 
 C09 aceptado por mensaje directo del usuario. Se trabajó T28 → T29 → T30, sin delegación. Descarga por grupos completos con cursor HMAC; captura coherente bajo REPEATABLE READ, inmutable durante 15 minutos; retención mínima de 90 días y recuperación explícita. Configura API_SYNC_SIGNING_KEY con al menos 32 caracteres secretos, igual en cada proceso. Sin clave, los endpoints nuevos que la necesitan devuelven 503. No se guardan claves de prueba en configuración de producto.

@@ -84,3 +84,11 @@ class SyncSnapshotItem(Base):
     entity_key: Mapped[object] = mapped_column(JSONB)
     entity_version: Mapped[int]
     state_json: Mapped[dict] = mapped_column(JSONB)
+
+
+class SyncStreamLease(Base):
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    account_id: Mapped[UUID]
+    user_id: Mapped[UUID]
+    device_id: Mapped[UUID]
+    expires_at: Mapped[datetime]

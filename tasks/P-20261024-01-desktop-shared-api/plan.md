@@ -1,8 +1,10 @@
 # P-20261024-01-desktop-shared-api: API compartida para escritorio
 
-**Checkpoint actual:** C10 listo para revisión expresa; T28–T30 comprobadas en secuencia, sin delegación. C09 aceptado por el usuario el 2026-10-27: «Autorizo registrar C09 como aceptado y ejecutar T28–T30 hasta revisión C10». Trabajo detenido antes de T31. C07/C08 conservan autorización de paso sin aceptaciones separadas. Se conservan los 16 diagnósticos estáticos previos y los límites de T32. Evidencia y desglose en todo.md.
+**Checkpoint actual:** C11 listo para revisión expresa; T31 → T32 → T33 comprobadas, una tarea a la vez y sin delegación. C10 aceptado por el usuario el 2026-10-28: «Aprobado, puedes continuar con el plan». Trabajo detenido en C11, sin aceptar ese checkpoint ni cerrar el plan. C07/C08 conservan autorización de paso sin aceptaciones separadas. Se conservan los 16 diagnósticos estáticos previos y los límites externos. Evidencia y desglose en todo.md.
 
-**Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-27. **Lista:** [todo.md](todo.md).
+**Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-28. **Lista:** [todo.md](todo.md).
+
+**Revisión C10, 2026-10-28:** revisión secuencial de T28–T30, normas y contrato sobre HEAD 52cabb8, sin fallos de producto encontrados. Se amplía el probe de descarga para comprobar falta de clave, historia de una versión anterior y revocación antes de leer captura/página/delta. Probe real, cinco pruebas de descarga y 40 controles de estructura correctos; evidencia y límites en todo.md. C10 sigue pendiente de aceptación expresa. T31 no se inicia.
 
 **Continuación autorizada, 2026-10-27:** el objetivo recibido autoriza T19 → T20 → T21, comprobar C07 y continuar hasta C09 sin esperar revisión en C07. Se trabaja una tarea a la vez y sin delegación. Esta instrucción sustituye las pausas de C07/C08 para este bloque; no registra su aceptación. C09 conserva revisión. No adelantar citas dentro de T19–T21; T22 inicia su implementación tras comprobar C07. Se conservan los cambios locales del usuario sobre la aceptación de C06.
 
@@ -143,9 +145,9 @@ La corrección del 2026-10-26 interrumpe T09: T34–T36 → C12 → T37–T39 �
 
 **C10: Descarga y recuperación.** Detenerse para revisión.
 
-- [ ] T31: Avisar cambios por SSE.
-- [ ] T32: Probar colaboración concurrente.
-- [ ] T33: Entregar el contrato y su evidencia.
+- [x] T31: Avisar cambios por SSE.
+- [x] T32: Probar colaboración concurrente.
+- [x] T33: Entregar el contrato y su evidencia.
 
 **C11: Colaboración y entrega de API.** Detenerse para revisión.
 
