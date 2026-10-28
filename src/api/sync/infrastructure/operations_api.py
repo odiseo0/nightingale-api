@@ -10,21 +10,30 @@ from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.errors import bounded_body, no_query_parameters, request_correlation_id
 from src.api.sync.application.operations_cases import get_operation, submit_batch
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
-from src.api.sync.domain.operations import OperationBatch, OperationBatchResult, OperationResult
+from src.api.sync.domain.operations import (
+    OperationBatch,
+    OperationBatchResult,
+    OperationResult,
+)
 from src.core import Err, Ok
 from src.core.db import get_db
 from src.core.schema import ApiError
 
 router = APIRouter(
     prefix="/v1/accounts/{account_id}/sync",
-    tags=["sync"], dependencies=[Depends(no_query_parameters)],
-    responses={code: {"model": ApiError} for code in (401, 403, 404, 410, 413, 422, 503)},
+    tags=["sync"],
+    dependencies=[Depends(no_query_parameters)],
+    responses={
+        code: {"model": ApiError} for code in (401, 403, 404, 410, 413, 422, 503)
+    },
 )
 bearer = HTTPBearer(auto_error=False)
 
 
 @router.post(
-    "/operations", operation_id="submitOperations", dependencies=[Depends(bounded_body)],
+    "/operations",
+    operation_id="submitOperations",
+    dependencies=[Depends(bounded_body)],
     response_model_exclude_unset=True,
 )
 async def accept_operations(
@@ -34,11 +43,18 @@ async def accept_operations(
     authorization: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     correlation_id: Annotated[UUID7, Depends(request_correlation_id)],
 ) -> OperationBatchResult:
-    if any(len(item.model_dump_json(by_alias=True).encode("utf-8")) > 64 * 1024 for item in obj_in.operations):
+    if any(
+        len(item.model_dump_json(by_alias=True).encode("utf-8")) > 64 * 1024
+        for item in obj_in.operations
+    ):
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE)
+
     result = await submit_batch(
-        db, authorization.credentials if authorization else None,
-        account_id, obj_in, correlation_id,
+        db,
+        authorization.credentials if authorization else None,
+        account_id,
+        obj_in,
+        correlation_id,
     )
 
     match result:
@@ -56,14 +72,23 @@ async def accept_operations(
             assert_never(unexpected)
 
 
-@router.get("/operations/{operation_id}", operation_id="getOperation", response_model_exclude_unset=True)
+@router.get(
+    "/operations/{operation_id}",
+    operation_id="getOperation",
+    response_model_exclude_unset=True,
+)
 async def read_operation(
     account_id: UUID7,
     operation_id: UUID7,
     db: Annotated[AsyncSession, Depends(get_db)],
     authorization: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
 ) -> OperationResult:
-    result = await get_operation(db, authorization.credentials if authorization else None, account_id, operation_id)
+    result = await get_operation(
+        db,
+        authorization.credentials if authorization else None,
+        account_id,
+        operation_id,
+    )
 
     match result:
         case Ok(response):

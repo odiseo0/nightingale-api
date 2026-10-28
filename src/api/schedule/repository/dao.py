@@ -123,9 +123,6 @@ class ScheduleRuleDAO(DAO[ScheduleRule, BaseModel, BaseModel]):
         )
 
 
-dao_rules = ScheduleRuleDAO(ScheduleRule)
-
-
 class ScheduleExceptionDAO(DAO[ScheduleException, BaseModel, BaseModel]):
     async def for_day(
         self, db: AsyncSession, account_id: UUID, professional_id: UUID, day: date
@@ -181,9 +178,6 @@ class ScheduleExceptionDAO(DAO[ScheduleException, BaseModel, BaseModel]):
             {**values, "version": row.version + 1, "updated_at": now},
             commit=False,
         )
-
-
-dao_exceptions = ScheduleExceptionDAO(ScheduleException)
 
 
 class ScheduleBlockDAO(DAO[ScheduleBlock, BaseModel, BaseModel]):
@@ -283,3 +277,5 @@ class ScheduleBlockDAO(DAO[ScheduleBlock, BaseModel, BaseModel]):
 
 
 dao_blocks = ScheduleBlockDAO(ScheduleBlock)
+dao_exceptions = ScheduleExceptionDAO(ScheduleException)
+dao_rules = ScheduleRuleDAO(ScheduleRule)

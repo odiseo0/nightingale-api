@@ -41,8 +41,10 @@ from src.settings.db_settings import db_settings
 @asynccontextmanager
 async def listener_lifespan(app: FastAPI) -> AsyncIterator[None]:
     uri = db_settings.SQLALCHEMY_DATABASE_URI
+
     if uri is not None:
         await notifications.start(uri)
+
     try:
         yield
     finally:

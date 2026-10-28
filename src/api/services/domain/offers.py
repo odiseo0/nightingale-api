@@ -9,7 +9,9 @@ from src.core.schema import AdministrativeResponse, BaseModel
 
 
 class OfferServicePayload(BaseModel):
-    duration_minutes_override: int | None = Field(default=None, strict=True, ge=1, le=1440)
+    duration_minutes_override: int | None = Field(
+        default=None, strict=True, ge=1, le=1440
+    )
 
     model_config = ConfigDict(extra="forbid")
 

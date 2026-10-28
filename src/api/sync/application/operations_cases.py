@@ -833,7 +833,7 @@ async def get_operation(
         )
 
         match scope:
-            case Ok((context, head)):
+            case Ok((context, _)):
                 pass
             case Err(error):
                 return Err(error)

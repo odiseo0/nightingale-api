@@ -289,11 +289,6 @@ class ChangeLogDAO(DAO[ChangeLog, BaseModel, BaseModel]):
             await db.commit()
 
 
-dao_heads = AccountSyncHeadDAO(AccountSyncHead)
-dao_receipts = OperationReceiptDAO(OperationReceipt)
-dao_changes = ChangeLogDAO(ChangeLog)
-
-
 class SyncSnapshotDAO(DAO[SyncSnapshot, BaseModel, BaseModel]):
     async def purge_expired(self, db: AsyncSession) -> int:
         expired = (
@@ -338,10 +333,6 @@ class SyncSnapshotItemDAO(DAO[SyncSnapshotItem, BaseModel, BaseModel]):
                 .limit(shows)
             )
         )
-
-
-dao_snapshots = SyncSnapshotDAO(SyncSnapshot)
-dao_snapshot_items = SyncSnapshotItemDAO(SyncSnapshotItem)
 
 
 class SyncStreamLeaseDAO(DAO[SyncStreamLease, BaseModel, BaseModel]):
@@ -417,3 +408,8 @@ class SyncStreamLeaseDAO(DAO[SyncStreamLease, BaseModel, BaseModel]):
 
 
 dao_streams = SyncStreamLeaseDAO(SyncStreamLease)
+dao_heads = AccountSyncHeadDAO(AccountSyncHead)
+dao_receipts = OperationReceiptDAO(OperationReceipt)
+dao_changes = ChangeLogDAO(ChangeLog)
+dao_snapshots = SyncSnapshotDAO(SyncSnapshot)
+dao_snapshot_items = SyncSnapshotItemDAO(SyncSnapshotItem)

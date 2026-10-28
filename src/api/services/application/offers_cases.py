@@ -62,6 +62,7 @@ def offer_response(
 async def booking_service(db: AsyncSession, context, professional_id, service_id):
     """Resolve the reference inside the future authorized appointment transaction."""
     scope = await account_professional(db, context, professional_id)
+
     if isinstance(scope, Err):
         return scope
 
