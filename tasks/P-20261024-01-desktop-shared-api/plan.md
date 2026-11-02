@@ -240,3 +240,11 @@ Cerrar solo tras C11 y C15 aceptados: catálogo funcional, dos usuarios/disposit
 
 Ninguna decisión funcional abierta para el alcance aprobado. Proveedor cloud, datos reales, política legal, corrección global, Hub y módulos posteriores quedan expresamente excluidos. La disponibilidad del entorno y versiones se verifica en sus tareas; un impedimento se registra sin sustituir herramientas o alcance en silencio.
 
+## Entrega documental para el escritorio · 2026-10-28
+
+El usuario pide regenerar openapi.json y redactar una guía detallada y directa para el repositorio nightingale: propósito de API, estado, decisiones, modelo de datos y endpoints disponibles. Se prepara en contracts/api-v1 para copiar el conjunto al escritorio, sin modificar ese repositorio ni aceptar C11. El usuario autoriza además conectar el router que ya reorganizó en src/api/api.py con la app de módulo: «Añade la conexión y genera OpenAPI». Se conservan sus cambios locales; no se amplían funciones o dependencias.
+
+Orden: conectar el router existente; regenerar con scripts/export_contracts.py; redactar la guía desde código, contratos y decisiones vigentes; comprobar rutas, esquemas, referencias, ejemplos y pruebas aplicables; registrar evidencia en todo.md. Los JSON conservan su generación y huellas; la guía es una copia de consulta con origen y versión, no otra fuente del esquema. La revisión general C11 y la integración real del consumidor siguen pendientes.
+
+Comprobado al cierre del 2026-10-29: contratos y guía preparados; el router se importa directamente desde src/api/api.py para que importar un modelo no cargue endpoints/configuración SQL mediante src/api/__init__.py. Suite actual con 144 pruebas y dos errores en subcasos del validador de duración ya presentes en f572f9c; no se restaura código de negocio previo para hacer pasar esas pruebas. Build offline correcto. Desglose, comparación HTTP y límites en el registro de entrega de todo.md. C11 sigue pendiente.
+

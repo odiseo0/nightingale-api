@@ -18,6 +18,7 @@ El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient 
 | [Contratos](docs/contracts.md) | Propiedad, criterios de diseño y acuerdos por cerrar |
 | [Contrato de diseño HTTP v1](docs/api-v1.md) | Rutas, operaciones, modelos públicos, permisos y recuperación de esta etapa |
 | [Artefactos de contrato](contracts/README.md) | OpenAPI/JSON Schema generados desde código, origen y huellas |
+| [Referencia para el escritorio](contracts/api-v1/nightingale-api.md) | Documento portable para nightingale: estado, decisiones, datos, endpoints y flujos, junto a los contratos |
 | [Guía para Rust](docs/rust-api-guide.md) | Acceso, lotes, conflictos, SSE, cursores y recuperación; consumidor pendiente |
 | [Esquema físico de diseño](docs/database-schema.md) | Única fuente del modelo; implementación parcial en migraciones y pruebas aisladas |
 | [Calidad y pruebas](docs/quality.md) | Requisitos verificables y pruebas futuras |
