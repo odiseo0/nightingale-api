@@ -7,6 +7,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# pg_ctl status uses exit code 3 for a stopped server; check native codes below.
+$PSNativeCommandUseErrorActionPreference = $false
 $repository = Split-Path $PSScriptRoot -Parent
 $directory = Join-Path $repository ".tmp/test-services/postgres-$($Mode.ToLowerInvariant())"
 $dataDirectory = Join-Path $directory 'data'
@@ -17,11 +19,8 @@ if (-not (Test-Path -LiteralPath $pgCtl)) {
     throw "PostgreSQL 18 tools not found in $PostgresBin"
 }
 
-if ($Action -eq 'Stop') {
-    if (Test-Path -LiteralPath (Join-Path $dataDirectory 'postmaster.pid')) {
-        & $pgCtl stop -D $dataDirectory -m fast -w -t 30
-        if ($LASTEXITCODE -ne 0) { throw 'Could not stop the isolated PostgreSQL process' }
-    }
+if ($Action -eq 'Stop' -and -not (Test-Path -LiteralPath (Join-Path $dataDirectory 'PG_VERSION'))) {
+    Write-Output "PostgreSQL ${Mode}: already stopped"
     return
 }
 
@@ -39,8 +38,28 @@ if (-not (Test-Path -LiteralPath (Join-Path $dataDirectory 'PG_VERSION'))) {
 $version = (Get-Content -LiteralPath (Join-Path $dataDirectory 'PG_VERSION')).Trim()
 if ($version -ne '18') { throw "Expected PostgreSQL 18 data, found $version" }
 
-if (Test-Path -LiteralPath (Join-Path $dataDirectory 'postmaster.pid')) {
-    throw 'This cluster has a process marker. Stop it or check its status before starting it again.'
+# A PID file can remain after a crash. Let PostgreSQL check the process and,
+# when starting, handle its stale lock files rather than deleting them here.
+# https://www.postgresql.org/docs/18/app-pg-ctl.html
+$statusOutput = & $pgCtl status -D $dataDirectory 2>&1
+$statusCode = $LASTEXITCODE
+if ($statusCode -notin 0, 3) {
+    throw "Could not check the isolated PostgreSQL process: $statusOutput"
+}
+
+if ($Action -eq 'Stop') {
+    if ($statusCode -eq 3) {
+        Write-Output "PostgreSQL ${Mode}: already stopped"
+        return
+    }
+    & $pgCtl stop -D $dataDirectory -m fast -w -t 30
+    if ($LASTEXITCODE -ne 0) { throw 'Could not stop the isolated PostgreSQL process' }
+    return
+}
+
+if ($statusCode -eq 0) {
+    Write-Output "PostgreSQL ${Mode}: already running; $statusOutput"
+    return
 }
 
 # Bind only to loopback. These ports never use the personal PostgreSQL service.

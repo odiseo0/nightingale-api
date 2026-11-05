@@ -47,7 +47,7 @@ Desde la raíz, abre el perfil que necesites:
 .\test-support\postgres.ps1 -Action Stop -Mode Test
 ```
 
-`-Mode Development` usa otra carpeta y otro puerto. `-PostgresBin` permite indicar la ruta de herramientas de PostgreSQL 18. Cada inicio nuevo crea su propio clúster si falta. Si ya existe un marcador de proceso, el comando se detiene; no intenta reutilizar ni detener otro clúster.
+`-Mode Development` usa otra carpeta y otro puerto. `-PostgresBin` permite indicar la ruta de herramientas de PostgreSQL 18. Cada inicio nuevo crea su propio clúster si falta. `Start` consulta `pg_ctl status`: si el perfil ya está activo, lo conserva; si está detenido, lo inicia. PostgreSQL comprueba los marcadores antiguos al arrancar; el script no los borra. `Stop` no falla si el perfil ya está detenido o aún no existe. Los errores de estado, inicio y cierre siguen deteniendo el comando. [Referencia de PostgreSQL 18](https://www.postgresql.org/docs/18/app-pg-ctl.html).
 
 | Perfil | Puerto, solo 127.0.0.1 | Carpeta |
 |---|---|---|
