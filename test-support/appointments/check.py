@@ -324,10 +324,11 @@ async def check_appointments(runtime, administrative, client, tokens):
     assert replacement["state"]["offeredDurationMinutesSnapshot"] == 20
     assert (await get(f"/appointments/{appointment}/history"))["total"] == 5
     replacement_id = UUID(replacement["state"]["id"])
-    assert (await submit(envelope("CompleteAppointment",replacement_id,{},1)))["error"]["code"] == "INVALID_STATE_TRANSITION"
-    with patch.object(dao_appointments,"server_time",return_value=datetime.fromisoformat(move["payload"]["startsAt"])):
-        completed = await submit(envelope("CompleteAppointment",replacement_id,{"changeReason":"Fixture attendance"},1),assistant)
-    assert completed["status"] == "accepted" and completed["state"]["status"] == "completed"
+    with patch.object(dao_appointments, "server_time", return_value=datetime.fromisoformat("2026-11-01T00:00:00Z")):
+        premature = await submit(envelope("CompleteAppointment",replacement_id,{},1))
+    assert premature.get("error") is not None and premature["error"]["code"] == "INVALID_STATE_TRANSITION", premature
+    completed = await submit(envelope("CompleteAppointment",replacement_id,{"changeReason":"Fixture attendance"},1),assistant)
+    assert completed["status"] == "accepted" and completed["state"]["status"] == "completed", completed
     assert completed["state"]["startsAt"] == replacement["state"]["startsAt"]
     assert (await submit(envelope("CreateAppointment",uuid7(),{**payload,**move["payload"]})))["error"]["code"] == "SLOT_UNAVAILABLE"
     assert (await submit(envelope("ConfirmAppointment",replacement_id,{},2)))["error"]["code"] == "INVALID_STATE_TRANSITION"
@@ -338,9 +339,8 @@ async def check_appointments(runtime, administrative, client, tokens):
     with patch.object(dao_appointments,"server_time",return_value=datetime.fromisoformat("2026-11-02T14:00:00Z")):
         assert (await submit(envelope("MarkAppointmentNoShow",adjacent_id,{},1)))["error"]["code"] == "INVALID_STATE_TRANSITION"
     absence = envelope("MarkAppointmentNoShow",adjacent_id,{"changeReason":"Fixture absence"},1)
-    with patch.object(dao_appointments,"server_time",return_value=datetime.fromisoformat("2026-11-02T14:15:00Z")):
-        absent = await submit(absence,assistant)
-    assert absent["status"] == "accepted" and absent["state"]["status"] == "no_show"
+    absent = await submit(absence,assistant)
+    assert absent["status"] == "accepted" and absent["state"]["status"] == "no_show", absent
     assert (await submit(absence,assistant))["status"] == "duplicate"
     assert (await submit(envelope("CancelAppointment",adjacent_id,{},2)))["error"]["code"] == "INVALID_STATE_TRANSITION"
     assert (await submit(envelope("CreateAppointment",uuid7(),{**payload,"startsAt":"2026-11-02T13:45:00Z","endsAt":"2026-11-02T14:15:00Z"})))["error"]["code"] == "SLOT_UNAVAILABLE"

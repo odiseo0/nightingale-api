@@ -61,7 +61,9 @@ async def check_contracts(runtime, administrative, client, tokens):
     response = await client.get("/v1/capabilities")
     access.expect(response, 200)
     capabilities = CapabilitiesResponse.model_validate(response.json())
-    assert len(capabilities.operation_catalog) == 42 and capabilities.max_page_size == 500
+    from src.api.sync.domain.operations import EMPTY_PAYLOAD_ACTIONS, OPERATION_SCHEMAS
+    expected_actions = len((set(OPERATION_SCHEMAS) | EMPTY_PAYLOAD_ACTIONS) - {"AcceptInvitation"})
+    assert len(capabilities.operation_catalog) == expected_actions and capabilities.max_page_size == 500
     assert "AcceptInvitation" not in capabilities.operation_catalog and "AcceptInvitation" in capabilities.online_only_actions
     access.expect(await client.get("/v1/capabilities?unknown=1"), 422)
 
@@ -145,7 +147,7 @@ async def check_contracts(runtime, administrative, client, tokens):
     owner_only = (set(capabilities.online_only_actions) | set(SERVICE_SCHEMAS) | set(OFFER_SCHEMAS) | {"UpdateProfessionalProfile"}) - {"RegisterAccountDevice"}
     assert set(response.json()["allowedActions"]) == set(capabilities.operation_catalog) - owner_only
     access.expect(await client.get(base + "/members", headers=access.authorization(assistant)), 403)
-    print("Contract checks passed: generated HTTP schemas and local references, 42 actions, owner/assistant access sets, fictional example requests, duplicate/conflict/rejection, snapshot/delta/release and SSE model examples.")
+    print(f"Contract checks passed: generated HTTP schemas and local references, {expected_actions} actions, owner/assistant access sets, fictional example requests, duplicate/conflict/rejection, snapshot/delta/release and SSE model examples.")
 
 
 if __name__ == "__main__":

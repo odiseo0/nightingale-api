@@ -36,6 +36,47 @@ Ambos reutilizan la preparación de sync, comprueban la ruta del clúster, aplic
 
 C10 ejecutó estos dos probes y los nueve existentes en secuencia. Las conexiones separadas y ASGI de aquel cierre no acreditaban dos procesos API; T31/T32 añadieron los probes reales indicados arriba. Consumidores siguen pendientes. No se ejecuta HTTP separado del wheel. Evidencia histórica en [T30/C10](../tasks/P-20261024-01-desktop-shared-api/todo.md#t30-recuperar-tras-vencimiento) y actual en T31–T33.
 
+## Descarga clínica · etapa 1 C06
+
+```powershell
+.\.venv\Scripts\python.exe test-support/clinical_downloads/check.py
+```
+
+Compara captura anterior sin clínica y captura explícita con perfil, condiciones y alergias, sin historias. Comprueba subconjunto de permisos, delta, cambio de época, auditoría sin contenido clínico y rollback. Requiere PostgreSQL/Keycloak Test y usa solo datos ficticios.
+
+## Alergias e intolerancias · etapa 1 C05
+
+```powershell
+.\.venv\Scripts\python.exe test-support/allergies/check.py
+```
+
+Comprueba alergia, intolerancia y tipo desconocido, fechas parciales, estados, filtros, permisos independientes, idempotencia, carrera alta/ausencia conocida, rollback e historia inmutable con PostgreSQL/Keycloak Test. Solo datos ficticios y bases aleatorias eliminadas al terminar.
+
+## Condiciones clínicas · etapa 1 C04
+
+```powershell
+.\.venv\Scripts\python.exe test-support/conditions/check.py
+```
+
+Comprueba fechas parciales, texto libre repetido, estados/certeza, anulación terminal, revisión de listas, permisos independientes, idempotencia, carrera alta/ausencia conocida, rollback e historia inmutable con PostgreSQL/Keycloak Test. La persistencia acredita migración reversible en el head actual. Solo datos ficticios.
+
+## Perfil clínico y nacimiento · etapa 1 C03
+
+```powershell
+.\.venv\Scripts\python.exe test-support/clinical_profile/check.py
+```
+
+Usa una base aleatoria y Keycloak Test para comprobar perfil ausente sin escritura, edad y 29 de febrero, sexo nulo/desconocido, versiones, duplicados, carreras, rollback, aislamiento, cambios de nacimiento e historia inmutable. La persistencia del bloque anterior se repite con el head actual para acreditar upgrade/downgrade/reaplicación. Solo datos ficticios y servicios Test, sin Docker ni base personal.
+
+## Permisos clínicos · etapa 1 C02
+
+```powershell
+.\.venv\Scripts\python.exe test-support/clinical_permissions/check.py
+.\.venv\Scripts\python.exe test-support/persistence/check.py
+```
+
+El primer probe crea una base aleatoria en PostgreSQL Test, aplica el head actual y usa Keycloak Test para comprobar niveles iniciales `read_write`, lectura/configuración por sección, idempotencia, versiones, carreras, rollback, conservación al desactivar/reactivar y recuperación de resultados desde otra instalación tras revocar acceso. El segundo aplica, revierte y reaplica el head, prueba una revisión fallida sin DDL parcial, permisos SQL, rollback y dos escritores. Lee el head real y distingue base disponible de listener SSE no iniciado. No usan la base personal ni Docker.
+
 ## PostgreSQL
 
 Herramientas locales comprobadas: PostgreSQL **18.3**, en `C:\Program Files\PostgreSQL\18\bin`. La referencia 18.6 del plan no describe la versión instalada. El soporte usa la familia 18 y no actualiza la instalación del usuario.

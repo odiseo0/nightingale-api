@@ -223,8 +223,13 @@ async def check_events(runtime, administrative, client, tokens):
             assert "data" not in revoked
             async with asyncio.timeout(5):
                 assert [line async for line in lines_one] == []
-        async with administrative() as db:
-            assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_stream_leases")) == 0
+        for _ in range(150):
+            async with administrative() as db:
+                remaining_leases = await db.scalar(text("SELECT count(*) FROM nightingale.sync_stream_leases"))
+            if remaining_leases == 0:
+                break
+            await asyncio.sleep(.02)
+        assert remaining_leases == 0, "Stream cleanup did not release all leases"
         report = {"processIds": [process.pid for process in processes], "processCount": 2, "connectionLimit": 2,
                   "heartbeatSeconds": heartbeat["receivedAt"] - initial["receivedAt"], "retryMs": 3000,
                   "listenerLossReadiness": [state.status_code for state in states], "recovered": True,

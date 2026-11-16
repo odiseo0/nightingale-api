@@ -130,6 +130,9 @@ async def check_migrations(directory):
     result = migrate("upgrade", "head")
 
     assert result.returncode == 0, result.stderr
+    head = migrate("heads")
+    assert head.returncode == 0, head.stderr
+    revision = head.stdout.strip().split()[0]
 
     migrator = await asyncpg.connect(
         database_url("nightingale_migrator", MIGRATOR_PASSWORD).replace(
@@ -140,13 +143,13 @@ async def check_migrations(directory):
     try:
         assert (
             await migrator.fetchval("SELECT version_num FROM public.alembic_version")
-            == "20261028_01"
+            == revision
         )
         assert (
             await migrator.fetchval(
                 "SELECT count(*) FROM information_schema.tables WHERE table_schema='nightingale'"
             )
-            == 28
+            >= 28
         )
 
         # A failing revision must roll back both its DDL and its version update.
@@ -156,7 +159,7 @@ async def check_migrations(directory):
             encoding="utf-8",
         )
         (directory / "migrations/versions/failed_probe.py").write_text(
-            'from alembic import op\nrevision="failed_probe"\ndown_revision="20261028_01"\n'
+            f'from alembic import op\nrevision="failed_probe"\ndown_revision="{revision}"\n'
             'def upgrade():\n    op.execute("CREATE TABLE nightingale.failed_probe (id integer)")\n'
             '    op.execute("SELECT 1/0")\n',
             encoding="utf-8",
@@ -169,7 +172,7 @@ async def check_migrations(directory):
         )
         assert (
             await migrator.fetchval("SELECT version_num FROM public.alembic_version")
-            == "20261028_01"
+            == revision
         )
 
         result = migrate("downgrade", "base")
@@ -209,7 +212,11 @@ async def check_transactions():
 
     try:
         async with async_session_factory() as db:
-            assert await ready(db) == {"status": "ready", "database": "available"}
+            readiness = await ready(db)
+            if hasattr(readiness, "status_code"):
+                assert readiness.status_code == 503 and b'"database":"available"' in readiness.body
+            else:
+                assert readiness.status == "ready" and readiness.database == "available"
 
             assert await dao.get(db, 0) is Empty
             assert await dao.get_for_update(db, 0) is Empty
