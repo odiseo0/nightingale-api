@@ -15,8 +15,7 @@ from src.api.sync.repository.dao import (
     dao_streams,
 )
 from src.core import Err, Ok, Result
-from src.core.db import DAOError, transaction
-from src.core.utils.utils import Empty
+from src.core.db import transaction
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,9 +34,6 @@ async def get_permission_epoch(
     db: AsyncSession, account_id: UUID
 ) -> Result[int, Never]:
     head = await dao_heads.get_for_account(db, account_id)
-
-    if head is Empty:
-        raise DAOError("La cuenta no tiene control de sincronización")
 
     return Ok(head.permission_epoch)
 

@@ -105,7 +105,16 @@ class AccountResponse(AdministrativeResponse):
     version: int
 
 
-type ClinicalSection = Literal["profile", "conditions", "allergies"]
+type ClinicalSection = Literal[
+    "profile",
+    "conditions",
+    "allergies",
+    "encounters",
+    "notes",
+    "measurements",
+    "immunizations",
+    "antecedents",
+]
 type ClinicalLevel = Literal["none", "read", "read_write"]
 
 
@@ -113,12 +122,22 @@ class ClinicalPermissions(BaseModel):
     clinical_profile: ClinicalLevel = "read_write"
     conditions: ClinicalLevel = "read_write"
     allergies: ClinicalLevel = "read_write"
+    encounters: ClinicalLevel = "read_write"
+    notes: ClinicalLevel = "read_write"
+    measurements: ClinicalLevel = "read_write"
+    immunizations: ClinicalLevel = "read_write"
+    antecedents: ClinicalLevel = "read_write"
 
     def level(self, section: ClinicalSection) -> ClinicalLevel:
         return {
             "profile": self.clinical_profile,
             "conditions": self.conditions,
             "allergies": self.allergies,
+            "encounters": self.encounters,
+            "notes": self.notes,
+            "measurements": self.measurements,
+            "immunizations": self.immunizations,
+            "antecedents": self.antecedents,
         }[section]
 
 
@@ -234,6 +253,11 @@ class AccountChange:
         "clinical_profile",
         "clinical_conditions",
         "clinical_allergies",
+        "clinical_encounters",
+        "clinical_notes",
+        "clinical_measurements",
+        "clinical_immunizations",
+        "clinical_antecedents",
     ] = "owner"
     account_id: UUID | None = None
     previous_starts_at: datetime | None = None

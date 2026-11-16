@@ -55,6 +55,12 @@ from src.api.clinical_records.domain.conditions import (
     SetPatientClinicalSectionReviewPayload,
     UpdatePatientConditionPayload,
 )
+from src.api.encounters.domain.encounters import (
+    CreatePatientEncounterPayload,
+    InvalidatePatientEncounterPayload,
+    PatientEncounterResponse,
+    UpdatePatientEncounterPayload,
+)
 from src.api.patients.domain.contacts import (
     CONTACT_SCHEMAS,
     ContactResponse,
@@ -135,6 +141,13 @@ CONDITION_SCHEMAS: dict[str, type[BaseModel]] = {
 }
 
 
+ENCOUNTER_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientEncounter": CreatePatientEncounterPayload,
+    "UpdatePatientEncounter": UpdatePatientEncounterPayload,
+    "InvalidatePatientEncounter": InvalidatePatientEncounterPayload,
+}
+
+
 APPOINTMENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateAppointment": CreateAppointmentPayload,
     "ConfirmAppointment": EmptyAppointmentPayload,
@@ -160,6 +173,7 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "SetPatientSexAtBirth": SetPatientSexAtBirthPayload,
     **CONDITION_SCHEMAS,
     **ALLERGY_SCHEMAS,
+    **ENCOUNTER_SCHEMAS,
     **CONTACT_SCHEMAS,
     **SERVICE_SCHEMAS,
     **OFFER_SCHEMAS,
@@ -283,6 +297,7 @@ type OperationState = (
     | PatientConditionResponse
     | ClinicalSectionReviewResponse
     | PatientAllergyIntoleranceResponse
+    | PatientEncounterResponse
 )
 
 

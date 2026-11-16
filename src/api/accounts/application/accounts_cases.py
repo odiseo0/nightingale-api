@@ -281,6 +281,11 @@ async def account_context(
                 clinical_profile=membership.clinical_profile_access,
                 conditions=membership.conditions_access,
                 allergies=membership.allergies_access,
+                encounters=membership.encounters_access,
+                notes=membership.notes_access,
+                measurements=membership.measurements_access,
+                immunizations=membership.immunizations_access,
+                antecedents=membership.antecedents_access,
             ),
         )
     )
@@ -462,6 +467,52 @@ async def get_access(
                 )
                 + (
                     [
+                        "CreatePatientEncounter",
+                        "UpdatePatientEncounter",
+                        "InvalidatePatientEncounter",
+                    ]
+                    if state == "active"
+                    and context.clinical_permissions.encounters == "read_write"
+                    else []
+                )
+                + (
+                    ["CreatePatientNote", "UpdatePatientNote", "InvalidatePatientNote"]
+                    if state == "active"
+                    and context.clinical_permissions.notes == "read_write"
+                    else []
+                )
+                + (
+                    [
+                        "RecordPatientMeasurement",
+                        "CorrectPatientMeasurement",
+                        "InvalidatePatientMeasurement",
+                    ]
+                    if state == "active"
+                    and context.clinical_permissions.measurements == "read_write"
+                    else []
+                )
+                + (
+                    [
+                        "RecordPatientImmunization",
+                        "UpdatePatientImmunization",
+                        "InvalidatePatientImmunization",
+                    ]
+                    if state == "active"
+                    and context.clinical_permissions.immunizations == "read_write"
+                    else []
+                )
+                + (
+                    [
+                        "CreatePatientAntecedent",
+                        "UpdatePatientAntecedent",
+                        "InvalidatePatientAntecedent",
+                    ]
+                    if state == "active"
+                    and context.clinical_permissions.antecedents == "read_write"
+                    else []
+                )
+                + (
+                    [
                         "CreateInvitation",
                         "RevokeInvitation",
                         "SetMembershipStatus",
@@ -495,8 +546,38 @@ async def get_access(
     return Ok(response)
 
 
+async def encounter_participants(
+    db: AsyncSession,
+    account_id: UUID,
+    professional_id: UUID,
+    assistant_id: UUID | None,
+) -> bool:
+    professional = await dao_account_professionals.get_by(
+        db, where={"account_id": account_id, "professional_id": professional_id}
+    )
+    if professional is Empty or professional.status != "active":
+        return False
+
+    if assistant_id is None:
+        return True
+
+    assistant = await dao_memberships.get_scoped(db, account_id, assistant_id)
+
+    return assistant is not Empty and assistant.status == "active"
+
+
 def readable_clinical_sections(context: AccountContext) -> list[ClinicalSection]:
-    sections: list[ClinicalSection] = ["profile", "conditions", "allergies"]
+    sections: list[ClinicalSection] = [
+        "profile",
+        "conditions",
+        "allergies",
+        "encounters",
+        "notes",
+        "measurements",
+        "immunizations",
+        "antecedents",
+    ]
+
     return [
         section
         for section in sections

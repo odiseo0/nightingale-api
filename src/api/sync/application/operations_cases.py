@@ -54,6 +54,7 @@ from src.api.clinical_records.application.conditions_cases import (
 from src.api.clinical_records.domain.conditions import (
     SetPatientClinicalSectionReviewPayload,
 )
+from src.api.encounters.application.encounters_cases import apply_encounter_operation
 from src.api.patients.application.contacts_cases import (
     apply_contact_operation,
 )
@@ -80,6 +81,7 @@ from src.api.sync.domain.operations import (
     BLOCK_SCHEMAS,
     CONDITION_SCHEMAS,
     CONTACT_SCHEMAS,
+    ENCOUNTER_SCHEMAS,
     EXCEPTION_SCHEMAS,
     OFFER_SCHEMAS,
     RULE_SCHEMAS,
@@ -284,11 +286,9 @@ async def accept_operation(
         account_id = context.account.id
         clinical_section = clinical_result_section(operation.action, payload)
 
-        if (
-            operation.action == "SetPatientSexAtBirth"
-            or operation.action in CONDITION_SCHEMAS
-            or operation.action in ALLERGY_SCHEMAS
-        ) and not clinical_result_allowed(context, clinical_section):
+        if clinical_section is not None and not clinical_result_allowed(
+            context, clinical_section
+        ):
             return Err(AccessDenied())
 
         if operation.action in BLOCK_SCHEMAS and isinstance(operation.entity_key, UUID):
@@ -330,10 +330,9 @@ async def accept_operation(
 
         if receipt is not Empty:
             if (
-                operation.action == "SetPatientSexAtBirth"
-                or operation.action in CONDITION_SCHEMAS
-                or operation.action in ALLERGY_SCHEMAS
-            ) and receipt.clinical_section != clinical_section:
+                clinical_section is not None
+                and receipt.clinical_section != clinical_section
+            ):
                 return Err(AccessDenied())
 
             if receipt.request_hash != fingerprint:
@@ -427,6 +426,9 @@ async def accept_operation(
             "CreatePatientAllergyIntolerance": "patient_allergy_intolerance",
             "UpdatePatientAllergyIntolerance": "patient_allergy_intolerance",
             "InvalidatePatientAllergyIntolerance": "patient_allergy_intolerance",
+            "CreatePatientEncounter": "clinical_encounter",
+            "UpdatePatientEncounter": "clinical_encounter",
+            "InvalidatePatientEncounter": "clinical_encounter",
         }.get(operation.action, "invitation" if internal_invitation else "unknown")
         changes = []
         permission_changed = True
@@ -464,6 +466,7 @@ async def accept_operation(
                 or operation.action in APPOINTMENT_SCHEMAS
                 or operation.action in CONDITION_SCHEMAS
                 or operation.action in ALLERGY_SCHEMAS
+                or operation.action in ENCOUNTER_SCHEMAS
                 or operation.action in OFFER_SCHEMAS
                 or operation.action in SERVICE_SCHEMAS
                 or operation.action in CONTACT_SCHEMAS
@@ -491,6 +494,7 @@ async def accept_operation(
                 if (
                     operation.action in CONDITION_SCHEMAS
                     or operation.action in ALLERGY_SCHEMAS
+                    or operation.action in ENCOUNTER_SCHEMAS
                     or operation.action == "SetPatientSexAtBirth"
                 ) and not isinstance(operation.entity_key, UUID):
                     return Err(AccountRuleError("VALIDATION_ERROR"))
@@ -508,6 +512,7 @@ async def accept_operation(
                     (OFFER_SCHEMAS, lambda: apply_offer_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
                     (SERVICE_SCHEMAS, lambda: apply_service_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
                     (CONTACT_SCHEMAS, lambda: apply_contact_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
+                    (ENCOUNTER_SCHEMAS, lambda: apply_encounter_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id, operation.occurred_at_local)),
                     (ALLERGY_SCHEMAS, lambda: apply_allergy_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
                     (CONDITION_SCHEMAS, lambda: apply_condition(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
                     ({"SetPatientSexAtBirth"}, lambda: apply_clinical_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
@@ -869,11 +874,9 @@ async def get_operation(
         if context.account.status != "active" and action != "SetAccountStatus":
             return Err(AccessDenied())
 
-        if (
-            action == "SetPatientSexAtBirth"
-            or action in CONDITION_SCHEMAS
-            or action in ALLERGY_SCHEMAS
-        ) and not clinical_result_allowed(context, clinical_section):
+        if clinical_section is not None and not clinical_result_allowed(
+            context, clinical_section
+        ):
             return Err(AccessDenied())
 
         receipt = await dao_receipts.get_scoped(

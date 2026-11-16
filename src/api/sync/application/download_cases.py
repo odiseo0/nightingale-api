@@ -80,6 +80,11 @@ CLINICAL_AUDIENCES: dict[str, ClinicalSection] = {
     "clinical_profile": "profile",
     "clinical_conditions": "conditions",
     "clinical_allergies": "allergies",
+    "clinical_encounters": "encounters",
+    "clinical_notes": "notes",
+    "clinical_measurements": "measurements",
+    "clinical_immunizations": "immunizations",
+    "clinical_antecedents": "antecedents",
 }
 
 

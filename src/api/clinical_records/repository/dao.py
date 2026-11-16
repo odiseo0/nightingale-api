@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.clinical_records.domain.allergies import AllergyQuery
 from src.api.clinical_records.domain.conditions import ConditionQuery
+from src.api.encounters.domain.encounters import PatientEncounterResponse
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import EmptyType
+from src.core.utils.utils import Empty, EmptyType
 
 from .allergies import PatientAllergyIntolerance, PatientAllergyIntoleranceHistory
 from .conditions import (
@@ -17,7 +18,11 @@ from .conditions import (
     PatientCondition,
     PatientConditionHistory,
 )
-from .models import PatientClinicalProfile, PatientClinicalProfileHistory
+from .models import (
+    PatientClinicalProfile,
+    PatientClinicalProfileHistory,
+    PatientClinicalTimeline,
+)
 
 
 class PatientClinicalProfileDAO(DAO[PatientClinicalProfile, BaseModel, BaseModel]):
@@ -299,6 +304,49 @@ class PatientAllergyIntoleranceHistoryDAO(
     pass
 
 
+class PatientClinicalTimelineDAO(DAO[PatientClinicalTimeline, BaseModel, BaseModel]):
+    async def project_encounter(
+        self, db: AsyncSession, account_id: UUID, encounter: PatientEncounterResponse
+    ) -> PatientClinicalTimeline:
+        row = await self.get_by(
+            db,
+            where={
+                "account_id": account_id,
+                "patient_id": encounter.patient_id,
+                "entry_type": "encounter",
+                "entry_id": encounter.encounter_id,
+            },
+            execution_options={"populate_existing": True},
+        )
+
+        if row is Empty:
+            row = PatientClinicalTimeline(
+                account_id=account_id,
+                patient_id=encounter.patient_id,
+                entry_type="encounter",
+                entry_id=encounter.encounter_id,
+                source_section="encounters",
+                occurred_at=encounter.occurred_at,
+                occurrence_date=None,
+                date_precision="instant",
+                sort_key=encounter.occurred_at.isoformat(),
+                accepted_at=encounter.updated_at,
+                entity_version=encounter.version,
+                record_status=encounter.record_status,
+            )
+            await self.add(db, row)
+        else:
+            row.occurred_at = encounter.occurred_at
+            row.sort_key = encounter.occurred_at.isoformat()
+            row.accepted_at = encounter.updated_at
+            row.entity_version = encounter.version
+            row.record_status = encounter.record_status
+            await self.flush(db)
+
+        return row
+
+
+dao_clinical_timeline = PatientClinicalTimelineDAO(PatientClinicalTimeline)
 dao_allergies = PatientAllergyIntoleranceDAO(PatientAllergyIntolerance)
 dao_allergy_histories = PatientAllergyIntoleranceHistoryDAO(
     PatientAllergyIntoleranceHistory

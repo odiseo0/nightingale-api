@@ -9,6 +9,7 @@ from src.api.accounts.domain.accounts import (
     AccountContext,
     AccountEffect,
     AccountResponse,
+    ClinicalPermissions,
     ClinicalPermissionsPayload,
     CreateInvitationPayload,
     InvitationAcceptanceResult,
@@ -136,11 +137,16 @@ async def apply_invitation_operation(
         if membership.version != expected_version:
             return Err(AccountRuleError("VERSION_CONFLICT", membership.version))
 
-        data = payload.clinical_permissions
+        data = ClinicalPermissions(**payload.clinical_permissions.model_dump())
         changes = {
             "clinical_profile_access": data.clinical_profile,
             "conditions_access": data.conditions,
             "allergies_access": data.allergies,
+            "encounters_access": data.encounters,
+            "notes_access": data.notes,
+            "measurements_access": data.measurements,
+            "immunizations_access": data.immunizations,
+            "antecedents_access": data.antecedents,
         }
         if all(getattr(membership, name) == value for name, value in changes.items()):
             return Err(AccountRuleError("NO_CHANGES", membership.version))

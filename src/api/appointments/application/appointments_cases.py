@@ -49,6 +49,21 @@ if TYPE_CHECKING:
     from src.api.appointments.repository.models import Appointment, AppointmentHistory
 
 
+async def encounter_appointment(
+    db: AsyncSession, account_id: UUID, patient_id: UUID, appointment_id: UUID | None
+) -> bool:
+    if appointment_id is None:
+        return True
+
+    appointment = await dao_appointments.get(db, appointment_id)
+
+    return (
+        appointment is not Empty
+        and appointment.account_id == account_id
+        and appointment.patient_id == patient_id
+    )
+
+
 async def occupancy(
     db: AsyncSession,
     professional_id: UUID,

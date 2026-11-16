@@ -19,6 +19,7 @@ from src.api.clinical_records.domain.conditions import (
     ClinicalSectionReviewResponse,
     PatientConditionResponse,
 )
+from src.api.encounters.domain.encounters import PatientEncounterResponse
 from src.api.schedule.domain.schedule import AbsoluteInterval, ScheduleRuleFields
 from src.api.sync.domain import operations as projections
 from src.api.sync.domain.operations import OperationState
@@ -46,6 +47,7 @@ PROJECTION_SCHEMAS: dict[str, type[BaseModel]] = {
     "patient_condition": PatientConditionResponse,
     "patient_clinical_section_review": ClinicalSectionReviewResponse,
     "patient_allergy_intolerance": PatientAllergyIntoleranceResponse,
+    "clinical_encounter": PatientEncounterResponse,
 }
 
 

@@ -26,6 +26,8 @@ from src.api.clinical_records.domain.conditions import (
     ClinicalSectionReviewResponse,
     PatientConditionResponse,
 )
+from src.api.encounters.application.snapshot_cases import snapshot_encounters
+from src.api.encounters.domain.encounters import PatientEncounterResponse
 from src.api.patients.application.snapshot_cases import snapshot_patients
 from src.api.schedule.application.snapshot_cases import snapshot_schedule
 from src.api.services.application.snapshot_cases import snapshot_services
@@ -143,6 +145,9 @@ async def create_snapshot(
         items = await snapshot_accounts(db, context)
         appointments = await snapshot_appointments(db, context, window)
         clinical_items = await snapshot_clinical(db, context, clinical_sections)
+
+        if "encounters" in clinical_sections:
+            clinical_items.extend(await snapshot_encounters(db, account_id))
         states = [
             item.state
             for item in appointments
@@ -167,7 +172,8 @@ async def create_snapshot(
                 ClinicalProfileResponse
                 | PatientConditionResponse
                 | ClinicalSectionReviewResponse
-                | PatientAllergyIntoleranceResponse,
+                | PatientAllergyIntoleranceResponse
+                | PatientEncounterResponse,
             )
         }
         items.extend(

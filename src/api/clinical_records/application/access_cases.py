@@ -20,9 +20,33 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+CLINICAL_ROUTINE_SECTIONS: dict[str, ClinicalSection] = {
+    "CreatePatientEncounter": "encounters",
+    "UpdatePatientEncounter": "encounters",
+    "InvalidatePatientEncounter": "encounters",
+    "CreatePatientNote": "notes",
+    "UpdatePatientNote": "notes",
+    "InvalidatePatientNote": "notes",
+    "RecordPatientMeasurement": "measurements",
+    "CorrectPatientMeasurement": "measurements",
+    "InvalidatePatientMeasurement": "measurements",
+    "RecordPatientImmunization": "immunizations",
+    "UpdatePatientImmunization": "immunizations",
+    "InvalidatePatientImmunization": "immunizations",
+    "CreatePatientAntecedent": "antecedents",
+    "UpdatePatientAntecedent": "antecedents",
+    "InvalidatePatientAntecedent": "antecedents",
+}
+
+
 def clinical_result_section(
     action: str, payload: BaseModel | None
 ) -> ClinicalSection | None:
+    routine_section = CLINICAL_ROUTINE_SECTIONS.get(action)
+
+    if routine_section is not None:
+        return routine_section
+
     if action == "SetPatientSexAtBirth":
         return "profile"
 
