@@ -1462,6 +1462,7 @@ PK id. F38 creador de cuenta; F39 destinatario global; F40 recibo (account_id,in
 | entity_type | text | Sí | Sin valor | Texto no vacío | Tipo reconocido o unknown para rechazo sin efecto. |
 | entity_key | jsonb | Sí | Sin valor | CHECK forma de clave | UUIDv7 textual o clave compuesta de UUIDv7 conocida; no cuerpo personal libre. |
 | request_hash | bytea | Sí | Sin valor | CHECK 32 octetos | Huella canónica; no payload completo. |
+| clinical_section | text | No | Nulo | CHECK profile/conditions/allergies | Sección clínica que debe conservar `read_write` para recuperar el resultado; nulo fuera de clínica o si es indeterminado. |
 | status | text | Sí | Sin valor | CHECK accepted/conflict/rejected | Duplicate es lectura del original; temporal no se fija como rechazo. |
 | entity_version | integer | No | Nulo | CHECK positivo condicional | Versión del efecto o conflicto, si permitido. |
 | result_json | jsonb | No | Nulo | CHECK objeto | Resultado permitido, retirado al vencer; no tokens ni payload de entrada. |
@@ -1469,7 +1470,7 @@ PK id. F38 creador de cuenta; F39 destinatario global; F40 recibo (account_id,in
 | result_expires_at | timestamptz | Sí | Sin valor | CHECK finito/mínimo 90 días | No antes de completed_at + 90 días. |
 | purged_at | timestamptz | No | Nulo | CHECK temporal/finito | Retirada de resultado completo; no eliminación del recibo. |
 
-PK (account_id,actor_user_id,operation_id), F41 pertenencia y F42 instalación/actor del origen. Índice (source_device_id,actor_user_id) y (result_expires_at) parcial para resultados no retirados. result_json nulo si y solo si purged_at existe; purged_at >= result_expires_at. Conservar clave, huella, estado y versión mínimos indefinidamente en esta etapa, sin reejecutar al retirar resultado. Recibo inmutable salvo retirar result_json/asignar purged_at. No registrar recibo de éxito antes del commit ni fallos temporales definitivos. AcceptInvitation usa esta misma clave y su acción interna, no una acción adicional permitida en el lote.
+PK (account_id,actor_user_id,operation_id), F41 pertenencia y F42 instalación/actor del origen. Índice (source_device_id,actor_user_id) y (result_expires_at) parcial para resultados no retirados. result_json nulo si y solo si purged_at existe; purged_at >= result_expires_at. Conservar clave, huella, estado y versión mínimos indefinidamente en esta etapa, sin reejecutar al retirar resultado. Recibo inmutable salvo retirar result_json/asignar purged_at. No registrar recibo de éxito antes del commit ni fallos temporales definitivos. AcceptInvitation usa esta misma clave y su acción interna, no una acción adicional permitida en el lote. La migración 20261116_02 rellena secciones conocidas; para revisiones compartidas usa solo result_json.state.section y deja nulos los casos ambiguos, que no son recuperables.
 
 ### 9.3.6 `account_sync_heads`
 
@@ -1691,6 +1692,7 @@ Convenciones clínicas:
 - Los textos obligatorios no son vacíos tras quitar espacios exteriores. No hay unicidad ni índice global por nombre/sustancia.
 - Cada historial conserva el contenido completo resultante, acción, actor, operación e instante. La FK de versión actual es diferida al cierre; un control diferido comprueba secuencia desde 1, ausencia de huecos, máximo igual a la versión actual e igualdad de contenido. Historias y cambios de nacimiento son append-only: el rol operativo recibe SELECT/INSERT, sin UPDATE/DELETE/TRUNCATE.
 - Altas y retiradas del último registro pertinente coordinan la revisión de su sección sobre la fila `account_patients`, tras autorización y antes del estado/revisión. Efecto, revisión derivada, historias, recibo, auditoría y grupo comparten commit. Los bloqueos y relecturas conservan §9.5.
+- La migración 20261116_03 añade una guarda `BEFORE UPDATE` compartida por perfil, condiciones y alergias actuales. Rechaza cambios de `account_id`, `patient_id` o `id` y revierte la transacción; las ediciones clínicas ordinarias siguen permitidas.
 
 ### 10.2 `patient_clinical_profiles`
 

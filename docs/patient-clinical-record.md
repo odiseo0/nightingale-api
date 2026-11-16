@@ -1,7 +1,7 @@
 # Registro clínico y seguimiento del paciente
 
-**Versión:** 0.2. **Fecha:** 2026-11-15.
-**Estado:** especificación funcional vigente. El usuario aprobó el plan de etapa 1 y sus concreciones para revisión en C01; T01–T03 solo registran acuerdos, diseño y línea base. No acredita implementación ni acepta C01.
+**Versión:** 0.3. **Fecha:** 2026-11-16.
+**Estado:** especificación funcional vigente. La etapa 1 y su corrección están implementadas para revisión C07: permisos por sección, resultados con alcance persistido, revisiones coherentes, historial de nacimiento, descarga con referencias completas, auditoría y guardas de identidad. El usuario aceptó C01–C06 del plan sucesor; C07 espera revisión. La etapa 2 no se inicia.
 **Decisión de alcance:** [D12](decisions.md#d12--registro-clínico-y-seguimiento-del-paciente).
 **Entrega documental:** [P-20261115-01-clinical-spec](../tasks/P-20261115-01-clinical-spec/plan.md), con [evidencia](../tasks/P-20261115-01-clinical-spec/todo.md).
 
@@ -558,5 +558,6 @@ Los acuerdos de §3 concretan la ampliación futura. Las propuestas y pendientes
 |---|---|---|
 | 0.1 | 2026-11-15 | Especificación de descubrimiento: acuerdos, tres etapas, funciones y datos, reglas comunes, integración, casos de aceptación, pendientes y fuentes oficiales |
 | 0.2 | 2026-11-15 | Aprobación del plan de etapa 1 y concreción de O01, O04–O06, O14 y la parte funcional de O15; pendientes de otras etapas y operación conservados |
+| 0.3 | 2026-11-16 | Corrección de alcance de resultados, estados, historial, descarga, auditoría e integridad; C01–C06 del sucesor aceptados, C07 pendiente |
 
 La comprobación de esta entrega vive en [la lista documental](../tasks/P-20261115-01-clinical-spec/todo.md). Escribir y revisar el documento no prueba la API, el escritorio, PostgreSQL, exactitud clínica, métodos de crecimiento ni producción. La aceptación de la especificación y los futuros planes corresponde al usuario.

@@ -16,13 +16,15 @@ Aceptación y revocación se coordinan en PostgreSQL con el orden y relecturas d
 
 La definición física está solo en database-schema.md. El historial de T04 se conserva abajo; sus alternativas de sesiones/proveedor quedan sustituidas en este ámbito. D11 resuelve el alcance y la propiedad del servidor del Hub; O02 conserva el mecanismo de acceso limitado a citas pendiente de diseño.
 
-## Permisos clínicos de etapa 1 · diseño para C01
+## Permisos clínicos de etapa 1 · implementación para revisión C07
 
 El plan [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) añade tres niveles independientes por pertenencia: perfil clínico, condiciones y alergias/intolerancias. Cada nivel vale `none`, `read` o `read_write`; asistentes existentes/nuevos empiezan con `read_write`. El propietario conserva acceso completo y solo él configura asistentes, online y con versión de pertenencia. Estos niveles no crean roles globales ni cambian los permisos administrativos sobre nacimiento.
 
 `none` excluye estado, resúmenes, historias, resultados y descargas; `read` permite consultas; `read_write` permite acciones y recuperar resultados de escritura. API vuelve a autorizar antes de duplicados, resultados, listas, detalles, historias y capturas. Cambiar niveles incrementa pertenencia y época en la misma aceptación, invalida capturas/cursores y provoca cierre del SSE anterior. Desactivar/reactivar conserva la configuración.
 
-La captura clínica es opcional y registra las secciones permitidas. Sus proyecciones usarán audiencias cerradas por sección, filtradas antes de construir la respuesta; no incluirán historias. T04–T06 implementan niveles, configuración por propietario, acceso propio y filtrado cerrado, comprobados con datos ficticios para revisión C02. Las lecturas clínicas correctas deberán dejar evidencia sin nombres clínicos, sustancias, reacciones, filtros, cuerpos o cursores; un fallo al persistirla impedirá entregar datos. No se promete borrado de copias locales ya descargadas. C02 espera revisión del usuario y no habilita datos clínicos.
+La captura clínica es opcional y registra las secciones permitidas. Sus proyecciones usan audiencias cerradas por sección, filtradas antes de construir la respuesta; no incluyen historias. Las lecturas clínicas correctas dejan evidencia sin nombres clínicos, sustancias, reacciones, filtros, cuerpos o cursores; un fallo al persistirla impide entregar datos. No se promete borrado de copias locales ya descargadas.
+
+Cada recibo clínico conserva `clinical_section`. Duplicados y GET exigen `read_write` vigente en esa sección antes de leer o validar el resultado; `read`/`none` no reciben cuerpos, `originalResult` ni conflictos informativos. Las revisiones compartidas usan su sección real. Los recibos históricos ambiguos permanecen sin alcance y fallan cerrados. Las lecturas de resultados, capturas y deltas clínicos registran evidencia en la misma transacción. La migración 20261116_03 impide reasignar cuenta, ID o paciente de las filas clínicas actuales.
 
 ## Acceso futuro del Hub acordado por D11
 

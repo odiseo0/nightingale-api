@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.2. **Fecha:** 2026-11-15. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 del núcleo. La etapa clínica [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) está aprobada para T01–T03; §10 es diseño futuro para revisión C01, sin rutas o acciones clínicas implementadas. Los contratos generados existentes conservan 46 rutas/47 operaciones HTTP, 70 esquemas y 42 acciones por lote; no se regeneran en este bloque. C11 del núcleo, C01 clínico, consumidores y producción conservan sus límites.
+**Versión de diseño:** 1.2. **Fecha:** 2026-11-16. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 del núcleo. La etapa clínica y su corrección están implementadas para revisión C07. Los contratos generados contienen 60 rutas, 98 esquemas y 51 acciones por lote, con origen, HEAD y huellas reproducibles. C11 del núcleo, consumidores y producción conservan sus límites.
 
 Este documento conserva explicación de transporte, permisos y recuperación. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas. Los esquemas Pydantic de domain, derivados del BaseModel del proyecto, son la fuente de OpenAPI/JSON Schema exportados por scripts/export_contracts.py. Los generados identifican origen/versión/huella y no se editan a mano. La [guía Rust](rust-api-guide.md) explica su uso y enlaza ejemplos comprobados. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -318,7 +318,7 @@ Fuentes de API ya contrastadas durante planificación: [lifespan](https://fastap
 
 ## 10. Diseño clínico de etapa 1 para revisión C01
 
-Perfil, cambios de nacimiento, condiciones y alergias/intolerancias ya están disponibles en el servidor hasta T15 para revisión C05. La descarga clínica completa se concretará en T16. Los permisos de §10.1, la acción `SetMemberClinicalPermissions` y el alcance opcional de capturas sí se implementan en T04–T06 para revisión C02; §3 y §5 contienen su catálogo actual. Los artefactos generados no se actualizan en este bloque. Se mantiene `contractVersion=1`; al cerrar la etapa se publicará `modelRevision=api-v1.2`. Los esquemas Pydantic de `clinical_records`, `accounts`, `patients` y `sync` serán la fuente ejecutable posterior; esta sección es su diseño previo y no una segunda implementación.
+Perfil, cambios de nacimiento, condiciones, alergias/intolerancias, permisos, resultados y descarga clínica están disponibles en el servidor para revisión C07. Los esquemas Pydantic de `clinical_records`, `accounts`, `patients` y `sync` son la fuente ejecutable; esta sección explica su comportamiento y no crea otra definición. Se conserva `contractVersion=1` y `modelRevision=api-v1.2`.
 
 ### 10.1 Acceso clínico
 
@@ -338,6 +338,19 @@ A equivale a `/v1/accounts/{account_id}` y todas exigen token, dispositivo y niv
 
 | Método | Ruta | Acceso | Modelo de respuesta / comportamiento |
 |---|---|---|---|
+| GET | `A/patients/{patient_id}/clinical-profile` | perfil `read`/`read_write` | `ClinicalProfileResponse`; versión 0 sin fila |
+| GET | `A/patients/{patient_id}/clinical-profile/history` | perfil `read`/`read_write` | Historia ascendente con `afterVersion` |
+| GET | `A/patients/{patient_id}/birth-date-changes` | miembro | Cambios por `patientVersion` ascendente y `afterVersion` |
+| GET | `A/patients/{patient_id}/conditions` | condiciones `read`/`read_write` | Lista actual y filtros documentados |
+| GET | `A/patients/{patient_id}/conditions/{condition_id}` | condiciones `read`/`read_write` | Detalle de la misma cuenta/ficha |
+| GET | `A/patients/{patient_id}/conditions/{condition_id}/history` | condiciones `read`/`read_write` | Historia por versión |
+| GET | `A/patients/{patient_id}/allergy-intolerances` | alergias `read`/`read_write` | Lista actual y filtros documentados |
+| GET | `A/patients/{patient_id}/allergy-intolerances/{allergy_id}` | alergias `read`/`read_write` | Detalle de la misma cuenta/ficha |
+| GET | `A/patients/{patient_id}/allergy-intolerances/{allergy_id}/history` | alergias `read`/`read_write` | Historia por versión |
+| GET | `A/patients/{patient_id}/clinical-sections/conditions` | condiciones `read`/`read_write` | Revisión actual |
+| GET | `A/patients/{patient_id}/clinical-sections/conditions/history` | condiciones `read`/`read_write` | Historia por versión |
+| GET | `A/patients/{patient_id}/clinical-sections/allergies` | alergias `read`/`read_write` | Revisión actual |
+| GET | `A/patients/{patient_id}/clinical-sections/allergies/history` | alergias `read`/`read_write` | Historia por versión |
 
 Todas usan `page`/`shows`, `items`/`total`, autorización y filtros antes de contar/paginar. Historial acepta `afterVersion`. Condiciones filtra `clinicalStatus`, `verificationStatus` e `includeEnteredInError`; alergias añade `type`. Por defecto incluye estados vigentes, resueltos y refutados, pero excluye `entered-in-error`; un filtro explícito por ese estado o `includeEnteredInError=true` lo incluye. Las listas no tienen búsqueda global ni orden por texto clínico.
 
@@ -371,6 +384,15 @@ Las acciones de etapa 1 ya figuran en §5; la descarga clínica completa se conc
 
 | Acción | `entityKey` | Payload / versión | Permiso y regla |
 |---|---|---|---|
+| `SetPatientSexAtBirth` | `patientId` | `sexAtBirth`, `sourceType`; perfil versión actual o 0 | perfil `read_write`; primera exige valor no nulo |
+| `CreatePatientCondition` | `conditionId` nuevo | `patientId`, nombre, estados, fechas y fuente | condiciones `read_write`; no admite `entered-in-error` inicial |
+| `UpdatePatientCondition` | `conditionId` | Patch y versión actual | condiciones `read_write`; no anula por patch |
+| `InvalidatePatientCondition` | `conditionId` | `correctionReason` y versión actual | condiciones `read_write`; anulación terminal |
+| `CreatePatientAllergyIntolerance` | `allergyId` nuevo | `patientId`, sustancia, tipo, reacción, estados, fechas y fuente | alergias `read_write`; no admite `entered-in-error` inicial |
+| `UpdatePatientAllergyIntolerance` | `allergyId` | Patch y versión actual | alergias `read_write`; no anula por patch |
+| `InvalidatePatientAllergyIntolerance` | `allergyId` | `correctionReason` y versión actual | alergias `read_write`; anulación terminal |
+| `SetPatientClinicalSectionReview` | `patientId` | `section`, `informationStatus`, fuente; revisión actual o 0 | `read_write` de la sección indicada |
+| `SetMemberClinicalPermissions` | `userId` | Tres niveles y versión de pertenencia | propietario, online |
 
 Crear el primer registro pertinente cambia revisión a `has_entries`; añadir más no crea otra revisión si ya tiene ese estado. Anular/refutar el último cambia a `unknown`. Confirmar `has_entries` sin diferencias devuelve `NO_CHANGES`; para dejar constancia de una nueva revisión se requiere un cambio de fuente u otro dato permitido, sin fabricar versiones repetidas. Altas, anulaciones y revisiones se coordinan por ficha para impedir ausencia conocida concurrente con un alta.
 
@@ -380,10 +402,10 @@ Una fecha de inicio completamente posterior al día local se rechaza. Un fin ine
 
 `SnapshotRequest` añade `includeClinical=false`. Cuando es verdadero, la captura materializa solo secciones legibles y registra `clinicalSections` subconjunto de `profile`,`conditions`,`allergies`; vacío conserva la forma y contenido anteriores. `SnapshotResponse` expone ese conjunto y el cursor firmado lo conserva. Cursores anteriores equivalen a `includeClinical=false`.
 
-Nuevas proyecciones `patient_clinical_profile`, `patient_condition`, `patient_allergy_intolerance`, `patient_clinical_section_review`: último estado, incluidos resueltos, refutados y anulados; no tablas de historial. Ficha/nacimiento y demás referencias administrativas necesarias siguen las reglas existentes. Condiciones/alergias no se filtran por ventana de citas. Audiencias cerradas `clinical_profile`,`clinical_conditions`,`clinical_allergies` se comprueban antes de validar/entregar proyecciones; un consumidor que no solicita clínica nunca las recibe. Los grupos invisibles permiten avanzar sin cuerpos.
+Nuevas proyecciones `patient_clinical_profile`, `patient_condition`, `patient_allergy_intolerance`, `patient_clinical_section_review`: último estado, incluidos resueltos, refutados y anulados; no tablas de historial. Ficha/nacimiento y demás referencias administrativas necesarias siguen las reglas existentes; también se reúnen pacientes referenciados por clínica aunque estén inactivos/completos y sin citas en la ventana. Condiciones/alergias no se filtran por ventana de citas. Audiencias cerradas `clinical_profile`,`clinical_conditions`,`clinical_allergies` se comprueban antes de validar/entregar proyecciones; un consumidor que no solicita clínica nunca las recibe. Los grupos invisibles permiten avanzar sin cuerpos.
 
 Cambio de niveles o época exige otra captura; SSE cierra el alcance anterior. Esto no promete borrado remoto de datos ya descargados. No se habilita consumo clínico mientras procesos antiguos sigan activos.
 
-Cada operación conserva efecto, historias/revisión derivada, auditoría, recibo y grupo en una transacción. Lecturas clínicas correctas, capturas y páginas con clínica registran actor, dispositivo, cuenta, paciente/objeto o sección, acción, resultado, correlación e instante. No registran nombres, sustancias, reacciones, filtros clínicos, cuerpos o cursores. Si falla esa evidencia, la lectura no entrega datos y devuelve el fallo temporal común; SSE no audita heartbeats.
+Cada operación conserva efecto, historias/revisión derivada, auditoría, recibo y grupo en una transacción. El recibo clínico persiste `clinical_section`; duplicados y GET exigen `read_write` vigente en esa sección antes de entregar resultados o conflictos informativos. Lecturas clínicas correctas, recuperaciones de resultados, capturas, páginas y deltas con clínica registran actor, dispositivo, cuenta, paciente/objeto o sección, acción, resultado, correlación e instante. No registran nombres, sustancias, reacciones, filtros clínicos, cuerpos o cursores. Si falla esa evidencia, la lectura no entrega datos y devuelve el fallo temporal común; SSE no audita heartbeats.
 
 Las fechas parciales usan biblioteca estándar y validadores del proyecto. Las rutas declaran `response_model` y retorno real; proyecciones se validan antes de commit. Fuentes oficiales: [FastAPI response models](https://fastapi.tiangolo.com/tutorial/response-model/), [Pydantic 2.14.1 validators](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/validators.md), [PostgreSQL 18 constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [SQLAlchemy 2.1 transactions](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html) y FHIR R5 enlazado en el plan.
