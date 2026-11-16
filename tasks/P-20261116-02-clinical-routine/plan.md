@@ -118,7 +118,7 @@ Tipos iniciales y forma cerrada:
 
 | `kind` | Valor y unidad | Rango técnico de captura propuesto |
 |---|---|---|
-| `weight` | `value`, `kg` | 0,01–500 |
+| `weight` | `value`, `kg` | 0,01–1000; admite el error ficticio 700 de E09 |
 | `temperature` | `value`, `Cel` | 20–45 |
 | `oxygen_saturation` | `value`, `%` | 0–100 |
 | `heart_rate` | `value`, `/min` | 1–300 |

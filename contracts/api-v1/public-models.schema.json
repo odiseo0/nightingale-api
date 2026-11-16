@@ -304,6 +304,14 @@
       ],
       "type": "string"
     },
+    "AntecedentCategory": {
+      "enum": [
+        "personal",
+        "family",
+        "other"
+      ],
+      "type": "string"
+    },
     "ApiError": {
       "properties": {
         "code": {
@@ -1009,8 +1017,8 @@
           "type": "integer"
         },
         "modelRevision": {
-          "const": "api-v1.2",
-          "default": "api-v1.2",
+          "const": "api-v1.3",
+          "default": "api-v1.3",
           "title": "Modelrevision",
           "type": "string"
         },
@@ -1125,6 +1133,97 @@
     "ClinicalDate": {
       "type": "string"
     },
+    "ClinicalEntryType": {
+      "enum": [
+        "encounter",
+        "note",
+        "measurement",
+        "immunization",
+        "antecedent",
+        "condition",
+        "allergy_intolerance"
+      ],
+      "type": "string"
+    },
+    "ClinicalHistoryEntry": {
+      "properties": {
+        "acceptedAt": {
+          "format": "date-time",
+          "title": "Acceptedat",
+          "type": "string"
+        },
+        "datePrecision": {
+          "enum": [
+            "instant",
+            "year",
+            "month",
+            "day",
+            "reference"
+          ],
+          "title": "Dateprecision",
+          "type": "string"
+        },
+        "entityVersion": {
+          "title": "Entityversion",
+          "type": "integer"
+        },
+        "entryId": {
+          "format": "uuid7",
+          "title": "Entryid",
+          "type": "string"
+        },
+        "entryType": {
+          "$ref": "#/$defs/ClinicalEntryType"
+        },
+        "occurredAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Occurredat"
+        },
+        "occurrenceDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Occurrencedate"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "sourceSection": {
+          "$ref": "#/$defs/ClinicalSection"
+        }
+      },
+      "required": [
+        "entryType",
+        "entryId",
+        "sourceSection",
+        "occurredAt",
+        "occurrenceDate",
+        "datePrecision",
+        "acceptedAt",
+        "entityVersion",
+        "recordStatus"
+      ],
+      "title": "ClinicalHistoryEntry",
+      "type": "object"
+    },
     "ClinicalLevel": {
       "enum": [
         "none",
@@ -1139,11 +1238,31 @@
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         },
+        "antecedents": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
         "clinicalProfile": {
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         },
         "conditions": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "encounters": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "immunizations": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "measurements": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "notes": {
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         }
@@ -1316,7 +1435,12 @@
       "enum": [
         "profile",
         "conditions",
-        "allergies"
+        "allergies",
+        "encounters",
+        "notes",
+        "measurements",
+        "immunizations",
+        "antecedents"
       ],
       "type": "string"
     },
@@ -2011,6 +2135,46 @@
       "type": "object"
     },
     "JsonValue": {},
+    "LastVisitResponse": {
+      "properties": {
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "occurredAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Occurredat"
+        },
+        "scope": {
+          "const": "account",
+          "default": "account",
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "encounterId",
+        "occurredAt"
+      ],
+      "title": "LastVisitResponse",
+      "type": "object"
+    },
     "LiveResponse": {
       "properties": {
         "status": {
@@ -2065,6 +2229,38 @@
         "accounts"
       ],
       "title": "MeResponse",
+      "type": "object"
+    },
+    "MeasurementKind": {
+      "enum": [
+        "weight",
+        "temperature",
+        "oxygen_saturation",
+        "heart_rate",
+        "blood_pressure"
+      ],
+      "type": "string"
+    },
+    "MeasurementSummaryResponse": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientMeasurementResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "patientId",
+        "items"
+      ],
+      "title": "MeasurementSummaryResponse",
       "type": "object"
     },
     "MemberClinicalPermissionsResponse": {
@@ -2470,6 +2666,21 @@
         },
         {
           "$ref": "#/$defs/PatientAllergyIntoleranceResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientEncounterResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientNoteResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientMeasurementResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientImmunizationResponse"
+        },
+        {
+          "$ref": "#/$defs/PatientAntecedentResponse"
         }
       ]
     },
@@ -2581,6 +2792,28 @@
         "total"
       ],
       "title": "PaginatedResponse[AuditEventResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ClinicalHistoryEntry_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ClinicalHistoryEntry"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ClinicalHistoryEntry]",
       "type": "object"
     },
     "PaginatedResponse_ClinicalProfileHistoryResponse_": {
@@ -2759,6 +2992,50 @@
       "title": "PaginatedResponse[PatientAllergyIntoleranceResponse]",
       "type": "object"
     },
+    "PaginatedResponse_PatientAntecedentHistoryResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientAntecedentHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientAntecedentHistoryResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientAntecedentResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientAntecedentResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientAntecedentResponse]",
+      "type": "object"
+    },
     "PaginatedResponse_PatientBirthDateChangeResponse_": {
       "properties": {
         "items": {
@@ -2847,6 +3124,50 @@
       "title": "PaginatedResponse[PatientContactResponse]",
       "type": "object"
     },
+    "PaginatedResponse_PatientEncounterHistoryResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientEncounterHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientEncounterHistoryResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientEncounterResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientEncounterResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientEncounterResponse]",
+      "type": "object"
+    },
     "PaginatedResponse_PatientIdentifierResponse_": {
       "properties": {
         "items": {
@@ -2867,6 +3188,138 @@
         "total"
       ],
       "title": "PaginatedResponse[PatientIdentifierResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientImmunizationHistoryResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientImmunizationHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientImmunizationHistoryResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientImmunizationResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientImmunizationResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientImmunizationResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientMeasurementHistoryResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientMeasurementHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientMeasurementHistoryResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientMeasurementResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientMeasurementResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientMeasurementResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientNoteHistoryResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientNoteHistoryResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientNoteHistoryResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PatientNoteResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientNoteResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PatientNoteResponse]",
       "type": "object"
     },
     "PaginatedResponse_PatientProfileResponse_": {
@@ -3267,6 +3720,248 @@
         "version"
       ],
       "title": "PatientAllergyIntoleranceResponse",
+      "type": "object"
+    },
+    "PatientAntecedentHistoryResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "created",
+            "updated",
+            "invalidated"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "actorUserId": {
+          "format": "uuid7",
+          "title": "Actoruserid",
+          "type": "string"
+        },
+        "antecedentId": {
+          "format": "uuid7",
+          "title": "Antecedentid",
+          "type": "string"
+        },
+        "capturedAtLocal": {
+          "format": "date-time",
+          "title": "Capturedatlocal",
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/AntecedentCategory"
+        },
+        "changedAt": {
+          "format": "date-time",
+          "title": "Changedat",
+          "type": "string"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "occurrenceDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "relatedPersonDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relatedpersondescription"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category",
+        "content",
+        "antecedentId",
+        "patientId",
+        "encounterId",
+        "recordStatus",
+        "correctionReason",
+        "action",
+        "actorUserId",
+        "operationId",
+        "changedAt",
+        "version"
+      ],
+      "title": "PatientAntecedentHistoryResponse",
+      "type": "object"
+    },
+    "PatientAntecedentResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "antecedentId": {
+          "format": "uuid7",
+          "title": "Antecedentid",
+          "type": "string"
+        },
+        "capturedAtLocal": {
+          "format": "date-time",
+          "title": "Capturedatlocal",
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/AntecedentCategory"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "occurrenceDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "relatedPersonDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Relatedpersondescription"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category",
+        "content",
+        "antecedentId",
+        "patientId",
+        "encounterId",
+        "recordStatus",
+        "correctionReason",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientAntecedentResponse",
       "type": "object"
     },
     "PatientBirthDateChangeResponse": {
@@ -3705,6 +4400,386 @@
       "title": "PatientContactResponse",
       "type": "object"
     },
+    "PatientEncounterHistoryResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "created",
+            "updated",
+            "invalidated"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "actorUserId": {
+          "format": "uuid7",
+          "title": "Actoruserid",
+          "type": "string"
+        },
+        "appointmentId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentid"
+        },
+        "assessment": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Assessment"
+        },
+        "assistantUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Assistantuserid"
+        },
+        "attendingProfessionalId": {
+          "format": "uuid7",
+          "title": "Attendingprofessionalid",
+          "type": "string"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Capturedatlocal"
+        },
+        "changedAt": {
+          "format": "date-time",
+          "title": "Changedat",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "encounterId": {
+          "format": "uuid7",
+          "title": "Encounterid",
+          "type": "string"
+        },
+        "endedAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Endedat"
+        },
+        "findings": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Findings"
+        },
+        "historyPresentIllness": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Historypresentillness"
+        },
+        "indications": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Indications"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "reasonSourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "recordStatus": {
+          "$ref": "#/$defs/RecordStatus"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "encounterId",
+        "patientId",
+        "appointmentId",
+        "attendingProfessionalId",
+        "assistantUserId",
+        "occurredAt",
+        "endedAt",
+        "capturedAtLocal",
+        "recordStatus",
+        "correctionReason",
+        "action",
+        "actorUserId",
+        "operationId",
+        "changedAt",
+        "version"
+      ],
+      "title": "PatientEncounterHistoryResponse",
+      "type": "object"
+    },
+    "PatientEncounterResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "appointmentId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentid"
+        },
+        "assessment": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Assessment"
+        },
+        "assistantUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Assistantuserid"
+        },
+        "attendingProfessionalId": {
+          "format": "uuid7",
+          "title": "Attendingprofessionalid",
+          "type": "string"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Capturedatlocal"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "encounterId": {
+          "format": "uuid7",
+          "title": "Encounterid",
+          "type": "string"
+        },
+        "endedAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Endedat"
+        },
+        "findings": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Findings"
+        },
+        "historyPresentIllness": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Historypresentillness"
+        },
+        "indications": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Indications"
+        },
+        "occurredAt": {
+          "format": "date-time",
+          "title": "Occurredat",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "reasonSourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "recordStatus": {
+          "$ref": "#/$defs/RecordStatus"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "encounterId",
+        "patientId",
+        "appointmentId",
+        "attendingProfessionalId",
+        "assistantUserId",
+        "occurredAt",
+        "endedAt",
+        "capturedAtLocal",
+        "recordStatus",
+        "correctionReason",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientEncounterResponse",
+      "type": "object"
+    },
     "PatientIdentifierResponse": {
       "properties": {
         "createdAt": {
@@ -3781,6 +4856,949 @@
         "version"
       ],
       "title": "PatientIdentifierResponse",
+      "type": "object"
+    },
+    "PatientImmunizationHistoryResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "created",
+            "updated",
+            "invalidated"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "actorUserId": {
+          "format": "uuid7",
+          "title": "Actoruserid",
+          "type": "string"
+        },
+        "administratorName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Administratorname"
+        },
+        "bodySite": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bodysite"
+        },
+        "capturedAtLocal": {
+          "format": "date-time",
+          "title": "Capturedatlocal",
+          "type": "string"
+        },
+        "changedAt": {
+          "format": "date-time",
+          "title": "Changedat",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "doseDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dosedescription"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "immunizationId": {
+          "format": "uuid7",
+          "title": "Immunizationid",
+          "type": "string"
+        },
+        "locationText": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Locationtext"
+        },
+        "lotNumber": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lotnumber"
+        },
+        "occurrenceDate": {
+          "$ref": "#/$defs/ClinicalDate"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "productName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Productname"
+        },
+        "recordKind": {
+          "$ref": "#/$defs/RecordKind",
+          "default": "unknown"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "route": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Route"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "vaccineName": {
+          "minLength": 1,
+          "title": "Vaccinename",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "vaccineName",
+        "occurrenceDate",
+        "immunizationId",
+        "patientId",
+        "encounterId",
+        "recordStatus",
+        "correctionReason",
+        "action",
+        "actorUserId",
+        "operationId",
+        "changedAt",
+        "version"
+      ],
+      "title": "PatientImmunizationHistoryResponse",
+      "type": "object"
+    },
+    "PatientImmunizationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "administratorName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Administratorname"
+        },
+        "bodySite": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bodysite"
+        },
+        "capturedAtLocal": {
+          "format": "date-time",
+          "title": "Capturedatlocal",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "doseDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dosedescription"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "immunizationId": {
+          "format": "uuid7",
+          "title": "Immunizationid",
+          "type": "string"
+        },
+        "locationText": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Locationtext"
+        },
+        "lotNumber": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lotnumber"
+        },
+        "occurrenceDate": {
+          "$ref": "#/$defs/ClinicalDate"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "productName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Productname"
+        },
+        "recordKind": {
+          "$ref": "#/$defs/RecordKind",
+          "default": "unknown"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "route": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Route"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        },
+        "vaccineName": {
+          "minLength": 1,
+          "title": "Vaccinename",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "vaccineName",
+        "occurrenceDate",
+        "immunizationId",
+        "patientId",
+        "encounterId",
+        "recordStatus",
+        "correctionReason",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientImmunizationResponse",
+      "type": "object"
+    },
+    "PatientMeasurementHistoryResponse": {
+      "properties": {
+        "action": {
+          "enum": [
+            "created",
+            "updated",
+            "invalidated"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "actorUserId": {
+          "format": "uuid7",
+          "title": "Actoruserid",
+          "type": "string"
+        },
+        "bodySite": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bodysite"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Capturedatlocal"
+        },
+        "changedAt": {
+          "format": "date-time",
+          "title": "Changedat",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "diastolicValue": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Diastolicvalue"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "kind": {
+          "$ref": "#/$defs/MeasurementKind"
+        },
+        "measuredAt": {
+          "format": "date-time",
+          "title": "Measuredat",
+          "type": "string"
+        },
+        "measurementId": {
+          "format": "uuid7",
+          "title": "Measurementid",
+          "type": "string"
+        },
+        "method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Method"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "systolicValue": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Systolicvalue"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Value"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "measurementId",
+        "patientId",
+        "encounterId",
+        "kind",
+        "measuredAt",
+        "capturedAtLocal",
+        "method",
+        "bodySite",
+        "value",
+        "systolicValue",
+        "diastolicValue",
+        "unit",
+        "recordStatus",
+        "correctionReason",
+        "action",
+        "actorUserId",
+        "operationId",
+        "changedAt",
+        "version"
+      ],
+      "title": "PatientMeasurementHistoryResponse",
+      "type": "object"
+    },
+    "PatientMeasurementResponse": {
+      "properties": {
+        "ageAsOf": {
+          "format": "date",
+          "title": "Ageasof",
+          "type": "string"
+        },
+        "ageYears": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ageyears"
+        },
+        "bodySite": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bodysite"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Capturedatlocal"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "diastolicValue": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Diastolicvalue"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "kind": {
+          "$ref": "#/$defs/MeasurementKind"
+        },
+        "measuredAt": {
+          "format": "date-time",
+          "title": "Measuredat",
+          "type": "string"
+        },
+        "measurementId": {
+          "format": "uuid7",
+          "title": "Measurementid",
+          "type": "string"
+        },
+        "method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Method"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "patientVersion": {
+          "title": "Patientversion",
+          "type": "integer"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "systolicValue": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Systolicvalue"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Value"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "measurementId",
+        "patientId",
+        "encounterId",
+        "kind",
+        "measuredAt",
+        "capturedAtLocal",
+        "method",
+        "bodySite",
+        "value",
+        "systolicValue",
+        "diastolicValue",
+        "unit",
+        "recordStatus",
+        "correctionReason",
+        "ageYears",
+        "ageAsOf",
+        "patientVersion",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientMeasurementResponse",
+      "type": "object"
+    },
+    "PatientNoteHistoryResponse": {
+      "properties": {
+        "action": {
+          "enum": [
+            "created",
+            "updated",
+            "invalidated"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "actorUserId": {
+          "format": "uuid7",
+          "title": "Actoruserid",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Capturedatlocal"
+        },
+        "changedAt": {
+          "format": "date-time",
+          "title": "Changedat",
+          "type": "string"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "noteId": {
+          "format": "uuid7",
+          "title": "Noteid",
+          "type": "string"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "noteId",
+        "patientId",
+        "encounterId",
+        "body",
+        "capturedAtLocal",
+        "recordStatus",
+        "correctionReason",
+        "action",
+        "actorUserId",
+        "operationId",
+        "changedAt",
+        "version"
+      ],
+      "title": "PatientNoteHistoryResponse",
+      "type": "object"
+    },
+    "PatientNoteResponse": {
+      "properties": {
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            }
+          ],
+          "title": "Capturedatlocal"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correctionreason"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "noteId": {
+          "format": "uuid7",
+          "title": "Noteid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordStatus": {
+          "enum": [
+            "valid",
+            "entered-in-error"
+          ],
+          "title": "Recordstatus",
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "noteId",
+        "patientId",
+        "encounterId",
+        "body",
+        "capturedAtLocal",
+        "recordStatus",
+        "correctionReason",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "PatientNoteResponse",
       "type": "object"
     },
     "PatientProfileResponse": {
@@ -4019,6 +6037,21 @@
       ],
       "title": "ReadyResponse",
       "type": "object"
+    },
+    "RecordKind": {
+      "enum": [
+        "administered_here",
+        "reported",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "RecordStatus": {
+      "enum": [
+        "valid",
+        "entered-in-error"
+      ],
+      "type": "string"
     },
     "RelationshipResponse": {
       "properties": {
@@ -4911,7 +6944,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "287b361963d1b4ae1cf46f630c3af1a791a5aa73",
-    "sourceSha256": "1fe9c724e7960e92822dc5b253b056b23698f910c4b0cbb94bb5e24f8812e5e7"
+    "sourceHead": "ae7621bcfc8f6ee687a36757ac9348a7fef4b854",
+    "sourceSha256": "4185daa574b91e4919c9b5b8399685ff84b6f86f212d38ab6b15524f5fbaba60"
   }
 }

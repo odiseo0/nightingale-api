@@ -90,3 +90,7 @@ Casos de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routin
 - **Integridad:** FK de cuenta/paciente/cita/atención, historias inmutables, timeline coincidente/reconstruible, backfill idempotente y rollback de efecto/historia/timeline/recibo/auditoría/grupo.
 
 Dominio/aplicación no usan red. Integridad, migraciones, idempotencia concurrente y carreras usan PostgreSQL Test 18.3 y Keycloak Test aislados, con bases aleatorias eliminadas al terminar. SQLite no acredita esas reglas. No se declara integración Rust/Hub, operación con datos reales ni producción.
+
+## Evidencia clínica de Etapa 2 · T25/C08
+
+Los casos E06–E14 y E22–E24 están comprobados en el servidor mediante suite, persistencia y probes HTTP reales. Los siete tipos aparecen en timeline con filtros autorizados; captura/delta conservan hechos históricos, correcciones y anulaciones. Integración con consumidores, operación con datos reales y producción siguen pendientes.

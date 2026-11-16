@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.3 para C01. **Fecha:** 2026-11-16. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 del núcleo. La etapa clínica y su corrección están implementadas para revisión C07. Los contratos generados actuales contienen 60 rutas, 98 esquemas y 51 acciones por lote, con origen, HEAD y huellas reproducibles. §11 propone Etapa 2 sin cambiar los artefactos ni aceptar C01. C11 del núcleo, consumidores y producción conservan sus límites.
+**Versión de diseño:** 1.3. **Fecha:** 2026-11-16. **Estado:** Etapa 2 implementada para revisión C09. Los contratos generados contienen 78 rutas, 127 esquemas y 66 acciones por lote, con origen, HEAD y huellas reproducibles. `contractVersion=1` y `modelRevision=api-v1.3`. Consumidores y producción conservan sus límites.
 
 Este documento conserva explicación de transporte, permisos y recuperación. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas. Los esquemas Pydantic de domain, derivados del BaseModel del proyecto, son la fuente de OpenAPI/JSON Schema exportados por scripts/export_contracts.py. Los generados identifican origen/versión/huella y no se editan a mano. La [guía Rust](rust-api-guide.md) explica su uso y enlaza ejemplos comprobados. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -69,6 +69,20 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 | GET | `A/patients/{patient_id}/encounters/{encounter_id}` | atenciones `read`/`read_write` | PatientEncounterResponse | solo esa cuenta/ficha |
 | GET | `A/patients/{patient_id}/encounters/{encounter_id}/history` | atenciones `read`/`read_write` | PaginatedResponse<PatientEncounterHistoryResponse> | versión ascendente, afterVersion |
 | GET | `A/patients/{patient_id}/last-visit` | atenciones `read`/`read_write` | LastVisitResponse | última atención válida de cuenta/paciente |
+| GET | `A/patients/{patient_id}/notes` | notas `read`/`read_write` | PaginatedResponse<PatientNoteResponse> | recordStatus/encounterId; orden createdAt,id |
+| GET | `A/patients/{patient_id}/notes/{note_id}` | notas `read`/`read_write` | PatientNoteResponse | solo esa cuenta/ficha |
+| GET | `A/patients/{patient_id}/notes/{note_id}/history` | notas `read`/`read_write` | PaginatedResponse<PatientNoteHistoryResponse> | versión ascendente, afterVersion |
+| GET | `A/patients/{patient_id}/measurements` | mediciones `read`/`read_write` | PaginatedResponse<PatientMeasurementResponse> | kind/recordStatus/from/until; orden measuredAt,id |
+| GET | `A/patients/{patient_id}/measurements/summary` | mediciones `read`/`read_write` | MeasurementSummaryResponse | última toma válida por tipo |
+| GET | `A/patients/{patient_id}/measurements/{measurement_id}` | mediciones `read`/`read_write` | PatientMeasurementResponse | incluye edad derivada y versión de ficha |
+| GET | `A/patients/{patient_id}/measurements/{measurement_id}/history` | mediciones `read`/`read_write` | PaginatedResponse<PatientMeasurementHistoryResponse> | versión ascendente, afterVersion |
+| GET | `A/patients/{patient_id}/immunizations` | vacunas `read`/`read_write` | PaginatedResponse<PatientImmunizationResponse> | recordKind/recordStatus; orden occurrenceDate,id |
+| GET | `A/patients/{patient_id}/immunizations/{immunization_id}` | vacunas `read`/`read_write` | PatientImmunizationResponse | fuente, precisión y detalles opcionales |
+| GET | `A/patients/{patient_id}/immunizations/{immunization_id}/history` | vacunas `read`/`read_write` | PaginatedResponse<PatientImmunizationHistoryResponse> | versión ascendente, afterVersion |
+| GET | `A/patients/{patient_id}/antecedents` | antecedentes `read`/`read_write` | PaginatedResponse<PatientAntecedentResponse> | category/recordStatus; orden createdAt,id |
+| GET | `A/patients/{patient_id}/antecedents/{antecedent_id}` | antecedentes `read`/`read_write` | PatientAntecedentResponse | relato, fuente, fecha y persona relacionada |
+| GET | `A/patients/{patient_id}/antecedents/{antecedent_id}/history` | antecedentes `read`/`read_write` | PaginatedResponse<PatientAntecedentHistoryResponse> | versión ascendente, afterVersion |
+| GET | `A/patients/{patient_id}/clinical-history` | secciones legibles | PaginatedResponse<ClinicalHistoryEntry> | Referencias sin contenido; filtros por fuente antes de total/página |
 | GET | `A/patients/{patient_id}/clinical-profile` | perfil `read`/`read_write` | ClinicalProfileResponse | versión 0 sin fila, sin escritura |
 | GET | `A/patients/{patient_id}/clinical-profile/history` | perfil `read`/`read_write` | PaginatedResponse<ClinicalProfileHistoryResponse> | versión ascendente, afterVersion opcional |
 | GET | `A/patients/{patient_id}/birth-date-changes` | miembro | PaginatedResponse<PatientBirthDateChangeResponse> | solo cambios desde esta entrega |
@@ -174,6 +188,18 @@ Actor/dispositivo no se aceptan en payload. UUID de nuevas entidades procede del
 | CreatePatientEncounter | encounterId nuevo | patientId, appointmentId?, attendingProfessionalId, assistantUserId?, occurredAt?, endedAt?, capturedAtLocal?, motivo/fuente y contenido clínico opcional. | atenciones read_write | Atención real sin cierre; varias por cita; vínculos de la misma ficha. |
 | UpdatePatientEncounter | encounterId | Patch de tiempos/captura/contenido/fuente/correctionReason; versión actual. | atenciones read_write | No cambia ficha/cita/profesional; sin reasignación. |
 | InvalidatePatientEncounter | encounterId | correctionReason opcional; versión actual. | atenciones read_write | Anulación terminal entered-in-error. |
+| CreatePatientNote | noteId nuevo | patientId, encounterId?, body, capturedAtLocal?. | notas read_write | Nota independiente/vinculada; sin diagnóstico o última visita derivados. |
+| UpdatePatientNote | noteId | Patch de body, capturedAtLocal, correctionReason; versión actual. | notas read_write | Ausencia conserva; NO_CHANGES sin versión. |
+| InvalidatePatientNote | noteId | correctionReason opcional; versión actual. | notas read_write | Anulación terminal e historia conservada. |
+| RecordPatientMeasurement | measurementId nuevo | patientId, encounterId?, kind, measuredAt?, capturedAtLocal?, method?, bodySite?, valores según tipo, unit fija. | mediciones read_write | Nueva toma con ID nuevo; cinco formas y rangos cerrados. |
+| CorrectPatientMeasurement | measurementId | Patch de tiempos/captura/método/sitio/valores/correctionReason; versión actual. | mediciones read_write | No cambia tipo/unidad/ficha; conserva historia. |
+| InvalidatePatientMeasurement | measurementId | correctionReason opcional; versión actual. | mediciones read_write | Anulación terminal fuera de serie vigente. |
+| RecordPatientImmunization | immunizationId nuevo | patientId, encounterId?, vaccineName, occurrenceDate, recordKind, sourceType, captura y detalles opcionales. | vacunas read_write | administered_here exige atención válida; declaración no prueba administración. |
+| UpdatePatientImmunization | immunizationId | Patch de vacuna/fecha/tipo/fuente/captura/detalles/correctionReason; versión actual. | vacunas read_write | Conserva historia; no cambia ficha/atención. |
+| InvalidatePatientImmunization | immunizationId | correctionReason opcional; versión actual. | vacunas read_write | Anulación terminal. |
+| CreatePatientAntecedent | antecedentId nuevo | patientId, encounterId?, category, content, relatedPersonDescription?, occurrenceDate?, sourceType, capturedAtLocal?. | antecedentes read_write | family exige persona relacionada; sin condición derivada. |
+| UpdatePatientAntecedent | antecedentId | Patch de contenido/persona/fecha/fuente/captura/correctionReason; versión actual. | antecedentes read_write | Conserva contexto e historia; valida estado combinado. |
+| InvalidatePatientAntecedent | antecedentId | correctionReason opcional; versión actual. | antecedentes read_write | Anulación terminal. |
 | CreateInvitation | invitationId nuevo | inviteeUserId requerido; rol assistant implícito. | propietario; online | Destinatario ya identificado por OIDC; vence 72 h después del instante del servidor; no correo. |
 | RevokeInvitation | invitationId | Objeto vacío. | propietario; online | Solo pending no vencida; aceptación/revocación coordinadas; conserva evidencia. |
 | SetMembershipStatus | userId destinatario | status active / inactive. | propietario; online | Solo asistentes ya vinculados; no transfiere propiedad ni desactiva usuario global. |
@@ -325,7 +351,7 @@ Fuentes de API ya contrastadas durante planificación: [lifespan](https://fastap
 
 ## 10. Diseño clínico de etapa 1 para revisión C01
 
-Perfil, cambios de nacimiento, condiciones, alergias/intolerancias, permisos, resultados y descarga clínica están disponibles en el servidor para revisión C07. Los esquemas Pydantic de `clinical_records`, `accounts`, `patients` y `sync` son la fuente ejecutable; esta sección explica su comportamiento y no crea otra definición. Se conserva `contractVersion=1` y `modelRevision=api-v1.2`.
+Perfil, cambios de nacimiento, condiciones, alergias/intolerancias, permisos, resultados y descarga clínica están disponibles en el servidor para revisión C07. Los esquemas Pydantic de `clinical_records`, `accounts`, `patients` y `sync` son la fuente ejecutable; esta sección explica su comportamiento y no crea otra definición. Se conserva `contractVersion=1`; la publicación actual es `modelRevision=api-v1.3`.
 
 ### 10.1 Acceso clínico
 
@@ -499,4 +525,4 @@ La captura de Etapa 2 contiene atenciones válidas actuales y vínculos, versió
 
 El delta publica correcciones con la versión actual y anulaciones como `entered-in-error`; una captura posterior no incluye la entrada inválida. Los grupos invisibles permiten avanzar sin contenido. La retención de 90 días no borra hechos/historias. No se promete borrado de copias descargadas ni aplicación atómica en SQLite sin prueba del consumidor.
 
-Al completar T26 se generan desde la app real OpenAPI, esquemas, ejemplos y manifiesto con `modelRevision=api-v1.3`. Los recuentos proceden del catálogo real, no de cifras fijas. Hasta entonces los artefactos actuales permanecen en `api-v1.2` y `contractVersion=1`.
+OpenAPI, esquemas, ejemplos y manifiesto se generan desde la app real con `modelRevision=api-v1.3`. Los recuentos proceden del catálogo real, no de cifras fijas. `contractVersion=1` se conserva.

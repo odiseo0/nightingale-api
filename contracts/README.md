@@ -1,6 +1,6 @@
 # Contratos generados de Nightingale API
 
-Origen editable: esquemas Pydantic de `src/api/*/domain` y `src.application:app`. Generador: `scripts/export_contracts.py`. Revisión: **api-v1.2**, contrato remoto **1**. No editar `api-v1/` a mano.
+Origen editable: esquemas Pydantic de `src/api/*/domain` y `src.application:app`. Generador: `scripts/export_contracts.py`. Revisión: **api-v1.3**, contrato remoto **1**. No editar `api-v1/` a mano.
 
 ## Generar y comprobar
 

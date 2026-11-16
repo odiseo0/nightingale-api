@@ -1,6 +1,6 @@
 # Consumo de API v1 desde Rust
 
-Revisión: api-v1.2, 2026-11-16. Esta guía describe el servidor de este repositorio. No implementa ni acredita el cliente Rust, SQLite, Outbox o Hub.
+Revisión: api-v1.3, 2026-11-16. Esta guía describe el servidor de este repositorio. No implementa ni acredita el cliente Rust, SQLite, Outbox o Hub.
 
 ## Fuente y arranque
 

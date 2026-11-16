@@ -272,3 +272,7 @@ La copia aportada declara PMD/DAT 0.3 y SRS 0.5, todos del 2026-10-21; su índic
 | Solicitud de cambio y lista de espera sin acuerdo completo | P05/P06 aprobados como criterios revisables: solicitud separada e interés separado de reserva autorizada por personal. O04/O05 permanecen abiertos para detalles; no se amplía Hub |
 
 El usuario aceptó C13 y los criterios P05/P06 el 2026-10-23, reservándose revisarlos al implementar. También indicó que trasladará los archivos al repositorio original del escritorio y pidió no cambiar rutas. Se restauran los destinos originales de sus enlaces y se retiran las dependencias relativas añadidas hacia documentos de API; dos referencias a planes siguen sin destino en esta copia porque sus archivos pertenecen al escritorio. No se afirma haberlos comprobado en el origen ni haber realizado el traslado. La aprobación no acredita funciones, contratos ejecutables ni cierre de T04. Las comprobaciones se registran después de ejecutarlas en [la lista de control](../tasks/P-20261021-01-api-foundation/todo.md).
+
+## Publicación clínica api-v1.3 · T26
+
+Los modelos reales publican 78 rutas, 127 esquemas HTTP y 66 acciones. `scripts.export_contracts` genera dos veces los mismos artefactos y `--check` confirma origen, HEAD y huellas. `test-support/contracts/check.py` valida ejemplos ficticios contra PostgreSQL/Keycloak Test. Esto acredita el servidor, no consumidores, operación o producción.

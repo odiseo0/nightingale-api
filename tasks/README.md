@@ -1,6 +1,6 @@
 # Planes y tareas
 
-Plan de etapa 2 clínica: [P-20261116-02-clinical-routine](P-20261116-02-clinical-routine/plan.md), **In progress**, con [lista de control](P-20261116-02-clinical-routine/todo.md). T01–T09 están Done. C01–C02 fueron aceptados y el usuario autorizó T07–T09 hasta C03; C03–C09 no están aceptados y T10–T27 permanecen Todo. Los cierres anteriores se conservan sin atribuirles nuevas aceptaciones.
+Plan de etapa 2 clínica: [P-20261116-02-clinical-routine](P-20261116-02-clinical-routine/plan.md), **In progress**, con [lista de control](P-20261116-02-clinical-routine/todo.md). T01–T27 están Done. C01–C08 fueron aceptados; C09 espera revisión del usuario. Etapa 2 publica `api-v1.3`; no se inicia Etapa 3. Los cierres anteriores se conservan sin atribuirles nuevas aceptaciones.
 
 El 2026-11-16 el usuario aprobó todas las revisiones pendientes de trabajo ya completado: C08 de P-20261116-01-clinical-review-refactor, C06 de P-20261115-02-patient-clinical-data, C11 de P-20261024-01-desktop-shared-api y C01 de los dos encargos documentales. Esos cinco planes quedan **Completed**. Esto no acepta por anticipado tareas o checkpoints futuros de etapa 2.
 

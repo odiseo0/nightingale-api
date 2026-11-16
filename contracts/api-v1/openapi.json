@@ -305,6 +305,14 @@
         ],
         "type": "string"
       },
+      "AntecedentCategory": {
+        "enum": [
+          "personal",
+          "family",
+          "other"
+        ],
+        "type": "string"
+      },
       "ApiError": {
         "properties": {
           "code": {
@@ -1010,8 +1018,8 @@
             "type": "integer"
           },
           "modelRevision": {
-            "const": "api-v1.2",
-            "default": "api-v1.2",
+            "const": "api-v1.3",
+            "default": "api-v1.3",
             "title": "Modelrevision",
             "type": "string"
           },
@@ -1126,6 +1134,97 @@
       "ClinicalDate": {
         "type": "string"
       },
+      "ClinicalEntryType": {
+        "enum": [
+          "encounter",
+          "note",
+          "measurement",
+          "immunization",
+          "antecedent",
+          "condition",
+          "allergy_intolerance"
+        ],
+        "type": "string"
+      },
+      "ClinicalHistoryEntry": {
+        "properties": {
+          "acceptedAt": {
+            "format": "date-time",
+            "title": "Acceptedat",
+            "type": "string"
+          },
+          "datePrecision": {
+            "enum": [
+              "instant",
+              "year",
+              "month",
+              "day",
+              "reference"
+            ],
+            "title": "Dateprecision",
+            "type": "string"
+          },
+          "entityVersion": {
+            "title": "Entityversion",
+            "type": "integer"
+          },
+          "entryId": {
+            "format": "uuid7",
+            "title": "Entryid",
+            "type": "string"
+          },
+          "entryType": {
+            "$ref": "#/components/schemas/ClinicalEntryType"
+          },
+          "occurredAt": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Occurredat"
+          },
+          "occurrenceDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrencedate"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "sourceSection": {
+            "$ref": "#/components/schemas/ClinicalSection"
+          }
+        },
+        "required": [
+          "entryType",
+          "entryId",
+          "sourceSection",
+          "occurredAt",
+          "occurrenceDate",
+          "datePrecision",
+          "acceptedAt",
+          "entityVersion",
+          "recordStatus"
+        ],
+        "title": "ClinicalHistoryEntry",
+        "type": "object"
+      },
       "ClinicalLevel": {
         "enum": [
           "none",
@@ -1140,11 +1239,31 @@
             "$ref": "#/components/schemas/ClinicalLevel",
             "default": "read_write"
           },
+          "antecedents": {
+            "$ref": "#/components/schemas/ClinicalLevel",
+            "default": "read_write"
+          },
           "clinicalProfile": {
             "$ref": "#/components/schemas/ClinicalLevel",
             "default": "read_write"
           },
           "conditions": {
+            "$ref": "#/components/schemas/ClinicalLevel",
+            "default": "read_write"
+          },
+          "encounters": {
+            "$ref": "#/components/schemas/ClinicalLevel",
+            "default": "read_write"
+          },
+          "immunizations": {
+            "$ref": "#/components/schemas/ClinicalLevel",
+            "default": "read_write"
+          },
+          "measurements": {
+            "$ref": "#/components/schemas/ClinicalLevel",
+            "default": "read_write"
+          },
+          "notes": {
             "$ref": "#/components/schemas/ClinicalLevel",
             "default": "read_write"
           }
@@ -1317,7 +1436,12 @@
         "enum": [
           "profile",
           "conditions",
-          "allergies"
+          "allergies",
+          "encounters",
+          "notes",
+          "measurements",
+          "immunizations",
+          "antecedents"
         ],
         "type": "string"
       },
@@ -2012,6 +2136,46 @@
         "type": "object"
       },
       "JsonValue": {},
+      "LastVisitResponse": {
+        "properties": {
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "occurredAt": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Occurredat"
+          },
+          "scope": {
+            "const": "account",
+            "default": "account",
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "encounterId",
+          "occurredAt"
+        ],
+        "title": "LastVisitResponse",
+        "type": "object"
+      },
       "LiveResponse": {
         "properties": {
           "status": {
@@ -2066,6 +2230,38 @@
           "accounts"
         ],
         "title": "MeResponse",
+        "type": "object"
+      },
+      "MeasurementKind": {
+        "enum": [
+          "weight",
+          "temperature",
+          "oxygen_saturation",
+          "heart_rate",
+          "blood_pressure"
+        ],
+        "type": "string"
+      },
+      "MeasurementSummaryResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientMeasurementResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "patientId",
+          "items"
+        ],
+        "title": "MeasurementSummaryResponse",
         "type": "object"
       },
       "MemberClinicalPermissionsResponse": {
@@ -2471,6 +2667,21 @@
           },
           {
             "$ref": "#/components/schemas/PatientAllergyIntoleranceResponse"
+          },
+          {
+            "$ref": "#/components/schemas/PatientEncounterResponse"
+          },
+          {
+            "$ref": "#/components/schemas/PatientNoteResponse"
+          },
+          {
+            "$ref": "#/components/schemas/PatientMeasurementResponse"
+          },
+          {
+            "$ref": "#/components/schemas/PatientImmunizationResponse"
+          },
+          {
+            "$ref": "#/components/schemas/PatientAntecedentResponse"
           }
         ]
       },
@@ -2582,6 +2793,28 @@
           "total"
         ],
         "title": "PaginatedResponse[AuditEventResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_ClinicalHistoryEntry_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClinicalHistoryEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[ClinicalHistoryEntry]",
         "type": "object"
       },
       "PaginatedResponse_ClinicalProfileHistoryResponse_": {
@@ -2760,6 +2993,50 @@
         "title": "PaginatedResponse[PatientAllergyIntoleranceResponse]",
         "type": "object"
       },
+      "PaginatedResponse_PatientAntecedentHistoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientAntecedentHistoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientAntecedentHistoryResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientAntecedentResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientAntecedentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientAntecedentResponse]",
+        "type": "object"
+      },
       "PaginatedResponse_PatientBirthDateChangeResponse_": {
         "properties": {
           "items": {
@@ -2848,6 +3125,50 @@
         "title": "PaginatedResponse[PatientContactResponse]",
         "type": "object"
       },
+      "PaginatedResponse_PatientEncounterHistoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientEncounterHistoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientEncounterHistoryResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientEncounterResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientEncounterResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientEncounterResponse]",
+        "type": "object"
+      },
       "PaginatedResponse_PatientIdentifierResponse_": {
         "properties": {
           "items": {
@@ -2868,6 +3189,138 @@
           "total"
         ],
         "title": "PaginatedResponse[PatientIdentifierResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientImmunizationHistoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientImmunizationHistoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientImmunizationHistoryResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientImmunizationResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientImmunizationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientImmunizationResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientMeasurementHistoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientMeasurementHistoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientMeasurementHistoryResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientMeasurementResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientMeasurementResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientMeasurementResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientNoteHistoryResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientNoteHistoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientNoteHistoryResponse]",
+        "type": "object"
+      },
+      "PaginatedResponse_PatientNoteResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientNoteResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PaginatedResponse[PatientNoteResponse]",
         "type": "object"
       },
       "PaginatedResponse_PatientProfileResponse_": {
@@ -3268,6 +3721,248 @@
           "version"
         ],
         "title": "PatientAllergyIntoleranceResponse",
+        "type": "object"
+      },
+      "PatientAntecedentHistoryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "created",
+              "updated",
+              "invalidated"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actorUserId": {
+            "format": "uuid7",
+            "title": "Actoruserid",
+            "type": "string"
+          },
+          "antecedentId": {
+            "format": "uuid7",
+            "title": "Antecedentid",
+            "type": "string"
+          },
+          "capturedAtLocal": {
+            "format": "date-time",
+            "title": "Capturedatlocal",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AntecedentCategory"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "title": "Changedat",
+            "type": "string"
+          },
+          "content": {
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "occurrenceDate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClinicalDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operationId": {
+            "format": "uuid7",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "relatedPersonDescription": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relatedpersondescription"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/ClinicalSourceType",
+            "default": "unknown"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "content",
+          "antecedentId",
+          "patientId",
+          "encounterId",
+          "recordStatus",
+          "correctionReason",
+          "action",
+          "actorUserId",
+          "operationId",
+          "changedAt",
+          "version"
+        ],
+        "title": "PatientAntecedentHistoryResponse",
+        "type": "object"
+      },
+      "PatientAntecedentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "antecedentId": {
+            "format": "uuid7",
+            "title": "Antecedentid",
+            "type": "string"
+          },
+          "capturedAtLocal": {
+            "format": "date-time",
+            "title": "Capturedatlocal",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AntecedentCategory"
+          },
+          "content": {
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "occurrenceDate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClinicalDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "relatedPersonDescription": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relatedpersondescription"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/ClinicalSourceType",
+            "default": "unknown"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "content",
+          "antecedentId",
+          "patientId",
+          "encounterId",
+          "recordStatus",
+          "correctionReason",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "title": "PatientAntecedentResponse",
         "type": "object"
       },
       "PatientBirthDateChangeResponse": {
@@ -3706,6 +4401,386 @@
         "title": "PatientContactResponse",
         "type": "object"
       },
+      "PatientEncounterHistoryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "created",
+              "updated",
+              "invalidated"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actorUserId": {
+            "format": "uuid7",
+            "title": "Actoruserid",
+            "type": "string"
+          },
+          "appointmentId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appointmentid"
+          },
+          "assessment": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment"
+          },
+          "assistantUserId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assistantuserid"
+          },
+          "attendingProfessionalId": {
+            "format": "uuid7",
+            "title": "Attendingprofessionalid",
+            "type": "string"
+          },
+          "capturedAtLocal": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Capturedatlocal"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "title": "Changedat",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "encounterId": {
+            "format": "uuid7",
+            "title": "Encounterid",
+            "type": "string"
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Endedat"
+          },
+          "findings": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings"
+          },
+          "historyPresentIllness": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Historypresentillness"
+          },
+          "indications": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indications"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "operationId": {
+            "format": "uuid7",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reasonSourceType": {
+            "$ref": "#/components/schemas/ClinicalSourceType",
+            "default": "unknown"
+          },
+          "recordStatus": {
+            "$ref": "#/components/schemas/RecordStatus"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "encounterId",
+          "patientId",
+          "appointmentId",
+          "attendingProfessionalId",
+          "assistantUserId",
+          "occurredAt",
+          "endedAt",
+          "capturedAtLocal",
+          "recordStatus",
+          "correctionReason",
+          "action",
+          "actorUserId",
+          "operationId",
+          "changedAt",
+          "version"
+        ],
+        "title": "PatientEncounterHistoryResponse",
+        "type": "object"
+      },
+      "PatientEncounterResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "appointmentId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appointmentid"
+          },
+          "assessment": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment"
+          },
+          "assistantUserId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assistantuserid"
+          },
+          "attendingProfessionalId": {
+            "format": "uuid7",
+            "title": "Attendingprofessionalid",
+            "type": "string"
+          },
+          "capturedAtLocal": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Capturedatlocal"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "encounterId": {
+            "format": "uuid7",
+            "title": "Encounterid",
+            "type": "string"
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Endedat"
+          },
+          "findings": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings"
+          },
+          "historyPresentIllness": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Historypresentillness"
+          },
+          "indications": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indications"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reasonSourceType": {
+            "$ref": "#/components/schemas/ClinicalSourceType",
+            "default": "unknown"
+          },
+          "recordStatus": {
+            "$ref": "#/components/schemas/RecordStatus"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "encounterId",
+          "patientId",
+          "appointmentId",
+          "attendingProfessionalId",
+          "assistantUserId",
+          "occurredAt",
+          "endedAt",
+          "capturedAtLocal",
+          "recordStatus",
+          "correctionReason",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "title": "PatientEncounterResponse",
+        "type": "object"
+      },
       "PatientIdentifierResponse": {
         "properties": {
           "createdAt": {
@@ -3782,6 +4857,949 @@
           "version"
         ],
         "title": "PatientIdentifierResponse",
+        "type": "object"
+      },
+      "PatientImmunizationHistoryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "created",
+              "updated",
+              "invalidated"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actorUserId": {
+            "format": "uuid7",
+            "title": "Actoruserid",
+            "type": "string"
+          },
+          "administratorName": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administratorname"
+          },
+          "bodySite": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bodysite"
+          },
+          "capturedAtLocal": {
+            "format": "date-time",
+            "title": "Capturedatlocal",
+            "type": "string"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "title": "Changedat",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "doseDescription": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dosedescription"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "immunizationId": {
+            "format": "uuid7",
+            "title": "Immunizationid",
+            "type": "string"
+          },
+          "locationText": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locationtext"
+          },
+          "lotNumber": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lotnumber"
+          },
+          "occurrenceDate": {
+            "$ref": "#/components/schemas/ClinicalDate"
+          },
+          "operationId": {
+            "format": "uuid7",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "productName": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productname"
+          },
+          "recordKind": {
+            "$ref": "#/components/schemas/RecordKind",
+            "default": "unknown"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/ClinicalSourceType",
+            "default": "unknown"
+          },
+          "vaccineName": {
+            "minLength": 1,
+            "title": "Vaccinename",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "vaccineName",
+          "occurrenceDate",
+          "immunizationId",
+          "patientId",
+          "encounterId",
+          "recordStatus",
+          "correctionReason",
+          "action",
+          "actorUserId",
+          "operationId",
+          "changedAt",
+          "version"
+        ],
+        "title": "PatientImmunizationHistoryResponse",
+        "type": "object"
+      },
+      "PatientImmunizationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "administratorName": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administratorname"
+          },
+          "bodySite": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bodysite"
+          },
+          "capturedAtLocal": {
+            "format": "date-time",
+            "title": "Capturedatlocal",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "doseDescription": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dosedescription"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "immunizationId": {
+            "format": "uuid7",
+            "title": "Immunizationid",
+            "type": "string"
+          },
+          "locationText": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locationtext"
+          },
+          "lotNumber": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lotnumber"
+          },
+          "occurrenceDate": {
+            "$ref": "#/components/schemas/ClinicalDate"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "productName": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Productname"
+          },
+          "recordKind": {
+            "$ref": "#/components/schemas/RecordKind",
+            "default": "unknown"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/ClinicalSourceType",
+            "default": "unknown"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "vaccineName": {
+            "minLength": 1,
+            "title": "Vaccinename",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "vaccineName",
+          "occurrenceDate",
+          "immunizationId",
+          "patientId",
+          "encounterId",
+          "recordStatus",
+          "correctionReason",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "title": "PatientImmunizationResponse",
+        "type": "object"
+      },
+      "PatientMeasurementHistoryResponse": {
+        "properties": {
+          "action": {
+            "enum": [
+              "created",
+              "updated",
+              "invalidated"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actorUserId": {
+            "format": "uuid7",
+            "title": "Actoruserid",
+            "type": "string"
+          },
+          "bodySite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bodysite"
+          },
+          "capturedAtLocal": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Capturedatlocal"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "title": "Changedat",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "diastolicValue": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Diastolicvalue"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MeasurementKind"
+          },
+          "measuredAt": {
+            "format": "date-time",
+            "title": "Measuredat",
+            "type": "string"
+          },
+          "measurementId": {
+            "format": "uuid7",
+            "title": "Measurementid",
+            "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "operationId": {
+            "format": "uuid7",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "systolicValue": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Systolicvalue"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "measurementId",
+          "patientId",
+          "encounterId",
+          "kind",
+          "measuredAt",
+          "capturedAtLocal",
+          "method",
+          "bodySite",
+          "value",
+          "systolicValue",
+          "diastolicValue",
+          "unit",
+          "recordStatus",
+          "correctionReason",
+          "action",
+          "actorUserId",
+          "operationId",
+          "changedAt",
+          "version"
+        ],
+        "title": "PatientMeasurementHistoryResponse",
+        "type": "object"
+      },
+      "PatientMeasurementResponse": {
+        "properties": {
+          "ageAsOf": {
+            "format": "date",
+            "title": "Ageasof",
+            "type": "string"
+          },
+          "ageYears": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ageyears"
+          },
+          "bodySite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bodysite"
+          },
+          "capturedAtLocal": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Capturedatlocal"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "diastolicValue": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Diastolicvalue"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MeasurementKind"
+          },
+          "measuredAt": {
+            "format": "date-time",
+            "title": "Measuredat",
+            "type": "string"
+          },
+          "measurementId": {
+            "format": "uuid7",
+            "title": "Measurementid",
+            "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "patientVersion": {
+            "title": "Patientversion",
+            "type": "integer"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "systolicValue": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Systolicvalue"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "measurementId",
+          "patientId",
+          "encounterId",
+          "kind",
+          "measuredAt",
+          "capturedAtLocal",
+          "method",
+          "bodySite",
+          "value",
+          "systolicValue",
+          "diastolicValue",
+          "unit",
+          "recordStatus",
+          "correctionReason",
+          "ageYears",
+          "ageAsOf",
+          "patientVersion",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "title": "PatientMeasurementResponse",
+        "type": "object"
+      },
+      "PatientNoteHistoryResponse": {
+        "properties": {
+          "action": {
+            "enum": [
+              "created",
+              "updated",
+              "invalidated"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actorUserId": {
+            "format": "uuid7",
+            "title": "Actoruserid",
+            "type": "string"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "capturedAtLocal": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Capturedatlocal"
+          },
+          "changedAt": {
+            "format": "date-time",
+            "title": "Changedat",
+            "type": "string"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "noteId": {
+            "format": "uuid7",
+            "title": "Noteid",
+            "type": "string"
+          },
+          "operationId": {
+            "format": "uuid7",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "noteId",
+          "patientId",
+          "encounterId",
+          "body",
+          "capturedAtLocal",
+          "recordStatus",
+          "correctionReason",
+          "action",
+          "actorUserId",
+          "operationId",
+          "changedAt",
+          "version"
+        ],
+        "title": "PatientNoteHistoryResponse",
+        "type": "object"
+      },
+      "PatientNoteResponse": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "capturedAtLocal": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "format": "date-time",
+                "type": "string"
+              }
+            ],
+            "title": "Capturedatlocal"
+          },
+          "correctionReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctionreason"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "encounterId": {
+            "anyOf": [
+              {
+                "format": "uuid7",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounterid"
+          },
+          "noteId": {
+            "format": "uuid7",
+            "title": "Noteid",
+            "type": "string"
+          },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
+          "recordStatus": {
+            "enum": [
+              "valid",
+              "entered-in-error"
+            ],
+            "title": "Recordstatus",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "noteId",
+          "patientId",
+          "encounterId",
+          "body",
+          "capturedAtLocal",
+          "recordStatus",
+          "correctionReason",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "title": "PatientNoteResponse",
         "type": "object"
       },
       "PatientProfileResponse": {
@@ -4020,6 +6038,21 @@
         ],
         "title": "ReadyResponse",
         "type": "object"
+      },
+      "RecordKind": {
+        "enum": [
+          "administered_here",
+          "reported",
+          "unknown"
+        ],
+        "type": "string"
+      },
+      "RecordStatus": {
+        "enum": [
+          "valid",
+          "entered-in-error"
+        ],
+        "type": "string"
       },
       "RelationshipResponse": {
         "properties": {
@@ -7565,6 +9598,419 @@
         ]
       }
     },
+    "/v1/accounts/{account_id}/patients/{patient_id}/antecedents": {
+      "get": {
+        "operationId": "listPatientAntecedents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AntecedentCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "valid",
+                    "entered-in-error"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientAntecedentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Antecedents",
+        "tags": [
+          "clinical-antecedents"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/antecedents/{antecedent_id}": {
+      "get": {
+        "operationId": "getPatientAntecedent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "antecedent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Antecedent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientAntecedentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Antecedent",
+        "tags": [
+          "clinical-antecedents"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/antecedents/{antecedent_id}/history": {
+      "get": {
+        "operationId": "listPatientAntecedentHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "antecedent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Antecedent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "afterVersion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Afterversion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientAntecedentHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Antecedent History",
+        "tags": [
+          "clinical-antecedents"
+        ]
+      }
+    },
     "/v1/accounts/{account_id}/patients/{patient_id}/birth-date-changes": {
       "get": {
         "operationId": "listBirthDateChanges",
@@ -7700,6 +10146,219 @@
         "summary": "List Birth Date Changes",
         "tags": [
           "clinical-records"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/clinical-history": {
+      "get": {
+        "operationId": "listPatientClinicalHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sections",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/ClinicalSection"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sections"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entryTypes",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/ClinicalEntryType"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entrytypes"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "valid",
+                    "entered-in-error"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ClinicalHistoryEntry_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Clinical History",
+        "tags": [
+          "clinical-history"
         ]
       }
     },
@@ -8971,6 +11630,433 @@
         ]
       }
     },
+    "/v1/accounts/{account_id}/patients/{patient_id}/encounters": {
+      "get": {
+        "operationId": "listPatientEncounters",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RecordStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientEncounterResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Encounters",
+        "tags": [
+          "clinical-encounters"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/encounters/{encounter_id}": {
+      "get": {
+        "operationId": "getPatientEncounter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "encounter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Encounter Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientEncounterResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Encounter",
+        "tags": [
+          "clinical-encounters"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/encounters/{encounter_id}/history": {
+      "get": {
+        "operationId": "listPatientEncounterHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "encounter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Encounter Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "afterVersion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Afterversion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientEncounterHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Encounter History",
+        "tags": [
+          "clinical-encounters"
+        ]
+      }
+    },
     "/v1/accounts/{account_id}/patients/{patient_id}/identifiers": {
       "get": {
         "operationId": "listPatientIdentifiers",
@@ -9089,6 +12175,1476 @@
         "summary": "List Identifiers",
         "tags": [
           "patients"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/immunizations": {
+      "get": {
+        "operationId": "listPatientImmunizations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordKind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RecordKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordkind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "valid",
+                    "entered-in-error"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientImmunizationResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Immunizations",
+        "tags": [
+          "clinical-immunizations"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/immunizations/{immunization_id}": {
+      "get": {
+        "operationId": "getPatientImmunization",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "immunization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Immunization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientImmunizationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Immunization",
+        "tags": [
+          "clinical-immunizations"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/immunizations/{immunization_id}/history": {
+      "get": {
+        "operationId": "listPatientImmunizationHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "immunization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Immunization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "afterVersion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Afterversion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientImmunizationHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Immunization History",
+        "tags": [
+          "clinical-immunizations"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/last-visit": {
+      "get": {
+        "operationId": "getPatientLastVisit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LastVisitResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Last Visit",
+        "tags": [
+          "clinical-encounters"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/measurements": {
+      "get": {
+        "operationId": "listPatientMeasurements",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/MeasurementKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "valid",
+                    "entered-in-error"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientMeasurementResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Measurements",
+        "tags": [
+          "clinical-measurements"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/measurements/summary": {
+      "get": {
+        "operationId": "getPatientMeasurementSummary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasurementSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Measurement Summary",
+        "tags": [
+          "clinical-measurements"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/measurements/{measurement_id}": {
+      "get": {
+        "operationId": "getPatientMeasurement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "measurement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Measurement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientMeasurementResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Measurement",
+        "tags": [
+          "clinical-measurements"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/measurements/{measurement_id}/history": {
+      "get": {
+        "operationId": "listPatientMeasurementHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "measurement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Measurement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "afterVersion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Afterversion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientMeasurementHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Measurement History",
+        "tags": [
+          "clinical-measurements"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/notes": {
+      "get": {
+        "operationId": "listPatientNotes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "valid",
+                    "entered-in-error"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "encounterId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid7",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Encounterid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientNoteResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Notes",
+        "tags": [
+          "clinical-notes"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/notes/{note_id}": {
+      "get": {
+        "operationId": "getPatientNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Note Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientNoteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Note",
+        "tags": [
+          "clinical-notes"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/patients/{patient_id}/notes/{note_id}/history": {
+      "get": {
+        "operationId": "listPatientNoteHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Note Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "afterVersion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Afterversion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatientNoteHistoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Note History",
+        "tags": [
+          "clinical-notes"
         ]
       }
     },
@@ -12052,7 +16608,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "287b361963d1b4ae1cf46f630c3af1a791a5aa73",
-    "sourceSha256": "1fe9c724e7960e92822dc5b253b056b23698f910c4b0cbb94bb5e24f8812e5e7"
+    "sourceHead": "ae7621bcfc8f6ee687a36757ac9348a7fef4b854",
+    "sourceSha256": "4185daa574b91e4919c9b5b8399685ff84b6f86f212d38ab6b15524f5fbaba60"
   }
 }

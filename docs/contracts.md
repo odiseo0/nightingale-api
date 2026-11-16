@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado al 2026-11-16:** C09/C10 aceptados; C11 del núcleo sigue pendiente. El [contrato HTTP v1](api-v1.md), revisión 1.2, conserva camelCase y page/shows. La corrección clínica está implementada hasta T19 para revisión C07: 60 rutas, 98 esquemas y 51 acciones generadas. El manifiesto incluye origen, `sourceHead`, `sourceSha256` y huellas de archivos; dos generaciones y `--check` producen los mismos artefactos. Consumidores y producción siguen pendientes. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales. Los ejemplos de la [guía Rust](rust-api-guide.md) se comprueban contra PostgreSQL/Keycloak aislados. C11 no está aceptado.
+**Estado al 2026-11-16:** el [contrato HTTP v1](api-v1.md), revisión 1.3, conserva camelCase y page/shows. Etapa 2 está implementada para revisión C09: 78 rutas, 127 esquemas y 66 acciones generadas. El manifiesto incluye origen, `sourceHead`, `sourceSha256` y huellas de archivos; dos generaciones y `--check` producen los mismos artefactos. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales y los ejemplos se comprueban contra PostgreSQL/Keycloak aislados. Consumidores y producción siguen pendientes.
 
 ## Una fuente por contrato
 

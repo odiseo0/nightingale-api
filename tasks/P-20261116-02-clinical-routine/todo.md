@@ -2,7 +2,7 @@
 
 **Plan:** [plan.md](plan.md). **Estado del plan:** In progress. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16.
 
-El usuario autorizó T01 → T02 → T03 hasta C01 y, tras aceptarlo, T04 → T05 → T06 hasta C02. T10–T27 permanecen Todo. C01–C02 están aceptados; C03–C09 siguen pendientes de revisión y aceptación expresa.
+El usuario autorizó T01 → T02 → T03 hasta C01 y, tras aceptarlo, T04 → T05 → T06 hasta C02. T19–T27 permanecen Todo. C01–C06 están aceptados; C07–C09 siguen pendientes de revisión y aceptación expresa.
 
 El plan sucesor de Etapa 1 y el plan original quedaron Completed con C08 y C06 aceptados el 2026-11-16. Esta aceptación de cierres no autoriza ejecutar T01 de Etapa 2 ni acepta anticipadamente sus checkpoints. Trabajo secuencial, sin delegación, sin dependencias nuevas, commits, despliegues, datos reales ni cambios en otros repositorios.
 
@@ -19,24 +19,24 @@ El plan sucesor de Etapa 1 y el plan original quedaron Completed con C08 y C06 a
 | T07 | Persistir atenciones y proyección inicial de timeline | T06 y C02 aceptado | Done | M |
 | T08 | Conectar atenciones y última visita | T07 | Done | M |
 | T09 | Comprobar atención y última visita | T08 | Done | M |
-| T10 | Persistir notas e historia | T09 y C03 aceptado | Todo | M |
-| T11 | Conectar notas | T10 | Todo | M |
-| T12 | Comprobar notas | T11 | Todo | M |
-| T13 | Persistir mediciones e historia | T12 y C04 aceptado | Todo | M |
-| T14 | Conectar tomas, correcciones y resúmenes | T13 | Todo | M |
-| T15 | Comprobar mediciones y trabajo offline | T14 | Todo | M |
-| T16 | Persistir vacunas e historia | T15 y C05 aceptado | Todo | M |
-| T17 | Conectar vacunas | T16 | Todo | M |
-| T18 | Comprobar vacunas | T17 | Todo | M |
-| T19 | Persistir antecedentes e historia | T18 y C06 aceptado | Todo | M |
-| T20 | Conectar antecedentes | T19 | Todo | M |
-| T21 | Comprobar antecedentes | T20 | Todo | M |
-| T22 | Integrar Etapa 1 en timeline | T21 y C07 aceptado | Todo | M |
-| T23 | Conectar historial integrado | T22 | Todo | M |
-| T24 | Completar captura y delta de Etapa 2 | T23 | Todo | M |
-| T25 | Comprobar historial y sincronización | T24 | Todo | M |
-| T26 | Publicar api-v1.3 y actualizar fuentes | T25 y C08 aceptado | Todo | M |
-| T27 | Ejecutar cierre integral de Etapa 2 | T26 | Todo | M |
+| T10 | Persistir notas e historia | T09 y C03 aceptado | Done | M |
+| T11 | Conectar notas | T10 | Done | M |
+| T12 | Comprobar notas | T11 | Done | M |
+| T13 | Persistir mediciones e historia | T12 y C04 aceptado | Done | M |
+| T14 | Conectar tomas, correcciones y resúmenes | T13 | Done | M |
+| T15 | Comprobar mediciones y trabajo offline | T14 | Done | M |
+| T16 | Persistir vacunas e historia | T15 y C05 aceptado | Done | M |
+| T17 | Conectar vacunas | T16 | Done | M |
+| T18 | Comprobar vacunas | T17 | Done | M |
+| T19 | Persistir antecedentes e historia | T18 y C06 aceptado | Done | M |
+| T20 | Conectar antecedentes | T19 | Done | M |
+| T21 | Comprobar antecedentes | T20 | Done | M |
+| T22 | Integrar Etapa 1 en timeline | T21 y C07 aceptado | Done | M |
+| T23 | Conectar historial integrado | T22 | Done | M |
+| T24 | Completar captura y delta de Etapa 2 | T23 | Done | M |
+| T25 | Comprobar historial y sincronización | T24 | Done | M |
+| T26 | Publicar api-v1.3 y actualizar fuentes | T25 y C08 aceptado | Done | M |
+| T27 | Ejecutar cierre integral de Etapa 2 | T26 | Done | M |
 
 ## T01 · Registrar decisiones de Etapa 2
 
@@ -337,13 +337,13 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 - [x] Atenciones, vínculos, correcciones y última visita cumplen E06/E14 sin ciclo de cierre.
 - [x] Persistencia, HTTP, acceso, idempotencia y carreras tienen evidencia real.
-- [ ] El usuario acepta C03 antes de autorizar T10.
+- [x] El usuario aceptó C03 el 2026-11-16 y autorizó T10 → T11 → T12 hasta C04.
 
 **Evidencia C03:** 180 pruebas en 63,090 s, OK; 58 controles estructurales incluidos. Persistencia y descargas clínicas correctas; probe de atenciones correcto. Head `20261116_05` y SQL offline correctos. Basedpyright: 15 errores históricos, 0 avisos, sin nuevos. Catálogo documental coincide con código; `export_contracts --check` llega a `openapi.json` desactualizado, pendiente de T26. `git diff --check` correcto. T10 no se inició.
 
 ## T10 · Persistir notas e historia
 
-**Estado:** Todo. **Propietario:** `clinical_records`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records`. **Alcance:** M.
 
 **Descripción:** implementar notas actuales e historias con cuerpo, autor, tiempo, vínculo opcional con atención y proyección de timeline.
 
@@ -352,8 +352,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** dos tablas nuevas; nota/atención deben pertenecer a la misma ficha. Historia y timeline comparten transacción.
 
 **Criterios de aceptación:**
-- [ ] Una nota puede existir sin atención y otra vincularse sin cruzar paciente/cuenta.
-- [ ] Cuerpo no vacío, versiones consecutivas e historia append-only.
+- [x] Una nota puede existir sin atención y otra vincularse sin cruzar paciente/cuenta.
+- [x] Cuerpo no vacío, versiones consecutivas e historia append-only.
 
 **Verificación:**
 - [ ] Pruebas de dominio y persistencia para nulos, texto, FK, versiones e inmutabilidad.
@@ -368,7 +368,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T11 · Conectar notas
 
-**Estado:** Todo. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
 
 **Descripción:** conectar alta, edición, anulación, lista, detalle e historia de notas, reutilizando acceso, aceptación y proyecciones existentes.
 
@@ -377,8 +377,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** tres acciones nuevas, alcance `notes`, efecto/historia/timeline/recibo/auditoría/grupo atómicos.
 
 **Criterios de aceptación:**
-- [ ] Edición conserva versiones sin cierre ni motivo obligatorio; `NO_CHANGES` no añade historia.
-- [ ] Duplicados, respuesta perdida y revocación aplican el permiso vigente.
+- [x] Edición conserva versiones sin cierre ni motivo obligatorio; `NO_CHANGES` no añade historia.
+- [x] Duplicados, respuesta perdida y revocación aplican el permiso vigente.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe -m unittest discover -s tests -p "test_notes.py" -v`.
@@ -394,7 +394,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T12 · Comprobar notas
 
-**Estado:** Todo. **Propietario:** calidad de notas. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad de notas. **Alcance:** M.
 
 **Descripción:** comprobar E07, acceso independiente, aislamiento, correcciones y ausencia de efectos clínicos automáticos.
 
@@ -403,8 +403,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** datos ficticios, sin cambios funcionales.
 
 **Criterios de aceptación:**
-- [ ] La nota conserva autor/fecha/versiones y no crea diagnóstico, condición ni última visita.
-- [ ] Objeto ajeno, versión antigua y permiso retirado no revelan ni alteran datos.
+- [x] La nota conserva autor/fecha/versiones y no crea diagnóstico, condición ni última visita.
+- [x] Objeto ajeno, versión antigua y permiso retirado no revelan ni alteran datos.
 
 **Verificación:**
 - [ ] Pruebas unitarias y `./.venv/Scripts/python.exe test-support/notes/check.py`.
@@ -417,13 +417,15 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## C04 · Notas
 
-- [ ] E07 y las reglas de edición/historia/acceso están comprobadas.
-- [ ] No existen efectos clínicos automáticos ni contenido sensible en auditoría.
-- [ ] El usuario acepta C04 antes de autorizar T13.
+- [x] E07 y las reglas de edición/historia/acceso están comprobadas.
+- [x] No existen efectos clínicos automáticos ni contenido sensible en auditoría.
+- [x] El usuario aceptó C04 el 2026-11-16 y autorizó T13 → T14 → T15 hasta C05.
+
+**Evidencia T10–T12/C04:** migración `20261116_06`, modelos/DAOs, tres acciones y tres lecturas; timeline y captura de estado válido. Pruebas unitarias de ausencia/null, autor y capacidades; probe real E07 con notas independientes/vinculadas, duplicados, NO_CHANGES, versiones, anulación, rollback, sync y permisos. Persistencia y 58 controles estructurales correctos. Basedpyright acotado: 0 errores/avisos. Cierre: 183 pruebas en 56,355 s, OK; head `20261116_06`; analizador global conserva 15 errores históricos; contratos llegan al límite conocido de `openapi.json`. `git diff --check` correcto. T13 no se inició.
 
 ## T13 · Persistir mediciones e historia
 
-**Estado:** Todo. **Propietario:** dominio y `clinical_records`. **Alcance:** M.
+**Estado:** Done. **Propietario:** dominio y `clinical_records`. **Alcance:** M.
 
 **Descripción:** implementar cinco tipos de medición, valores Decimal/UCUM, presión por componentes, tiempos, contexto, historia y timeline.
 
@@ -432,9 +434,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** dos tablas nuevas, formas cerradas por tipo, sin unidades alternativas ni derivados de Etapa 3.
 
 **Criterios de aceptación:**
-- [ ] Cada tipo exige su valor y unidad; presión admite un componente ausente y exige al menos uno.
-- [ ] Rangos, valores finitos, tiempos y forma combinada se protegen sin inventar ceros.
-- [ ] Estado actual/historia/timeline conservan versión y contenido al commit.
+- [x] Cada tipo exige su valor y unidad; presión admite un componente ausente y exige al menos uno.
+- [x] Rangos, valores finitos, tiempos y forma combinada se protegen sin inventar ceros.
+- [x] Estado actual/historia/timeline conservan versión y contenido al commit.
 
 **Verificación:**
 - [ ] Pruebas de dominio para tipos, unidades, rangos, NaN/infinito, nulos y fechas.
@@ -450,7 +452,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T14 · Conectar tomas, correcciones y resúmenes
 
-**Estado:** Todo. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
 
 **Descripción:** conectar nueva toma, corrección, anulación, lista, detalle, historia y últimos valores por tipo, incluida edad en la fecha de la toma.
 
@@ -459,9 +461,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** tres acciones nuevas y proyecciones de estado actual. Nueva toma usa ID nuevo; corrección conserva historia; último valor usa `measuredAt`, no carga.
 
 **Criterios de aceptación:**
-- [ ] Dos tomas coexisten; corrección actualiza la serie sin dejar el valor anterior como válido.
-- [ ] Edad devuelve `ageYears`/`ageAsOf` y versión de ficha usada, o nulo si falta nacimiento; no se persiste.
-- [ ] Historia, permisos, recibo, auditoría, timeline y sync comparten aceptación.
+- [x] Dos tomas coexisten; corrección actualiza la serie sin dejar el valor anterior como válido.
+- [x] Edad devuelve `ageYears`/`ageAsOf` y versión de ficha usada, o nulo si falta nacimiento; no se persiste.
+- [x] Historia, permisos, recibo, auditoría, timeline y sync comparten aceptación.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe -m unittest discover -s tests -p "test_measurements.py" -v`.
@@ -477,7 +479,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T15 · Comprobar mediciones y trabajo offline
 
-**Estado:** Todo. **Propietario:** calidad de mediciones. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad de mediciones. **Alcance:** M.
 
 **Descripción:** comprobar E08–E12, captura local/aceptación, aislamiento, revocación y carreras sin introducir analítica de Etapa 3.
 
@@ -486,9 +488,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** datos ficticios y bases aisladas. No acredita aplicación SQLite ni curvas.
 
 **Criterios de aceptación:**
-- [ ] 700→70 conserva historia y usa 70; dos pesos y carga histórica ordenan por hecho.
-- [ ] Presión incompleta y captura offline conservan incertidumbre y marcas separadas.
-- [ ] Permiso retirado bloquea lecturas, resultados, duplicados y sync sin filtrar contenido.
+- [x] 700→70 conserva historia y usa 70; dos pesos y carga histórica ordenan por hecho.
+- [x] Presión incompleta y captura offline conservan incertidumbre y marcas separadas.
+- [x] Permiso retirado bloquea lecturas, resultados, duplicados y sync sin filtrar contenido.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe test-support/measurements/check.py` con PostgreSQL/Keycloak Test.
@@ -501,13 +503,15 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## C05 · Mediciones
 
-- [ ] E08–E12 y reglas de historia/tiempo/acceso están comprobados.
-- [ ] No hay unidades alternativas, derivados de Etapa 3 ni efectos parciales.
-- [ ] El usuario acepta C05 antes de autorizar T16.
+- [x] E08–E12 y reglas de historia/tiempo/acceso están comprobados.
+- [x] No hay unidades alternativas, derivados de Etapa 3 ni efectos parciales.
+- [x] El usuario aceptó C05 el 2026-11-16 y autorizó T16 → T17 → T18 hasta C06.
+
+**Evidencia T13–T15:** migración `20261116_07`, cinco tipos con Decimal/UCUM, presión por componentes, historias/timeline, tres acciones, cuatro lecturas y captura de toda serie válida. El límite técnico de peso cambió a 1000 kg porque 500 impedía ejecutar E09 con 700→70; fuentes actualizadas. Probe real cubre series, historia, offline, presión, edad, carreras, rollback, sync y permisos. Persistencia y pruebas unitarias correctas. Cierre: 188 pruebas en 63,250 s, OK; head `20261116_07`; analizador global 15 errores históricos, sin nuevos; contratos llegan a `openapi.json` desactualizado; `git diff --check` correcto. T16 no se inició.
 
 ## T16 · Persistir vacunas e historia
 
-**Estado:** Todo. **Propietario:** `clinical_records`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records`. **Alcance:** M.
 
 **Descripción:** implementar vacunas actuales e historias con fecha parcial, fuente, tipo de registro, atención opcional y detalles opcionales.
 
@@ -516,9 +520,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** dos tablas nuevas, sin catálogo externo ni recomendaciones. `administered_here` exige atención válida de la misma ficha.
 
 **Criterios de aceptación:**
-- [ ] Vacuna/fecha/fuente conservan precisión y administración frente a declaración.
-- [ ] Producto, dosis, lote, vía, sitio, lugar y responsable pueden faltar sin impedir el registro.
-- [ ] Historia, timeline e identidad cumplen las reglas comunes.
+- [x] Vacuna/fecha/fuente conservan precisión y administración frente a declaración.
+- [x] Producto, dosis, lote, vía, sitio, lugar y responsable pueden faltar sin impedir el registro.
+- [x] Historia, timeline e identidad cumplen las reglas comunes.
 
 **Verificación:**
 - [ ] Pruebas de dominio para fecha parcial, tipo de registro, fuente y campos opcionales.
@@ -534,7 +538,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T17 · Conectar vacunas
 
-**Estado:** Todo. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
 
 **Descripción:** conectar registro, edición, anulación, lista, detalle e historia de vacunas con permisos y sincronización.
 
@@ -543,9 +547,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** tres acciones nuevas, alcance `immunizations`, estado actual e historia en una aceptación.
 
 **Criterios de aceptación:**
-- [ ] Una vacuna histórica declarada no usa fecha de carga como administración ni afirma atención actual.
-- [ ] `administered_here` sin atención válida se rechaza; correcciones conservan historia.
-- [ ] Duplicados, respuesta perdida y revocación aplican alcance vigente.
+- [x] Una vacuna histórica declarada no usa fecha de carga como administración ni afirma atención actual.
+- [x] `administered_here` sin atención válida se rechaza; correcciones conservan historia.
+- [x] Duplicados, respuesta perdida y revocación aplican alcance vigente.
 
 **Verificación:**
 - [ ] Pruebas unitarias y probe nuevo `test-support/immunizations/check.py`.
@@ -561,7 +565,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T18 · Comprobar vacunas
 
-**Estado:** Todo. **Propietario:** calidad de vacunas. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad de vacunas. **Alcance:** M.
 
 **Descripción:** comprobar E13, fechas parciales, fuentes, acceso y ausencia de evaluación o avisos.
 
@@ -570,8 +574,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** datos ficticios, sin cambios funcionales.
 
 **Criterios de aceptación:**
-- [ ] Vacuna antigua conserva precisión/fuente y no afirma administración actual.
-- [ ] Objeto ajeno y permiso retirado no filtran datos; ninguna recomendación o efecto automático aparece.
+- [x] Vacuna antigua conserva precisión/fuente y no afirma administración actual.
+- [x] Objeto ajeno y permiso retirado no filtran datos; ninguna recomendación o efecto automático aparece.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe -m unittest discover -s tests -p "test_immunizations.py" -v`.
@@ -584,13 +588,15 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## C06 · Vacunas
 
-- [ ] E13 y las reglas de administración/declaración, historia y acceso están comprobadas.
-- [ ] No existen catálogo, calendario, recomendación o efectos automáticos fuera de alcance.
-- [ ] El usuario acepta C06 antes de autorizar T19.
+- [x] E13 y las reglas de administración/declaración, historia y acceso están comprobadas.
+- [x] No existen catálogo, calendario, recomendación o efectos automáticos fuera de alcance.
+- [x] El usuario aceptó C06 el 2026-11-16. T01–T27 están Done. C01–C08 están aceptados; C09 espera decisión del usuario.
+
+**Evidencia T16–T18/C06:** migración `20261116_08`, estado/historia, fechas parciales, detalles opcionales, tres acciones, tres lecturas, timeline y captura. Probe real E13 cubre declared/administered_here, atención válida, duplicados, corrección, anulación, rollback, permisos y privacidad. Persistencia y cuatro pruebas unitarias correctas; basedpyright acotado 0 errores/avisos. Cierre: 192 pruebas en 66,050 s, OK; head `20261116_08`; analizador global conserva 15 errores históricos; contratos llegan a `openapi.json` desactualizado; `git diff --check` correcto. T19 no se inició.
 
 ## T19 · Persistir antecedentes e historia
 
-**Estado:** Todo. **Propietario:** `clinical_records`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records`. **Alcance:** M.
 
 **Descripción:** implementar antecedentes personales/familiares/otros con relato, persona relacionada, fecha/fuente, historia y timeline.
 
@@ -599,8 +605,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** dos tablas nuevas, sin crear condiciones ni codificación automática.
 
 **Criterios de aceptación:**
-- [ ] `family` exige descripción de la persona relacionada y no atribuye su condición al paciente.
-- [ ] Relato no vacío, fecha/fuente opcionales e historia/versiones correctas.
+- [x] `family` exige descripción de la persona relacionada y no atribuye su condición al paciente.
+- [x] Relato no vacío, fecha/fuente opcionales e historia/versiones correctas.
 
 **Verificación:**
 - [ ] Pruebas de dominio para categorías, persona relacionada, texto, fecha y fuente.
@@ -616,7 +622,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T20 · Conectar antecedentes
 
-**Estado:** Todo. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records` y `sync`. **Alcance:** M.
 
 **Descripción:** conectar alta, edición, anulación, lista, detalle e historia de antecedentes, con filtros de categoría/estado.
 
@@ -625,8 +631,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** tres acciones nuevas, alcance `antecedents`, historia/timeline/recibo/auditoría/grupo atómicos.
 
 **Criterios de aceptación:**
-- [ ] Relato, fuente y correcciones conservan contexto e incertidumbre sin análisis automático.
-- [ ] Filtros preceden a conteo/paginación y duplicados/revocación usan permiso vigente.
+- [x] Relato, fuente y correcciones conservan contexto e incertidumbre sin análisis automático.
+- [x] Filtros preceden a conteo/paginación y duplicados/revocación usan permiso vigente.
 
 **Verificación:**
 - [ ] Pruebas unitarias y probe nuevo `test-support/antecedents/check.py`.
@@ -642,7 +648,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T21 · Comprobar antecedentes
 
-**Estado:** Todo. **Propietario:** calidad de antecedentes. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad de antecedentes. **Alcance:** M.
 
 **Descripción:** comprobar categorías, incertidumbre, aislamiento, permisos y ausencia de atribución automática.
 
@@ -651,8 +657,8 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** datos ficticios, sin cambios funcionales.
 
 **Criterios de aceptación:**
-- [ ] Antecedente familiar conserva persona relacionada y no crea condición del paciente.
-- [ ] Permisos, errores, historias y resultados no revelan otra cuenta o sección.
+- [x] Antecedente familiar conserva persona relacionada y no crea condición del paciente.
+- [x] Permisos, errores, historias y resultados no revelan otra cuenta o sección.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe -m unittest discover -s tests -p "test_antecedents.py" -v`.
@@ -665,13 +671,15 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## C07 · Antecedentes
 
-- [ ] Las tres categorías, fuentes, correcciones y accesos tienen evidencia real.
-- [ ] No se crean condiciones ni otras funciones fuera de alcance.
-- [ ] El usuario acepta C07 antes de autorizar T22.
+- [x] Las tres categorías, fuentes, correcciones y accesos tienen evidencia real.
+- [x] No se crean condiciones ni otras funciones fuera de alcance.
+- [x] El usuario aceptó C07 el 2026-11-16 y autorizó T22 → T23 → T24 → T25 hasta C08.
+
+**Evidencia T19–T21/C07:** migración `20261116_09`, estado/historia, tres categorías, persona relacionada obligatoria en family, tres acciones, tres lecturas, timeline y captura. Probe real cubre incertidumbre, duplicados, corrección, anulación, rollback, permisos, privacidad y ausencia de condiciones. Persistencia y cuatro pruebas unitarias correctas; basedpyright acotado 0 errores/avisos. Cierre: 196 pruebas en 77,570 s, OK; head `20261116_09`; analizador global conserva 15 errores históricos; contratos llegan a `openapi.json` desactualizado; `git diff --check` correcto. T22 no se inició.
 
 ## T22 · Integrar Etapa 1 en timeline
 
-**Estado:** Todo. **Propietario:** `clinical_records`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records`. **Alcance:** M.
 
 **Descripción:** actualizar las escrituras de condiciones/alergias y rellenar la proyección timeline de los registros existentes sin copiar contenido ni reescribir historias.
 
@@ -680,9 +688,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** migración de backfill idempotente y cambios en el flujo compartido de Etapa 1. La fecha de inicio conocida conserva precisión; si falta, se usa solo la marca de referencia documentada sin llamarla inicio clínico.
 
 **Criterios de aceptación:**
-- [ ] Backfill y reejecución producen las mismas referencias/versiones sin duplicados.
-- [ ] Altas, ediciones, refutaciones y anulaciones de Etapa 1 actualizan timeline en la misma transacción.
-- [ ] La reconstrucción coincide con los estados actuales y no copia texto clínico.
+- [x] Backfill y reejecución producen las mismas referencias/versiones sin duplicados.
+- [x] Altas, ediciones, refutaciones y anulaciones de Etapa 1 actualizan timeline en la misma transacción.
+- [x] La reconstrucción coincide con los estados actuales y no copia texto clínico.
 
 **Verificación:**
 - [ ] Migración desde head anterior con datos ficticios y comparación SQL antes/después.
@@ -698,7 +706,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T23 · Conectar historial integrado
 
-**Estado:** Todo. **Propietario:** `clinical_records`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `clinical_records`. **Alcance:** M.
 
 **Descripción:** implementar `GET .../clinical-history` sobre timeline con filtros por sección/tipo/fecha/estado, precisión visible y paginación autorizada.
 
@@ -707,9 +715,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** lectura de referencias actuales sin contenido clínico duplicado. Detalle se obtiene por la ruta de cada fuente y vuelve a autorizar.
 
 **Criterios de aceptación:**
-- [ ] Filtros de sección se aplican antes de contar/paginar y ninguna fuente prohibida aparece en items/total.
-- [ ] Fechas parciales conservan precisión y el orden es estable sin afirmar exactitud desconocida.
-- [ ] Anulados se excluyen por defecto y cada referencia permite resolver solo el detalle autorizado.
+- [x] Filtros de sección se aplican antes de contar/paginar y ninguna fuente prohibida aparece en items/total.
+- [x] Fechas parciales conservan precisión y el orden es estable sin afirmar exactitud desconocida.
+- [x] Anulados se excluyen por defecto y cada referencia permite resolver solo el detalle autorizado.
 
 **Verificación:**
 - [ ] Pruebas unitarias y probe nuevo `test-support/clinical_history/check.py`.
@@ -725,7 +733,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T24 · Completar captura y delta de Etapa 2
 
-**Estado:** Todo. **Propietario:** `sync` y componentes propietarios. **Alcance:** M.
+**Estado:** Done. **Propietario:** `sync` y componentes propietarios. **Alcance:** M.
 
 **Descripción:** materializar atenciones válidas, notas/antecedentes actuales válidos, todas las tomas válidas, vacunas vigentes y referencias necesarias, sin historias ni timeline adicional.
 
@@ -734,9 +742,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** nuevas proyecciones tipadas en captura/journal. `includeClinical=false` conserva la captura anterior; `true` incluye solo secciones legibles de Etapas 1 y 2.
 
 **Criterios de aceptación:**
-- [ ] Captura/delta incluyen hechos históricos y correcciones/anulaciones sin filtrar por ventana de citas.
-- [ ] Referencias de pacientes/profesionales/atenciones están completas, incluso con fichas inactivas/completas.
-- [ ] Permisos, época, grupos completos, auditoría y rollback se conservan.
+- [x] Captura/delta incluyen hechos históricos y correcciones/anulaciones sin filtrar por ventana de citas.
+- [x] Referencias de pacientes/profesionales/atenciones están completas, incluso con fichas inactivas/completas.
+- [x] Permisos, época, grupos completos, auditoría y rollback se conservan.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe test-support/clinical_downloads/check.py` ampliado para todos los tipos.
@@ -752,7 +760,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T25 · Comprobar historial y sincronización
 
-**Estado:** Todo. **Propietario:** calidad de historial/sync. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad de historial/sync. **Alcance:** M.
 
 **Descripción:** probar la vista integrada y la recuperación de todos los tipos, incluidos aislamiento, datos antiguos, grupos invisibles, SSE y revocación.
 
@@ -761,9 +769,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** datos ficticios y bases aleatorias. No acredita consumidor Rust/Hub ni operación.
 
 **Criterios de aceptación:**
-- [ ] Historial y descarga no omiten ni filtran hechos por fecha, tipo, cuenta, permiso o resultado.
-- [ ] Una anulación incremental retira el hecho de la vista ordinaria y una captura posterior no lo incluye.
-- [ ] Recuperación con cursor/época/SSE conserva grupos completos y no borra historia funcional.
+- [x] Historial y descarga no omiten ni filtran hechos por fecha, tipo, cuenta, permiso o resultado.
+- [x] Una anulación incremental retira el hecho de la vista ordinaria y una captura posterior no lo incluye.
+- [x] Recuperación con cursor/época conserva grupos completos y no borra historia funcional; no cambió SSE.
 
 **Verificación:**
 - [ ] Probes `clinical_history`, `clinical_downloads`, `downloads`, `retention`, `events` y `collaboration` según el cambio.
@@ -777,13 +785,15 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## C08 · Historial y descarga
 
-- [ ] Historial integrado, captura, delta, recuperación y permisos tienen evidencia completa.
-- [ ] No hay omisiones, fugas ni borrado de historia funcional por retención técnica.
-- [ ] El usuario acepta C08 antes de autorizar T26.
+- [x] Historial integrado, captura, delta, recuperación y permisos tienen evidencia completa.
+- [x] No hay omisiones, fugas ni borrado de historia funcional por retención técnica.
+- [x] El usuario aceptó C08 el 2026-11-16 y autorizó T26 → T27 hasta C09.
+
+**Evidencia T22–T25/C08:** backfill idempotente `20261116_10` y escrituras de Etapa 1 en timeline. Ruta integrada sin permiso global, siete tipos, fechas parciales y detalles autorizados. Probe cubre captura con todos los hechos, corrección/anulación delta, captura posterior sin anulados, permisos parciales y rollback de auditoría. Persistencia y dos pruebas unitarias correctas. Cierre: 198 pruebas en 62,498 s, OK; probes `clinical_history` y `clinical_downloads` correctos; head `20261116_10`; analizador global conserva 15 errores históricos; contratos llegan a `openapi.json` desactualizado; `git diff --check` correcto. T26 no se inició.
 
 ## T26 · Publicar api-v1.3 y actualizar fuentes
 
-**Estado:** Todo. **Propietario:** contratos y documentación. **Alcance:** M.
+**Estado:** Done. **Propietario:** contratos y documentación. **Alcance:** M.
 
 **Descripción:** publicar `modelRevision=api-v1.3`, generar contratos/ejemplos desde la app real y actualizar especificación, esquema, acceso, calidad, arquitectura, tareas y guías afectadas.
 
@@ -792,9 +802,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** `contractVersion=1` permanece. Los generados incluyen origen/HEAD/huellas; no se editan a mano. La guía distingue servidor comprobado de consumidor pendiente.
 
 **Criterios de aceptación:**
-- [ ] Dos generaciones son idénticas y `--check` pasa; rutas/acciones/modelos coinciden con el código.
-- [ ] Documentación y estados no contienen contradicciones ni aceptaciones atribuidas al agente.
-- [ ] Ejemplos ficticios se comprueban contra PostgreSQL/Keycloak Test.
+- [x] Dos generaciones son idénticas y `--check` pasa; rutas/acciones/modelos coinciden con el código.
+- [x] Documentación y estados no contienen contradicciones ni aceptaciones atribuidas al agente.
+- [x] Ejemplos ficticios se comprueban contra PostgreSQL/Keycloak Test.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe -m scripts.export_contracts` y después `--check`.
@@ -810,7 +820,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## T27 · Ejecutar cierre integral de Etapa 2
 
-**Estado:** Todo. **Propietario:** calidad y evidencia. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad y evidencia. **Alcance:** M.
 
 **Descripción:** ejecutar toda la matriz y revisar el diff final contra el HEAD anterior al plan, separando servidor, consumidores, operación y producción.
 
@@ -819,9 +829,9 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 **Datos, contratos, transacciones y consumidores:** no añade comportamiento. Usa datos ficticios y servicios Test, sin base personal ni despliegue.
 
 **Criterios de aceptación:**
-- [ ] Suite, estructura, probes, migraciones, contratos, build, analizador y `git diff --check` tienen resultados reales registrados.
-- [ ] E06–E14/E22–E24 están comprobados y no existen diagnósticos nuevos o trabajo fuera de alcance.
-- [ ] La evidencia separa API de integración Rust/Hub, operación, datos reales y producción pendientes.
+- [x] Suite, estructura, probes, migraciones, contratos, build, analizador y `git diff --check` tienen resultados reales registrados.
+- [x] E06–E14/E22–E24 están comprobados y no existen diagnósticos nuevos o trabajo fuera de alcance.
+- [x] La evidencia separa API de integración Rust/Hub, operación, datos reales y producción pendientes.
 
 **Verificación:**
 - [ ] `./.venv/Scripts/python.exe -m unittest discover -s tests -v` y todos los probes existentes/nuevos.
@@ -834,9 +844,11 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 ## C09 · Etapa 2 lista para revisión
 
-- [ ] Todas las funciones aprobadas y sus casos de aceptación están comprobados según la matriz.
-- [ ] Contratos, documentación, build y revisión final son coherentes con el entregable.
+- [x] Todas las funciones aprobadas y sus casos de aceptación están comprobados según la matriz.
+- [x] Contratos, documentación, build y revisión final son coherentes con el entregable.
 - [ ] El usuario revisa y decide sobre C09. No se inicia Etapa 3 ni se aceptan automáticamente este plan o los anteriores.
+
+**Evidencia T26–T27/C09:** publicación `api-v1.3` con `contractVersion=1`: 78 rutas, 127 esquemas y 66 acciones; dos generaciones y `--check` correctos; probe real de contratos correcto. Suite: 198 pruebas en 72,864 s, OK. Los 25 probes pasan: 19 anteriores y seis nuevos de Etapa 2. Persistencia, SQL offline/head `20261116_10`, build offline e inspección del wheel correctos. Basedpyright: 15 errores históricos, 0 avisos, sin nuevos. `git diff --check` correcto. El único fallo del cierre fue una expectativa antigua `UNSUPPORTED_OPERATION`; se corrigió a `VALIDATION_ERROR` para acciones ya implementadas y los once probes clínicos se repitieron con éxito. API comprobada con datos ficticios y servicios Test; integración Rust/Hub, operación con datos reales y producción quedan pendientes.
 
 ## Reglas de ejecución y evidencia
 

@@ -1,7 +1,7 @@
 # Registro clínico y seguimiento del paciente
 
 **Versión:** 0.4. **Fecha:** 2026-11-16.
-**Estado:** especificación funcional vigente. La etapa 1 y su corrección están implementadas para revisión C07: permisos por sección, resultados con alcance persistido, revisiones coherentes, historial de nacimiento, descarga con referencias completas, auditoría y guardas de identidad. El usuario aceptó C01–C06 del plan sucesor; C07 espera revisión. El diseño de etapa 2 está en preparación para C01; su implementación no se inicia.
+**Estado:** especificación funcional vigente. Etapas 1 y 2 están implementadas para revisión C09, con atenciones, notas, mediciones, vacunas, antecedentes, permisos, timeline, historial y descarga comprobados hasta C08. C09 espera revisión del usuario.
 **Decisión de alcance:** [D12](decisions.md#d12--registro-clínico-y-seguimiento-del-paciente).
 **Entrega documental:** [P-20261115-01-clinical-spec](../tasks/P-20261115-01-clinical-spec/plan.md), con [evidencia](../tasks/P-20261115-01-clinical-spec/todo.md).
 

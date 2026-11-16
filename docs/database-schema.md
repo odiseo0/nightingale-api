@@ -2,7 +2,7 @@
 
 **Versión:** 1.3; conserva la ampliación 1.0 aceptada en C01, el soporte de T31, el diseño clínico de etapa 1 y añade el diseño de etapa 2 para revisión C01.\
 **Fecha:** 2026-11-16.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09/C10 aceptados. T31–T33 para revisión C11 del núcleo. El diseño clínico de §11 pertenece a P-20261116-02-clinical-routine; no está implementado ni aceptado en su C01. Consumidores y producción siguen pendientes.\
+**Estado:** Etapa 2 implementada para revisión C09 mediante migraciones `20261116_04`–`20261116_10`, comprobadas en PostgreSQL Test aislado. Consumidores y producción siguen pendientes.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.
@@ -1976,7 +1976,7 @@ F94 ficha; F95 atención; F96/F97 autores; F98 diferida a historia. Índices `(a
 
 | `kind` | Forma y rango técnico | Unidad exacta |
 |---|---|---|
-| `weight` | `value` 0,01–500; componentes nulos | `kg` |
+| `weight` | `value` 0,01–1000; componentes nulos | `kg` |
 | `temperature` | `value` 20–45; componentes nulos | `Cel` |
 | `oxygen_saturation` | `value` 0–100; componentes nulos | `%` |
 | `heart_rate` | `value` 1–300; componentes nulos | `/min` |
