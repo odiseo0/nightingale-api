@@ -76,7 +76,10 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     assert not any(item["entityType"] == "patient_profile" and item["state"]["patientId"] == str(patient_id) for item in plain_items)
 
     clinical = await capture(include=True)
-    assert set(clinical["clinicalSections"]) == {"profile", "conditions", "allergies"}
+    assert set(clinical["clinicalSections"]) == {
+        "profile", "conditions", "allergies", "encounters", "notes",
+        "measurements", "immunizations", "antecedents",
+    }
     clinical_items = await items(clinical["snapshotId"])
     types = {item["entityType"] for item in clinical_items}
     assert {"patient_clinical_profile", "patient_condition", "patient_allergy_intolerance", "patient_clinical_section_review"}.issubset(types)
@@ -96,7 +99,10 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {"clinicalProfile": "read_write", "conditions": "none", "allergies": "read_write"}}, 1))["entityVersion"] == 2
 
     limited = await capture(actor=assistant, include=True)
-    assert set(limited["clinicalSections"]) == {"profile", "allergies"}
+    assert set(limited["clinicalSections"]) == {
+        "profile", "allergies", "encounters", "notes", "measurements",
+        "immunizations", "antecedents",
+    }
     limited_items = await items(limited["snapshotId"], actor=assistant)
     assert not any(item["entityType"] == "patient_condition" for item in limited_items)
     assert any(item["entityType"] == "patient_allergy_intolerance" for item in limited_items)

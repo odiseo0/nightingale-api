@@ -35,6 +35,11 @@ class ClinicalPermissionTests(unittest.TestCase):
             }
         })
         self.assertEqual(payload.clinical_permissions.conditions, "read")
+        self.assertEqual(payload.clinical_permissions.encounters, "read_write")
+        self.assertEqual(payload.clinical_permissions.notes, "read_write")
+        self.assertEqual(payload.clinical_permissions.measurements, "read_write")
+        self.assertEqual(payload.clinical_permissions.immunizations, "read_write")
+        self.assertEqual(payload.clinical_permissions.antecedents, "read_write")
         capabilities = get_capabilities().value
         self.assertIn("SetMemberClinicalPermissions", capabilities.operation_catalog)
         self.assertIn("SetMemberClinicalPermissions", capabilities.online_only_actions)
@@ -50,6 +55,21 @@ class ClinicalPermissionTests(unittest.TestCase):
             "CreatePatientAllergyIntolerance": "allergies",
             "UpdatePatientAllergyIntolerance": "allergies",
             "InvalidatePatientAllergyIntolerance": "allergies",
+            "CreatePatientEncounter": "encounters",
+            "UpdatePatientEncounter": "encounters",
+            "InvalidatePatientEncounter": "encounters",
+            "CreatePatientNote": "notes",
+            "UpdatePatientNote": "notes",
+            "InvalidatePatientNote": "notes",
+            "RecordPatientMeasurement": "measurements",
+            "CorrectPatientMeasurement": "measurements",
+            "InvalidatePatientMeasurement": "measurements",
+            "RecordPatientImmunization": "immunizations",
+            "UpdatePatientImmunization": "immunizations",
+            "InvalidatePatientImmunization": "immunizations",
+            "CreatePatientAntecedent": "antecedents",
+            "UpdatePatientAntecedent": "antecedents",
+            "InvalidatePatientAntecedent": "antecedents",
         }
         for action, section in expected.items():
             with self.subTest(action=action):
@@ -68,14 +88,21 @@ class ClinicalPermissionTests(unittest.TestCase):
         self.assertIsNone(clinical_result_section("CreateAppointment", None))
 
     def test_result_policy_requires_current_section_write_access(self):
-        for section in ("profile", "conditions", "allergies"):
+        for section in (
+            "profile",
+            "conditions",
+            "allergies",
+            "encounters",
+            "notes",
+            "measurements",
+            "immunizations",
+            "antecedents",
+        ):
             for level in ("none", "read", "read_write"):
                 context = SimpleNamespace(
                     owner=False,
                     clinical_permissions=ClinicalPermissions.model_validate({
-                        "clinicalProfile": level if section == "profile" else "read",
-                        "conditions": level if section == "conditions" else "read",
-                        "allergies": level if section == "allergies" else "read",
+                        section if section != "profile" else "clinicalProfile": level
                     }),
                 )
                 with self.subTest(section=section, level=level):
@@ -93,6 +120,41 @@ class ClinicalPermissionTests(unittest.TestCase):
         self.assertFalse(clinical_change_allowed("clinical_profile", []))
         self.assertFalse(clinical_change_allowed("clinical_conditions", ["profile"]))
         self.assertTrue(clinical_change_allowed("clinical_allergies", ["allergies"]))
+
+    def test_stage2_sections_share_scope_without_duplicates(self):
+        permissions = ClinicalPermissions(
+            encounters="none",
+            notes="read",
+            measurements="read_write",
+            immunizations="none",
+            antecedents="read",
+        )
+        self.assertEqual(permissions.level("encounters"), "none")
+        self.assertEqual(permissions.level("notes"), "read")
+        self.assertEqual(permissions.level("measurements"), "read_write")
+        self.assertEqual(permissions.level("immunizations"), "none")
+        self.assertEqual(permissions.level("antecedents"), "read")
+        self.assertTrue(clinical_change_allowed("clinical_notes", ["notes"]))
+        self.assertFalse(clinical_change_allowed("clinical_notes", ["conditions"]))
+        with self.assertRaises(ValidationError):
+            SyncPosition(
+                account_id=uuid7(),
+                user_id=uuid7(),
+                device_id=uuid7(),
+                audience="members",
+                clinical_sections=["notes", "notes"],
+                permission_epoch=1,
+                sequence=0,
+                window=SyncWindow(
+                    appointments_from="2026-11-01",
+                    appointments_until="2026-11-03",
+                    time_zone="America/Caracas",
+                    starts_at="2026-11-01T04:00:00Z",
+                    ends_at="2026-11-03T04:00:00Z",
+                ),
+                issued_at=datetime.now(UTC),
+                expires_at=datetime.now(UTC) + timedelta(days=1),
+            )
 
     def test_snapshot_opt_in_is_strict_and_off_by_default(self):
         self.assertFalse(SnapshotRequest().include_clinical)

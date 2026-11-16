@@ -10,6 +10,14 @@ ROOT = Path(__file__).resolve().parents[2]
 support = runpy.run_path(str(ROOT / "test-support/sync/check.py"))
 access = support["access"]
 
+STAGE2_DEFAULTS = {
+    "encounters": "read_write",
+    "notes": "read_write",
+    "measurements": "read_write",
+    "immunizations": "read_write",
+    "antecedents": "read_write",
+}
+
 
 async def check_clinical_permissions(runtime, administrative, client, tokens):
     from src.api.accounts.application.accounts_cases import bootstrap_practice
@@ -62,7 +70,8 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
         async with administrative() as db:
             return (await db.execute(text("""
                 SELECT m.version,m.clinical_profile_access,m.conditions_access,m.allergies_access,
-                    h.permission_epoch,
+                    m.encounters_access,m.notes_access,m.measurements_access,
+                    m.immunizations_access,m.antecedents_access,h.permission_epoch,
                     (SELECT count(*) FROM nightingale.operation_receipts WHERE account_id=m.account_id),
                     (SELECT count(*) FROM nightingale.audit_events WHERE account_id=m.account_id),
                     (SELECT count(*) FROM nightingale.change_log WHERE account_id=m.account_id)
@@ -92,12 +101,15 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
             """), {"account_id": account_id})).scalars().all()
 
     initial = await state()
-    assert initial[1:4] == ("read_write", "read_write", "read_write")
+    assert initial[1:9] == ("read_write",) * 8
 
     response = await client.get(base + "/access", headers=access.authorization(assistant))
     access.expect(response, 200)
     assert response.json()["clinicalPermissions"] == {
-        "clinicalProfile": "read_write", "conditions": "read_write", "allergies": "read_write"
+        "clinicalProfile": "read_write",
+        "conditions": "read_write",
+        "allergies": "read_write",
+        **STAGE2_DEFAULTS,
     }
     assert "SetMemberClinicalPermissions" not in response.json()["allowedActions"]
 
@@ -105,7 +117,7 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
     operation_id = uuid7()
     changed = await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": permissions}, 1, operation_id=operation_id)
     assert changed["status"] == "accepted" and changed["entityVersion"] == 2, changed
-    assert changed["state"]["clinicalPermissions"] == permissions
+    assert changed["state"]["clinicalPermissions"] == {**permissions, **STAGE2_DEFAULTS}
     duplicate = await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": permissions}, 1, operation_id=operation_id)
     assert duplicate["status"] == "duplicate" and duplicate["originalResult"]["status"] == "accepted"
     conflict = await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {**permissions, "conditions": "read_write"}}, 1, operation_id=operation_id)
@@ -117,16 +129,16 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
 
     response = await client.get(base + f"/members/{assistant['userId']}/clinical-permissions", headers=access.authorization(owner))
     access.expect(response, 200)
-    assert response.json()["clinicalPermissions"] == permissions and response.json()["membershipVersion"] == 2
+    assert response.json()["clinicalPermissions"] == {**permissions, **STAGE2_DEFAULTS} and response.json()["membershipVersion"] == 2
     response = await client.get(base + f"/members/{assistant['userId']}/clinical-permissions", headers=access.authorization(assistant))
     access.expect(response, 403)
     response = await client.get(base + "/access", headers=access.authorization(assistant))
-    assert response.json()["clinicalPermissions"] == permissions
+    assert response.json()["clinicalPermissions"] == {**permissions, **STAGE2_DEFAULTS}
 
     assert (await operation("SetMembershipStatus", assistant["userId"], {"status": "inactive"}, 2))["entityVersion"] == 3
-    assert (await state())[1:4] == ("none", "read", "read_write")
+    assert (await state())[1:9] == ("none", "read", "read_write", "read_write", "read_write", "read_write", "read_write", "read_write")
     assert (await operation("SetMembershipStatus", assistant["userId"], {"status": "active"}, 3))["entityVersion"] == 4
-    assert (await state())[1:4] == ("none", "read", "read_write")
+    assert (await state())[1:9] == ("none", "read", "read_write", "read_write", "read_write", "read_write", "read_write", "read_write")
 
     before = await state()
     original_append = dao_changes.append
@@ -141,8 +153,8 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
     recovered = await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": updated}, 4, operation_id=retry_id)
     assert recovered["status"] == "accepted" and recovered["entityVersion"] == 5
     after = await state()
-    assert after[0] == 5 and after[1:4] == ("read", "none", "read")
-    assert after[4] == before[4] + 1 and after[5:] == tuple(value + 1 for value in before[5:])
+    assert after[0] == 5 and after[1:9] == ("read", "none", "read", "read_write", "read_write", "read_write", "read_write", "read_write")
+    assert after[9] == before[9] + 1 and after[10:] == tuple(value + 1 for value in before[10:])
 
     first_id = uuid7()
     second_id = uuid7()
@@ -154,9 +166,15 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
     )
     assert sorted(item["status"] for item in (first, second)) == ["accepted", "conflict"]
     winner = first if first["status"] == "accepted" else second
-    assert winner["state"]["clinicalPermissions"] in (first_permissions, second_permissions)
+    assert winner["state"]["clinicalPermissions"] in (
+        {**first_permissions, **STAGE2_DEFAULTS},
+        {**second_permissions, **STAGE2_DEFAULTS},
+    )
     response = await client.get(base + f"/members/{assistant['userId']}/clinical-permissions", headers=access.authorization(owner))
     assert response.json()["clinicalPermissions"] == winner["state"]["clinicalPermissions"]
+    assert set(response.json()["clinicalPermissions"]) == {
+        "clinicalProfile", "conditions", "allergies", *STAGE2_DEFAULTS
+    }
     assert response.json()["membershipVersion"] == 6
 
     read_write = {"clinicalProfile": "none", "conditions": "read_write", "allergies": "read_write"}
@@ -218,6 +236,45 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
         "SetMemberClinicalPermissions", assistant["userId"],
         {"clinicalPermissions": allergies_none}, 10,
     ))["status"] == "accepted"
+
+    routine_actions = {
+        "encounters": "CreatePatientEncounter",
+        "notes": "CreatePatientNote",
+        "measurements": "RecordPatientMeasurement",
+        "immunizations": "RecordPatientImmunization",
+        "antecedents": "CreatePatientAntecedent",
+    }
+    routine_results = []
+    for action in routine_actions.values():
+        result_id = uuid7()
+        result = await operation(
+            action, uuid7(), {}, actor=assistant, operation_id=result_id
+        )
+        assert result["status"] == "rejected"
+        assert result["error"]["code"] == "UNSUPPORTED_OPERATION"
+        routine_results.append(result_id)
+
+    combined = {
+        **allergies_none,
+        "encounters": "none",
+        "notes": "none",
+        "measurements": "none",
+        "immunizations": "none",
+        "antecedents": "none",
+    }
+    assert (await operation(
+        "SetMemberClinicalPermissions", assistant["userId"],
+        {"clinicalPermissions": combined}, 11,
+    ))["status"] == "accepted"
+    for result_id in routine_results:
+        await get_result(result_id, status=403)
+    read_only = {**combined, **{section: "read" for section in routine_actions}}
+    assert (await operation(
+        "SetMemberClinicalPermissions", assistant["userId"],
+        {"clinicalPermissions": read_only}, 12,
+    ))["status"] == "accepted"
+    for result_id in routine_results:
+        await get_result(result_id, status=403)
 
     owner_second = await access.issue(client, tokens[0]["access_token"])
     assert (await operation("RegisterAccountDevice", owner_second["deviceId"], {}, actor=owner_second))["status"] == "accepted"

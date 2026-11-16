@@ -31,8 +31,13 @@ class ClinicalRecordsStructureTests(structure.AuthorizationStructureTests):
         "PatientConditionDAO", "PatientConditionHistoryDAO",
         "PatientClinicalSectionReviewDAO", "PatientClinicalSectionReviewHistoryDAO",
         "PatientAllergyIntoleranceDAO", "PatientAllergyIntoleranceHistoryDAO",
-        "ClinicalEntryDAO", "ClinicalHistoryDAO",
+        "ClinicalEntryDAO", "ClinicalHistoryDAO", "PatientClinicalTimelineDAO",
     }
+
+
+class EncountersStructureTests(structure.AuthorizationStructureTests):
+    component = structure.ROOT / "src/api/encounters"
+    dao_names = {"ClinicalEncounterDAO", "ClinicalEncounterHistoryDAO"}
 
 
 class PatientsStructureTests(structure.AuthorizationStructureTests):
