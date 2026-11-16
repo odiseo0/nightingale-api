@@ -24,6 +24,11 @@ class ConditionSchemaTests(unittest.TestCase):
         self.assertEqual(payload.clinical_status, "active")
         self.assertEqual(payload.verification_status, "unconfirmed")
         self.assertEqual(payload.source_type, "unknown")
+        with self.assertRaises(ValidationError):
+            CreatePatientConditionPayload.model_validate({
+                "patientId": str(uuid7()), "name": "CND-A",
+                "verificationStatus": "entered-in-error",
+            })
 
     def test_patch_preserves_absence_and_allows_nullable_dates(self):
         patch = UpdatePatientConditionPayload.model_validate({"onsetDate": None})

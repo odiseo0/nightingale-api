@@ -7,6 +7,7 @@ import test_foundation as foundation
 from pydantic import ValidationError
 
 from src.api.sync.domain.operations import OperationBatch, OperationEnvelope
+from src.api.sync.repository.models import ChangeLog
 
 
 class OperationSchemaTests(unittest.TestCase):
@@ -50,6 +51,13 @@ class OperationSchemaTests(unittest.TestCase):
         for items in ([], [self.operation() for _ in range(101)]):
             with self.assertRaises(ValidationError):
                 OperationBatch.model_validate({"operations": items})
+
+
+class SyncModelTests(unittest.TestCase):
+    def test_change_log_model_matches_physical_schema(self):
+        self.assertEqual(ChangeLog.__tablename__, "change_log")
+        self.assertEqual(ChangeLog.__table__.name, "change_log")
+        self.assertNotIn("change_logs", ChangeLog.metadata.tables)
 
 
 class InvitationOperationTests(unittest.TestCase):
@@ -144,6 +152,108 @@ class InvitationOperationTests(unittest.TestCase):
         """, self.database_settings())
 
         self.assertEqual(result["invalid_results"], 8)
+
+
+class ClinicalResultTests(unittest.TestCase):
+    run_python = foundation.FoundationTests.run_python
+    database_settings = foundation.FoundationTests.database_settings
+
+    def test_duplicate_and_get_enforce_shared_scope_and_audit(self):
+        result = self.run_python("""
+            import asyncio
+            import hashlib
+            import json
+            from datetime import UTC, datetime, timedelta
+            from types import SimpleNamespace
+            from unittest.mock import AsyncMock, patch
+            from uuid import uuid7
+
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from src.api.accounts.domain.accounts import ClinicalPermissions
+            from src.api.authorization.domain.errors import AccessDenied
+            from src.api.clinical_records.domain.conditions import ClinicalSectionReviewResponse
+            from src.api.sync.application.operations_cases import accept_operation, get_operation
+            from src.api.sync.domain.operations import OperationEnvelope, OperationResult
+            from src.core import Err, Ok
+
+            async def check():
+                account_id, user_id, device_id, patient_id, operation_id = [uuid7() for _ in range(5)]
+                operation = OperationEnvelope.model_validate({
+                    'operationId': str(operation_id), 'contractVersion': 1,
+                    'action': 'SetPatientClinicalSectionReview', 'entityKey': str(patient_id),
+                    'expectedVersion': 0,
+                    'payload': {'section': 'allergies', 'informationStatus': 'unknown'},
+                })
+                state = ClinicalSectionReviewResponse(
+                    patient_id=patient_id, section='allergies', information_status='unknown',
+                    source_type='unknown', reviewed_by_user_id=user_id,
+                    reviewed_at=datetime.now(UTC), active_count=0, version=1,
+                )
+                accepted = OperationResult(
+                    operation_id=operation_id, status='accepted', entity_version=1,
+                    state=state, error=None,
+                )
+                canonical = operation.model_dump(mode='json', by_alias=True)
+                canonical['payload'] = operation.validated_payload().model_dump(mode='json', by_alias=True)
+                fingerprint = hashlib.sha256(json.dumps(
+                    canonical, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False,
+                ).encode()).digest()
+                now = datetime.now(UTC)
+                receipt = SimpleNamespace(
+                    request_hash=fingerprint, result_json=accepted.model_dump(mode='json', by_alias=True),
+                    result_expires_at=now + timedelta(days=90), clinical_section='allergies',
+                    action='SetPatientClinicalSectionReview', entity_key=str(patient_id),
+                )
+
+                def context(level):
+                    return SimpleNamespace(
+                        owner=False, account=SimpleNamespace(id=account_id, status='active'),
+                        actor=SimpleNamespace(user_id=user_id, device_id=device_id),
+                        clinical_permissions=ClinicalPermissions(conditions='read_write', allergies=level),
+                    )
+
+                async def duplicate(level, audit_failure=False):
+                    audit = AsyncMock(side_effect=RuntimeError('fixture') if audit_failure else None)
+                    with patch('src.api.sync.application.operations_cases.authorized_context', new=AsyncMock(return_value=Ok((context(level), SimpleNamespace())))), \
+                        patch('src.api.sync.application.operations_cases.dao_heads.get_server_time', new=AsyncMock(return_value=now)), \
+                        patch('src.api.sync.application.operations_cases.dao_receipts.get_scoped', new=AsyncMock(return_value=receipt)) as read, \
+                        patch('src.api.sync.application.operations_cases.record_control', new=audit):
+                        async with AsyncSession() as db:
+                            try:
+                                outcome = await accept_operation(db, None, account_id, operation, operation_id)
+                            except RuntimeError:
+                                outcome = 'audit_failure'
+                    return outcome, read.await_count, audit.await_count
+
+                allowed, read_count, audit_count = await duplicate('read_write')
+                assert isinstance(allowed, Ok) and allowed.value.status == 'duplicate'
+                assert read_count == audit_count == 1
+                denied, read_count, audit_count = await duplicate('none')
+                assert isinstance(denied, Err) and isinstance(denied.error, AccessDenied)
+                assert read_count == audit_count == 0
+                failed, _, _ = await duplicate('read_write', True)
+                assert failed == 'audit_failure'
+
+                async def get(level):
+                    with patch('src.api.sync.application.operations_cases.authorized_context', new=AsyncMock(return_value=Ok((context(level), SimpleNamespace())))), \
+                        patch('src.api.sync.application.operations_cases.dao_heads.get_server_time', new=AsyncMock(return_value=now)), \
+                        patch('src.api.sync.application.operations_cases.dao_receipts.get_scope', new=AsyncMock(return_value=(receipt.action, receipt.clinical_section))), \
+                        patch('src.api.sync.application.operations_cases.dao_receipts.get_scoped', new=AsyncMock(return_value=receipt)) as read, \
+                        patch('src.api.sync.application.operations_cases.record_control', new=AsyncMock()) as audit:
+                        async with AsyncSession() as db:
+                            outcome = await get_operation(db, None, account_id, operation_id)
+                    return outcome, read.await_count, audit.await_count
+
+                allowed, read_count, audit_count = await get('read_write')
+                assert isinstance(allowed, Ok) and read_count == audit_count == 1
+                denied, read_count, audit_count = await get('read')
+                assert isinstance(denied, Err) and isinstance(denied.error, AccessDenied)
+                assert read_count == audit_count == 0
+                return {'checks': 5}
+
+            print(json.dumps(asyncio.run(check())))
+        """, self.database_settings())
+        self.assertEqual(result, {"checks": 5})
 
 
 class PayloadReuseTests(unittest.TestCase):

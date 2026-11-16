@@ -70,7 +70,7 @@ async def check_allergies(runtime, administrative, client, tokens):
     second_id = uuid7()
     intolerance = await operation("CreatePatientAllergyIntolerance", second_id, {"patientId": str(patient_id), "substance": "Sustancia Ficticia B", "type": "intolerance"})
     assert intolerance["status"] == "accepted" and intolerance["state"]["type"] == "intolerance"
-    for payload in ({"patientId": str(patient_id), "substance": " "}, {"patientId": str(patient_id), "substance": "ALG-A", "onsetDate": "2023-02-29"}, {"patientId": str(patient_id), "substance": "ALG-A", "onsetDate": "2999"}):
+    for payload in ({"patientId": str(patient_id), "substance": " "}, {"patientId": str(patient_id), "substance": "ALG-A", "onsetDate": "2023-02-29"}, {"patientId": str(patient_id), "substance": "ALG-A", "onsetDate": "2999"}, {"patientId": str(patient_id), "substance": "ALG-A", "verificationStatus": "entered-in-error"}):
         assert (await operation("CreatePatientAllergyIntolerance", uuid7(), payload))["error"]["code"] == "VALIDATION_ERROR"
 
     updated = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"type": "allergy", "reactionDescription": "Fixture reaction", "clinicalStatus": "inactive", "verificationStatus": "presumed"}, 1)
@@ -89,6 +89,13 @@ async def check_allergies(runtime, administrative, client, tokens):
 
     reviewed = await operation("SetPatientClinicalSectionReview", patient_id, {"section": "allergies", "informationStatus": "none_known", "sourceType": "patient"}, 2)
     assert reviewed["status"] == "accepted", reviewed
+    review_before = await review()
+    async with administrative() as db:
+        review_history_before = await db.scalar(text("SELECT count(*) FROM nightingale.patient_clinical_section_review_histories WHERE account_id=:id"), {"id": account_id})
+    assert (await operation("UpdatePatientAllergyIntolerance", allergy_id, {"reactionDescription": "Refuted fixture"}, 3))["status"] == "accepted"
+    assert await review() == review_before
+    async with administrative() as db:
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.patient_clinical_section_review_histories WHERE account_id=:id"), {"id": account_id}) == review_history_before
     third_id = uuid7()
     assert (await operation("CreatePatientAllergyIntolerance", third_id, {"patientId": str(patient_id), "substance": "Fixture substance"}))["status"] == "accepted"
     fourth_id = uuid7()
@@ -107,19 +114,19 @@ async def check_allergies(runtime, administrative, client, tokens):
     async def fail_group(db, values, **kwargs):
         return await original_append(db, {**values, "ordinal": 0}, **kwargs)
     with patch.object(dao_changes, "append", side_effect=fail_group):
-        failed = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"clinicalStatus": "active"}, 3, operation_id=retry_id)
+        failed = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"clinicalStatus": "active"}, 4, operation_id=retry_id)
     assert failed["status"] == "retryable_failure"
     async with administrative() as db:
         assert await db.scalar(text("SELECT count(*) FROM nightingale.patient_allergy_intolerances WHERE account_id=:id"), {"id": account_id}) == before
         assert await db.scalar(text("SELECT count(*) FROM nightingale.operation_receipts WHERE account_id=:id"), {"id": account_id}) == receipts
-    recovered = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"clinicalStatus": "active"}, 3, operation_id=retry_id)
-    assert recovered["status"] == "accepted" and recovered["entityVersion"] == 4
+    recovered = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"clinicalStatus": "active"}, 4, operation_id=retry_id)
+    assert recovered["status"] == "accepted" and recovered["entityVersion"] == 5
 
-    assistant_write = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"sourceType": "professional"}, 4, actor=assistant)
+    assistant_write = await operation("UpdatePatientAllergyIntolerance", allergy_id, {"sourceType": "professional"}, 5, actor=assistant)
     assert assistant_write["status"] == "accepted"
     assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {"clinicalProfile": "read_write", "conditions": "read", "allergies": "none"}}, 1))["entityVersion"] == 2
     await review(assistant, 403)
-    await operation("UpdatePatientAllergyIntolerance", allergy_id, {"sourceType": "patient"}, 5, actor=assistant, status=403)
+    await operation("UpdatePatientAllergyIntolerance", allergy_id, {"sourceType": "patient"}, 6, actor=assistant, status=403)
     response = await client.get(base + f"/patients/{patient_id}/clinical-sections/conditions", headers=access.authorization(assistant))
     access.expect(response, 200)
     response = await client.get(base + f"/sync/operations/{assistant_write['operationId']}", headers=access.authorization(assistant))
@@ -129,6 +136,7 @@ async def check_allergies(runtime, administrative, client, tokens):
     await review(outsider, 404)
 
     for factory, statement in (
+        (runtime, "UPDATE nightingale.patient_allergy_intolerances SET account_id=uuid7()"),
         (runtime, "UPDATE nightingale.patient_allergy_intolerance_histories SET substance='altered'"),
         (administrative, "DELETE FROM nightingale.patient_allergy_intolerance_histories"),
     ):

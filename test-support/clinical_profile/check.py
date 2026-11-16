@@ -124,6 +124,21 @@ async def check_clinical_profile(runtime, administrative, client, tokens):
     assert changes["items"][0]["previousBirthDate"] == "2000-02-29"
     assert changes["items"][0]["newBirthDate"] == "1999-02-28"
     assert changes["items"][0]["patientVersion"] == 2
+    assert (await operation("UpdatePatientProfile", patient_id, {"fullName": "Fixture Interleaved"}, 2))["entityVersion"] == 3
+    assert (await operation("UpdatePatientProfile", patient_id, {"birthDate": "1998-02-28"}, 3))["entityVersion"] == 4
+    assert (await operation("UpdatePatientProfile", patient_id, {"fullName": "Fixture Patient"}, 4))["entityVersion"] == 5
+    assert (await operation("UpdatePatientProfile", patient_id, {"birthDate": "1997-02-28"}, 5))["entityVersion"] == 6
+    response = await client.get(base + f"/patients/{patient_id}/birth-date-changes?afterVersion=2", headers=access.authorization(owner))
+    changes = response.json()
+    assert changes["total"] == 2
+    assert [item["patientVersion"] for item in changes["items"]] == [4, 6]
+    response = await client.get(base + f"/patients/{patient_id}/birth-date-changes?afterVersion=2&shows=1&page=2", headers=access.authorization(owner))
+    changes = response.json()
+    assert changes["total"] == 2 and [item["patientVersion"] for item in changes["items"]] == [6]
+    response = await client.get(base + f"/patients/{patient_id}/birth-date-changes?afterVersion=6", headers=access.authorization(owner))
+    assert response.json() == {"items": [], "total": 0}
+    response = await client.get(base + f"/patients/{patient_id}/birth-date-changes?unknown=1", headers=access.authorization(owner))
+    access.expect(response, 422)
 
     assistant_write = await operation("SetPatientSexAtBirth", patient_id, {"sexAtBirth": "unknown"}, 5, actor=assistant)
     assert assistant_write["status"] == "accepted" and assistant_write["entityVersion"] == 6
@@ -140,6 +155,7 @@ async def check_clinical_profile(runtime, administrative, client, tokens):
     response = await client.get(base + f"/patients/{uuid7()}/clinical-profile", headers=access.authorization(owner))
     access.expect(response, 404)
     for factory, statement in (
+        (runtime, "UPDATE nightingale.patient_clinical_profiles SET patient_id=uuid7()"),
         (runtime, "UPDATE nightingale.patient_clinical_profile_histories SET source_type='external_document'"),
         (administrative, "DELETE FROM nightingale.patient_clinical_profile_histories"),
         (administrative, "INSERT INTO nightingale.patient_clinical_profile_histories(account_id,patient_id,version,source_type,action,actor_user_id,operation_id,changed_at) SELECT account_id,patient_id,99,'unknown','set',actor_user_id,operation_id,changed_at FROM nightingale.patient_clinical_profile_histories LIMIT 1"),

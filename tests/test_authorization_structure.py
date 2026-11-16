@@ -68,7 +68,8 @@ class AuthorizationStructureTests(unittest.TestCase):
         for node in classes:
             self.assertTrue(any(
                 isinstance(base, ast.Subscript) and isinstance(base.value, ast.Name)
-                and base.value.id == "DAO" for base in node.bases
+                and base.value.id in {"DAO", "ClinicalEntryDAO", "ClinicalHistoryDAO"}
+                for base in node.bases
             ), node.name)
 
     def test_domain_has_no_provider_code_or_direct_pydantic_base(self):

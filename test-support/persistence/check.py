@@ -126,10 +126,71 @@ def migrate(
     )
 
 
+async def check_result_scope_backfill(migrator):
+    result = migrate("downgrade", "20261116_01")
+    assert result.returncode == 0, result.stderr or result.stdout
+    async with migrator.transaction():
+        await migrator.execute("""
+            INSERT INTO nightingale.app_users
+                (id,oidc_issuer,oidc_subject,display_name,created_at,updated_at)
+            VALUES ('019a1234-0000-7000-8000-000000000001','fixture','scope','Fixture','2026-11-15T00:00:00Z','2026-11-15T00:00:00Z');
+            INSERT INTO nightingale.accounts
+                (id,kind,owner_user_id,display_name,time_zone,location_name,location_address,location_country,location_state,location_city,created_at,updated_at)
+            VALUES ('019a1234-0000-7000-8000-000000000002','clinic','019a1234-0000-7000-8000-000000000001','Fixture','America/Caracas','Fixture','Fixture','VE','Fixture','Fixture','2026-11-15T00:00:00Z','2026-11-15T00:00:00Z');
+            INSERT INTO nightingale.account_memberships
+                (account_id,user_id,created_at,updated_at)
+            VALUES ('019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','2026-11-15T00:00:00Z','2026-11-15T00:00:00Z');
+            INSERT INTO nightingale.devices
+                (id,user_id,display_name,client_version,local_schema_version,created_at,updated_at)
+            VALUES ('019a1234-0000-7000-8000-000000000003','019a1234-0000-7000-8000-000000000001','Fixture','1',1,'2026-11-15T00:00:00Z','2026-11-15T00:00:00Z');
+            INSERT INTO nightingale.account_sync_heads
+                (account_id,last_sequence,created_at,updated_at)
+            VALUES ('019a1234-0000-7000-8000-000000000002',2,'2026-11-15T00:00:00Z','2026-11-15T00:00:00Z');
+            INSERT INTO nightingale.operation_receipts
+                (account_id,actor_user_id,operation_id,source_device_id,contract_version,action,entity_type,entity_key,request_hash,status,entity_version,result_json,completed_at,result_expires_at,purged_at)
+            VALUES
+                ('019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','019a1234-0000-7000-8000-000000000101','019a1234-0000-7000-8000-000000000003',1,'SetPatientClinicalSectionReview','patient_clinical_section_review','"019a1234-0000-7000-8000-000000000004"','fixture-scope-hash-32-bytes-0001','accepted',1,'{"operationId":"019a1234-0000-7000-8000-000000000101","status":"accepted","entityVersion":1,"state":{"section":"allergies"},"error":null}','2026-11-15T00:00:00Z','2027-02-13T00:00:00Z',NULL),
+                ('019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','019a1234-0000-7000-8000-000000000102','019a1234-0000-7000-8000-000000000003',1,'SetPatientClinicalSectionReview','patient_clinical_section_review','"019a1234-0000-7000-8000-000000000004"','fixture-scope-hash-32-bytes-0002','rejected',NULL,'{"operationId":"019a1234-0000-7000-8000-000000000102","status":"rejected","entityVersion":null,"state":null,"error":null}','2026-11-15T00:00:00Z','2027-02-13T00:00:00Z',NULL),
+                ('019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','019a1234-0000-7000-8000-000000000103','019a1234-0000-7000-8000-000000000003',1,'SetPatientClinicalSectionReview','patient_clinical_section_review','"019a1234-0000-7000-8000-000000000004"','fixture-scope-hash-32-bytes-0003','accepted',1,NULL,'2026-11-15T00:00:00Z','2027-02-13T00:00:00Z','2027-02-14T00:00:00Z'),
+                ('019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','019a1234-0000-7000-8000-000000000104','019a1234-0000-7000-8000-000000000003',1,'SetPatientSexAtBirth','patient_clinical_profile','"019a1234-0000-7000-8000-000000000004"','fixture-scope-hash-32-bytes-0004','rejected',NULL,'{"operationId":"019a1234-0000-7000-8000-000000000104","status":"rejected","entityVersion":null,"state":null,"error":null}','2026-11-15T00:00:00Z','2027-02-13T00:00:00Z',NULL);
+            INSERT INTO nightingale.audit_events
+                (id,account_id,actor_kind,actor_user_id,actor_device_id,action,object_type,object_key,outcome,operation_id,correlation_id,occurred_at)
+            SELECT
+                ('019a1234-0000-7000-8000-00000000' || lpad((200 + n)::text,4,'0'))::uuid,
+                account_id,'staff',actor_user_id,source_device_id,action,entity_type,entity_key,status,operation_id,
+                ('019a1234-0000-7000-8000-00000000' || lpad((300 + n)::text,4,'0'))::uuid,completed_at
+            FROM nightingale.operation_receipts, generate_series(1,4) AS n
+            WHERE operation_id=('019a1234-0000-7000-8000-00000000' || lpad((100 + n)::text,4,'0'))::uuid;
+            INSERT INTO nightingale.change_log
+                (account_id,sequence,ordinal,group_id,group_size,source_account_id,actor_user_id,operation_id,entity_type,entity_key,entity_version,change_kind,projection_json,accepted_at)
+            VALUES
+                ('019a1234-0000-7000-8000-000000000002',1,1,'019a1234-0000-7000-8000-000000000401',1,'019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','019a1234-0000-7000-8000-000000000101','patient_clinical_section_review','"019a1234-0000-7000-8000-000000000004"',1,'upsert','{}','2026-11-15T00:00:00Z'),
+                ('019a1234-0000-7000-8000-000000000002',2,1,'019a1234-0000-7000-8000-000000000402',1,'019a1234-0000-7000-8000-000000000002','019a1234-0000-7000-8000-000000000001','019a1234-0000-7000-8000-000000000103','patient_clinical_section_review','"019a1234-0000-7000-8000-000000000004"',1,'upsert','{}','2026-11-15T00:00:00Z');
+        """)
+    result = migrate("upgrade", "head")
+    assert result.returncode == 0, result.stderr or result.stdout
+    rows = await migrator.fetch("""
+        SELECT operation_id,clinical_section FROM nightingale.operation_receipts
+        ORDER BY operation_id
+    """)
+    assert [row["clinical_section"] for row in rows] == [
+        "allergies", None, None, "profile"
+    ]
+    try:
+        await migrator.execute("""
+            UPDATE nightingale.operation_receipts SET clinical_section='conditions'
+            WHERE operation_id='019a1234-0000-7000-8000-000000000104'
+        """)
+    except asyncpg.PostgresError:
+        pass
+    else:
+        raise AssertionError("Clinical result scope is mutable")
+
+
 async def check_migrations(directory):
     result = migrate("upgrade", "head")
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, result.stderr or result.stdout
     head = migrate("heads")
     assert head.returncode == 0, head.stderr
     revision = head.stdout.strip().split()[0]
@@ -151,6 +212,7 @@ async def check_migrations(directory):
             )
             >= 28
         )
+        await check_result_scope_backfill(migrator)
 
         # A failing revision must roll back both its DDL and its version update.
         shutil.copytree(ROOT / "migrations", directory / "migrations")

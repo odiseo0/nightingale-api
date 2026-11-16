@@ -71,12 +71,22 @@ async def check_conditions(runtime, administrative, client, tokens):
     create_id = uuid7()
     created_condition = await operation("CreatePatientCondition", condition_id, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2024-02-29", "abatementDate": "2024-03"}, operation_id=create_id)
     assert created_condition["status"] == "accepted" and created_condition["entityVersion"] == 1
+    async with administrative() as db:
+        scopes = (await db.execute(text("""
+            SELECT action,clinical_section FROM nightingale.operation_receipts
+            WHERE account_id=:id AND action IN ('SetPatientClinicalSectionReview','CreatePatientCondition')
+        """), {"id": account_id})).all()
+        assert set(scopes) == {
+            ("SetPatientClinicalSectionReview", "conditions"),
+            ("CreatePatientCondition", "conditions"),
+        }
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.operation_receipts WHERE account_id=:id AND clinical_section IS NOT NULL AND action NOT IN ('SetPatientClinicalSectionReview','CreatePatientCondition')"), {"id": account_id}) == 0
     assert (await review())["informationStatus"] == "has_entries"
     duplicate = await operation("CreatePatientCondition", condition_id, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2024-02-29", "abatementDate": "2024-03"}, operation_id=create_id)
     assert duplicate["status"] == "duplicate"
     second_id = uuid7()
     assert (await operation("CreatePatientCondition", second_id, {"patientId": str(patient_id), "name": "CND-A"}))["status"] == "accepted"
-    for payload in ({"patientId": str(patient_id), "name": " "}, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2023-02-29"}, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2999"}):
+    for payload in ({"patientId": str(patient_id), "name": " "}, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2023-02-29"}, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2999"}, {"patientId": str(patient_id), "name": "CND-A", "verificationStatus": "entered-in-error"}):
         assert (await operation("CreatePatientCondition", uuid7(), payload))["error"]["code"] == "VALIDATION_ERROR"
 
     updated = await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "resolved", "verificationStatus": "confirmed", "onsetDate": "2024", "abatementDate": "2024-03"}, 1)
@@ -96,6 +106,11 @@ async def check_conditions(runtime, administrative, client, tokens):
 
     reviewed = await operation("SetPatientClinicalSectionReview", patient_id, {"section": "conditions", "informationStatus": "none_known", "sourceType": "patient"}, 3)
     assert reviewed["status"] == "accepted"
+    review_before = await review()
+    review_history_before = await history_total("patient_clinical_section_review_histories")
+    assert (await operation("UpdatePatientCondition", condition_id, {"name": "Refuted fixture"}, 3))["status"] == "accepted"
+    assert await review() == review_before
+    assert await history_total("patient_clinical_section_review_histories") == review_history_before
     third_id = uuid7()
     assert (await operation("CreatePatientCondition", third_id, {"patientId": str(patient_id), "name": "Fixture condition"}))["status"] == "accepted"
     fourth_id = uuid7()
@@ -113,17 +128,17 @@ async def check_conditions(runtime, administrative, client, tokens):
     async def fail_group(db, values, **kwargs):
         return await original_append(db, {**values, "ordinal": 0}, **kwargs)
     with patch.object(dao_changes, "append", side_effect=fail_group):
-        failed = await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "active"}, 3, operation_id=retry_id)
+        failed = await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "active"}, 4, operation_id=retry_id)
     assert failed["status"] == "retryable_failure"
     assert await history_total("patient_conditions") == before and await history_total("operation_receipts") == before_receipts
-    recovered = await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "active"}, 3, operation_id=retry_id)
-    assert recovered["status"] == "accepted" and recovered["entityVersion"] == 4
+    recovered = await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "active"}, 4, operation_id=retry_id)
+    assert recovered["status"] == "accepted" and recovered["entityVersion"] == 5
 
-    assistant_write = await operation("UpdatePatientCondition", condition_id, {"sourceType": "professional"}, 4, actor=assistant)
+    assistant_write = await operation("UpdatePatientCondition", condition_id, {"sourceType": "professional"}, 5, actor=assistant)
     assert assistant_write["status"] == "accepted"
     assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {"clinicalProfile": "read_write", "conditions": "none", "allergies": "read_write"}}, 1))["entityVersion"] == 2
     await review(assistant, 403)
-    await operation("UpdatePatientCondition", condition_id, {"sourceType": "patient"}, 5, actor=assistant, status=403)
+    await operation("UpdatePatientCondition", condition_id, {"sourceType": "patient"}, 6, actor=assistant, status=403)
     response = await client.get(base + f"/sync/operations/{assistant_write['operationId']}", headers=access.authorization(assistant))
     access.expect(response, 403)
     assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {"clinicalProfile": "read_write", "conditions": "read_write", "allergies": "read_write"}}, 2))["entityVersion"] == 3
@@ -131,6 +146,7 @@ async def check_conditions(runtime, administrative, client, tokens):
     await review(outsider, 404)
 
     for factory, statement in (
+        (runtime, "UPDATE nightingale.patient_conditions SET id=uuid7()"),
         (runtime, "UPDATE nightingale.patient_condition_histories SET name='altered'"),
         (administrative, "DELETE FROM nightingale.patient_condition_histories"),
         (administrative, "UPDATE nightingale.patient_clinical_section_review_histories SET information_status='none_known'"),

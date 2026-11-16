@@ -58,7 +58,11 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
 
     assert (await operation("RegisterAccountDevice", owner["deviceId"], {}))["status"] == "accepted"
     patient_id = uuid7()
-    assert (await operation("RegisterPatient", patient_id, {"fullName": "Fixture Patient", "birthDate": "2000-02-29"}))["status"] == "accepted"
+    assert (await operation("RegisterPatient", patient_id, {"fullName": "Fixture Patient", "birthDate": "2000-02-29", "phoneCode": "+58", "phone": "4120000000", "identificationBasis": "own_document"}))["status"] == "accepted"
+    identifier_id = uuid7()
+    assert (await operation("AddPatientIdentifier", identifier_id, {"patientId": str(patient_id), "documentType": "national_id", "documentNumber": "FIXTURE-001"}))["status"] == "accepted"
+    assert (await operation("SetPatientCompletion", patient_id, {"completionStatus": "complete"}, 1))["status"] == "accepted"
+    assert (await operation("SetPatientProfileStatus", patient_id, {"status": "inactive"}, 2))["status"] == "accepted"
     assert (await operation("SetPatientSexAtBirth", patient_id, {"sexAtBirth": "unknown", "sourceType": "patient"}))["status"] == "accepted"
     condition_id = uuid7()
     assert (await operation("CreatePatientCondition", condition_id, {"patientId": str(patient_id), "name": "CND-A", "onsetDate": "2020-01-01"}))["status"] == "accepted"
@@ -69,6 +73,7 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     assert plain["clinicalSections"] == []
     plain_items = await items(plain["snapshotId"])
     assert not any(item["entityType"].startswith("patient_clinical") or item["entityType"] in ("patient_condition", "patient_allergy_intolerance") for item in plain_items)
+    assert not any(item["entityType"] == "patient_profile" and item["state"]["patientId"] == str(patient_id) for item in plain_items)
 
     clinical = await capture(include=True)
     assert set(clinical["clinicalSections"]) == {"profile", "conditions", "allergies"}
@@ -77,6 +82,7 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     assert {"patient_clinical_profile", "patient_condition", "patient_allergy_intolerance", "patient_clinical_section_review"}.issubset(types)
     assert not any(item["entityType"].endswith("history") for item in clinical_items)
     assert any(item["entityType"] == "patient_allergy_intolerance" and item["state"]["substance"] == "ALG-A" for item in clinical_items)
+    assert any(item["entityType"] == "patient_profile" and item["state"]["patientId"] == str(patient_id) for item in clinical_items)
     assert (await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "resolved"}, 1))["status"] == "accepted"
     response = await client.get(base + f"/sync/changes?cursor={clinical['baseCursor']}", headers=access.authorization(owner))
     access.expect(response, 200)
@@ -103,7 +109,7 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     access.expect(response, 410)
 
     async with administrative() as db:
-        events = (await db.execute(text("SELECT action,object_type,object_key FROM nightingale.audit_events WHERE action IN ('CaptureClinicalSnapshot','ReadClinicalSnapshotPage')"))).all()
+        events = (await db.execute(text("SELECT action,object_type,object_key FROM nightingale.audit_events WHERE action IN ('CaptureClinicalSnapshot','ReadClinicalSnapshotPage','ReadClinicalChanges')"))).all()
         assert len(events) >= 2
         assert all("CND-A" not in str(event) and "ALG-A" not in str(event) for event in events)
 
@@ -114,6 +120,13 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
         access.expect(response, 503)
     async with administrative() as db:
         assert await db.scalar(text("SELECT count(*) FROM nightingale.sync_snapshots WHERE account_id=:id AND clinical_sections<>'[]'"), {"id": account_id}) == 2
+        delta_audits = await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE account_id=:id AND action='ReadClinicalChanges'"), {"id": account_id})
+    assert delta_audits == 2
+    with patch.object(dao_events, "create", side_effect=SQLAlchemyError("Fixture audit failure")):
+        response = await client.get(base + f"/sync/changes?cursor={limited['baseCursor']}", headers=access.authorization(assistant))
+        access.expect(response, 503)
+    async with administrative() as db:
+        assert await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE account_id=:id AND action='ReadClinicalChanges'"), {"id": account_id}) == delta_audits
     print("Clinical download checks passed: opt-in, sections, current state, delta, epoch, audit and rollback.")
 
 

@@ -16,6 +16,11 @@ class AllergySchemaTests(unittest.TestCase):
         self.assertIsNone(payload.reaction_description)
         self.assertEqual(payload.clinical_status, "active")
         self.assertEqual(payload.verification_status, "unconfirmed")
+        with self.assertRaises(ValidationError):
+            CreatePatientAllergyIntolerancePayload.model_validate({
+                "patientId": str(uuid7()), "substance": "ALG-A",
+                "verificationStatus": "entered-in-error",
+            })
 
     def test_intolerance_is_not_reclassified(self):
         payload = CreatePatientAllergyIntolerancePayload.model_validate({

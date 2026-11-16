@@ -17,6 +17,7 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
     from src.api.authorization.application.authorization_cases import identified_users
     from src.api.sync.repository.dao import dao_changes
     from src.core import Ok
+    from src.core.db import DAOError
 
     owner, assistant, outsider = [await access.issue(client, token["access_token"]) for token in tokens]
     async with administrative() as db:
@@ -75,6 +76,21 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
     assert (await operation("CreateInvitation", invitation, {"inviteeUserId": assistant["userId"]}))["status"] == "accepted"
     await accept(invitation)
     assert (await operation("RegisterAccountDevice", assistant["deviceId"], {}, actor=assistant))["status"] == "accepted"
+
+    async def get_result(result_id, actor=assistant, status=200):
+        response = await client.get(
+            base + f"/sync/operations/{result_id}", headers=access.authorization(actor)
+        )
+        access.expect(response, status)
+        return response.json()
+
+    async def result_audits():
+        async with administrative() as db:
+            return (await db.execute(text("""
+                SELECT object_key FROM nightingale.audit_events
+                WHERE account_id=:account_id AND action='ReadOperationResult'
+            """), {"account_id": account_id})).scalars().all()
+
     initial = await state()
     assert initial[1:4] == ("read_write", "read_write", "read_write")
 
@@ -142,6 +158,66 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
     response = await client.get(base + f"/members/{assistant['userId']}/clinical-permissions", headers=access.authorization(owner))
     assert response.json()["clinicalPermissions"] == winner["state"]["clinicalPermissions"]
     assert response.json()["membershipVersion"] == 6
+
+    read_write = {"clinicalProfile": "none", "conditions": "read_write", "allergies": "read_write"}
+    assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": read_write}, 6))["status"] == "accepted"
+    patient_id = uuid7()
+    assert (await operation("RegisterPatient", patient_id, {"fullName": "Fixture Patient"}))["status"] == "accepted"
+    condition_id = uuid7()
+    condition_payload = {"patientId": str(patient_id), "name": "Fixture condition"}
+    assert (await operation("CreatePatientCondition", condition_id, condition_payload, actor=assistant, operation_id=condition_id))["status"] == "accepted"
+    allergy_review_id = uuid7()
+    allergy_payload = {"section": "allergies", "informationStatus": "unknown"}
+    assert (await operation("SetPatientClinicalSectionReview", patient_id, allergy_payload, actor=assistant, operation_id=allergy_review_id))["status"] == "accepted"
+
+    conditions_none = {"clinicalProfile": "none", "conditions": "none", "allergies": "read_write"}
+    assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": conditions_none}, 7))["status"] == "accepted"
+    await operation("CreatePatientCondition", condition_id, condition_payload, actor=assistant, operation_id=condition_id, status=403)
+    await operation("CreatePatientCondition", condition_id, {**condition_payload, "name": "Changed"}, actor=assistant, operation_id=condition_id, status=403)
+    await get_result(condition_id, status=403)
+    duplicate = await operation("SetPatientClinicalSectionReview", patient_id, allergy_payload, actor=assistant, operation_id=allergy_review_id)
+    assert duplicate["status"] == "duplicate"
+    assert (await get_result(allergy_review_id))["state"]["section"] == "allergies"
+
+    allergies_none = {"clinicalProfile": "none", "conditions": "read_write", "allergies": "none"}
+    assert (await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": allergies_none}, 8))["status"] == "accepted"
+    assert (await operation("CreatePatientCondition", condition_id, condition_payload, actor=assistant, operation_id=condition_id))["status"] == "duplicate"
+    assert (await get_result(condition_id))["state"]["name"] == "Fixture condition"
+    await operation("SetPatientClinicalSectionReview", patient_id, allergy_payload, actor=assistant, operation_id=allergy_review_id, status=403)
+    await get_result(allergy_review_id, status=403)
+
+    assistant_second = await access.issue(client, tokens[1]["access_token"])
+    assert (await operation("RegisterAccountDevice", assistant_second["deviceId"], {}, actor=assistant_second))["status"] == "accepted"
+    assert (await operation("CreatePatientCondition", condition_id, condition_payload, actor=assistant_second, operation_id=condition_id))["status"] == "duplicate"
+    assert (await get_result(condition_id, actor=assistant_second))["status"] == "accepted"
+    await operation("SetPatientClinicalSectionReview", patient_id, allergy_payload, actor=assistant_second, operation_id=allergy_review_id, status=403)
+    await get_result(allergy_review_id, actor=assistant_second, status=403)
+
+    audits = await result_audits()
+    assert len(audits) == 6 and set(audits) == {str(condition_id), str(allergy_review_id)}
+    before_audits = len(audits)
+    async def fail_audit(db, event):
+        raise DAOError("Fixture audit failure")
+    with patch("src.api.sync.application.operations_cases.record_control", side_effect=fail_audit):
+        await get_result(condition_id, status=503)
+    assert len(await result_audits()) == before_audits
+
+    race_read = client.get(
+        base + f"/sync/operations/{condition_id}", headers=access.authorization(assistant_second)
+    )
+    race_revoke = operation(
+        "SetMemberClinicalPermissions", assistant["userId"],
+        {"clinicalPermissions": conditions_none}, 9,
+    )
+    race_response, race_permission = await asyncio.gather(race_read, race_revoke)
+    access.expect(race_response, race_response.status_code)
+    assert race_response.status_code in (200, 403)
+    assert race_permission["status"] == "accepted"
+    await get_result(condition_id, actor=assistant_second, status=403)
+    assert (await operation(
+        "SetMemberClinicalPermissions", assistant["userId"],
+        {"clinicalPermissions": allergies_none}, 10,
+    ))["status"] == "accepted"
 
     owner_second = await access.issue(client, tokens[0]["access_token"])
     assert (await operation("RegisterAccountDevice", owner_second["deviceId"], {}, actor=owner_second))["status"] == "accepted"

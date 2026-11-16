@@ -6,6 +6,11 @@ from uuid import uuid7
 from pydantic import ValidationError
 
 from src.api.accounts.domain.accounts import ClinicalPermissions, ClinicalPermissionsPayload
+from src.api.clinical_records.application.access_cases import (
+    clinical_result_allowed,
+    clinical_result_section,
+)
+from src.api.clinical_records.domain.conditions import SetPatientClinicalSectionReviewPayload
 from src.api.sync.application.capabilities_cases import get_capabilities
 from src.api.sync.application.download_cases import clinical_change_allowed, position_for_scope
 from src.api.sync.domain.downloads import SnapshotRequest, SyncPosition, SyncWindow
@@ -35,6 +40,52 @@ class ClinicalPermissionTests(unittest.TestCase):
         self.assertIn("SetMemberClinicalPermissions", capabilities.online_only_actions)
         with self.assertRaises(ValidationError):
             ClinicalPermissionsPayload.model_validate({"clinicalPermissions": {}, "ownerUserId": str(uuid7())})
+
+    def test_result_scope_covers_every_clinical_action_and_fails_closed(self):
+        expected = {
+            "SetPatientSexAtBirth": "profile",
+            "CreatePatientCondition": "conditions",
+            "UpdatePatientCondition": "conditions",
+            "InvalidatePatientCondition": "conditions",
+            "CreatePatientAllergyIntolerance": "allergies",
+            "UpdatePatientAllergyIntolerance": "allergies",
+            "InvalidatePatientAllergyIntolerance": "allergies",
+        }
+        for action, section in expected.items():
+            with self.subTest(action=action):
+                self.assertEqual(clinical_result_section(action, None), section)
+        for section in ("conditions", "allergies"):
+            payload = SetPatientClinicalSectionReviewPayload(
+                section=section, information_status="unknown"
+            )
+            self.assertEqual(
+                clinical_result_section("SetPatientClinicalSectionReview", payload),
+                section,
+            )
+        self.assertIsNone(
+            clinical_result_section("SetPatientClinicalSectionReview", None)
+        )
+        self.assertIsNone(clinical_result_section("CreateAppointment", None))
+
+    def test_result_policy_requires_current_section_write_access(self):
+        for section in ("profile", "conditions", "allergies"):
+            for level in ("none", "read", "read_write"):
+                context = SimpleNamespace(
+                    owner=False,
+                    clinical_permissions=ClinicalPermissions.model_validate({
+                        "clinicalProfile": level if section == "profile" else "read",
+                        "conditions": level if section == "conditions" else "read",
+                        "allergies": level if section == "allergies" else "read",
+                    }),
+                )
+                with self.subTest(section=section, level=level):
+                    self.assertEqual(
+                        clinical_result_allowed(context, section),
+                        level == "read_write",
+                    )
+        owner = SimpleNamespace(owner=True, clinical_permissions=ClinicalPermissions())
+        self.assertTrue(clinical_result_allowed(owner, "conditions"))
+        self.assertFalse(clinical_result_allowed(owner, None))
 
     def test_clinical_audiences_require_their_explicit_section(self):
         self.assertTrue(clinical_change_allowed("members", []))

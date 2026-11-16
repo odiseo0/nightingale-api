@@ -6,7 +6,7 @@ from uuid import uuid7
 from pydantic import ValidationError
 
 from src.api.clinical_records.application.clinical_cases import clinical_profile_response
-from src.api.clinical_records.domain.clinical import SetPatientSexAtBirthPayload
+from src.api.clinical_records.domain.clinical import ClinicalHistoryQuery, SetPatientSexAtBirthPayload
 from src.api.sync.application.capabilities_cases import get_capabilities
 
 
@@ -19,6 +19,13 @@ class ClinicalProfileTests(unittest.TestCase):
             SetPatientSexAtBirthPayload.model_validate({"sourceType": "patient"})
         with self.assertRaises(ValidationError):
             SetPatientSexAtBirthPayload.model_validate({"sexAtBirth": "other", "actorUserId": str(uuid7())})
+
+    def test_birth_history_accepts_incremental_version_filter(self):
+        self.assertEqual(ClinicalHistoryQuery(afterVersion=2).after_version, 2)
+        with self.assertRaises(ValidationError):
+            ClinicalHistoryQuery(afterVersion=-1)
+        with self.assertRaises(ValidationError):
+            ClinicalHistoryQuery(unknown=1)
 
     def test_action_is_available_offline(self):
         capabilities = get_capabilities().value

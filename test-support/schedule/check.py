@@ -346,6 +346,8 @@ async def check_schedule(runtime, administrative, client, tokens):
     assert (await availability())["availableIntervals"] == [{"startsAt":"2026-10-27T15:00:00Z","endsAt":"2026-10-27T16:00:00Z"}]
     assert (await availability("2026-10-26T04:00:00Z","2026-10-27T04:00:00Z"))["availableIntervals"] == []
     await availability(duration=0,status=422)
+    await availability(duration=True,status=422)
+    await availability(duration=1.5,status=422)
     await availability("2026-10-01T00:00:00Z","2026-11-01T00:01:00Z",status=422)
     await availability(actor=outsider,status=404)
 
