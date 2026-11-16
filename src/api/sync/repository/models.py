@@ -36,8 +36,6 @@ class OperationReceipt(Base):
 
 
 class ChangeLog(Base):
-    __tablename__ = "change_log"
-
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     sequence: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     ordinal: Mapped[int] = mapped_column(primary_key=True)
@@ -73,6 +71,7 @@ class SyncSnapshot(Base):
     permission_epoch: Mapped[int] = mapped_column(BigInteger)
     audience: Mapped[str] = mapped_column(Text)
     item_count: Mapped[int] = mapped_column(BigInteger)
+    clinical_sections: Mapped[list[str]] = mapped_column(JSONB, server_default="[]")
     created_at: Mapped[datetime]
     expires_at: Mapped[datetime]
 

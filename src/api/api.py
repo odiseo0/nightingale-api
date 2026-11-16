@@ -9,6 +9,15 @@ from src.api.audit.infrastructure.audit_api import router as audit_router
 from src.api.authorization.infrastructure.authorization_api import (
     router as authorization_router,
 )
+from src.api.clinical_records.infrastructure.allergies_api import (
+    router as allergies_router,
+)
+from src.api.clinical_records.infrastructure.clinical_api import (
+    router as clinical_router,
+)
+from src.api.clinical_records.infrastructure.conditions_api import (
+    router as conditions_router,
+)
 from src.api.health import router as health_router
 from src.api.patients.infrastructure.contacts_api import router as contacts_router
 from src.api.patients.infrastructure.patients_api import router as patients_router
@@ -33,6 +42,9 @@ router.include_router(operations_router)
 router.include_router(downloads_router)
 router.include_router(events_router)
 router.include_router(snapshots_router)
+router.include_router(clinical_router)
+router.include_router(conditions_router)
+router.include_router(allergies_router)
 router.include_router(patients_router)
 router.include_router(contacts_router)
 router.include_router(services_router)

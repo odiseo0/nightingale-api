@@ -20,9 +20,11 @@ from src.api.accounts.domain.accounts import (
     AccountDeviceResponse,
     AccountPolicyPayload,
     AccountResponse,
+    ClinicalPermissionsPayload,
     CreateInvitationPayload,
     InvitationAcceptanceResult,
     InvitationResponse,
+    MemberClinicalPermissionsResponse,
     MemberResponse,
     MembershipStatusPayload,
     ProfessionalPayload,
@@ -34,6 +36,24 @@ from src.api.appointments.domain.appointments import (
     AppointmentResponse,
     CreateAppointmentPayload,
     EmptyAppointmentPayload,
+)
+from src.api.clinical_records.domain.allergies import (
+    CreatePatientAllergyIntolerancePayload,
+    InvalidatePatientAllergyIntolerancePayload,
+    PatientAllergyIntoleranceResponse,
+    UpdatePatientAllergyIntolerancePayload,
+)
+from src.api.clinical_records.domain.clinical import (
+    ClinicalProfileResponse,
+    SetPatientSexAtBirthPayload,
+)
+from src.api.clinical_records.domain.conditions import (
+    ClinicalSectionReviewResponse,
+    CreatePatientConditionPayload,
+    InvalidatePatientConditionPayload,
+    PatientConditionResponse,
+    SetPatientClinicalSectionReviewPayload,
+    UpdatePatientConditionPayload,
 )
 from src.api.patients.domain.contacts import (
     CONTACT_SCHEMAS,
@@ -100,6 +120,21 @@ BLOCK_SCHEMAS: dict[str, type[BaseModel]] = {
     "UpdateScheduleBlock": ScheduleBlockPatch,
     "SetScheduleBlockStatus": ScheduleRuleStatusPayload,
 }
+ALLERGY_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientAllergyIntolerance": CreatePatientAllergyIntolerancePayload,
+    "UpdatePatientAllergyIntolerance": UpdatePatientAllergyIntolerancePayload,
+    "InvalidatePatientAllergyIntolerance": InvalidatePatientAllergyIntolerancePayload,
+}
+
+
+CONDITION_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientCondition": CreatePatientConditionPayload,
+    "UpdatePatientCondition": UpdatePatientConditionPayload,
+    "InvalidatePatientCondition": InvalidatePatientConditionPayload,
+    "SetPatientClinicalSectionReview": SetPatientClinicalSectionReviewPayload,
+}
+
+
 APPOINTMENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateAppointment": CreateAppointmentPayload,
     "ConfirmAppointment": EmptyAppointmentPayload,
@@ -112,6 +147,7 @@ APPOINTMENT_SCHEMAS: dict[str, type[BaseModel]] = {
 OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateInvitation": CreateInvitationPayload,
     "SetMembershipStatus": MembershipStatusPayload,
+    "SetMemberClinicalPermissions": ClinicalPermissionsPayload,
     "UpdateAccountDetails": AccountDetailsPatch,
     "UpdateAccountPolicy": AccountPolicyPayload,
     "SetAccountStatus": MembershipStatusPayload,
@@ -121,6 +157,9 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "SetPatientProfileStatus": PatientStatusPayload,
     "SetPatientCompletion": PatientCompletionPayload,
     "AddPatientIdentifier": AddPatientIdentifierPayload,
+    "SetPatientSexAtBirth": SetPatientSexAtBirthPayload,
+    **CONDITION_SCHEMAS,
+    **ALLERGY_SCHEMAS,
     **CONTACT_SCHEMAS,
     **SERVICE_SCHEMAS,
     **OFFER_SCHEMAS,
@@ -228,6 +267,7 @@ type OperationState = (
     | InvitationResponse
     | InvitationAcceptanceResult
     | MemberResponse
+    | MemberClinicalPermissionsResponse
     | ProfessionalResponse
     | PatientProfileResponse
     | PatientIdentifierResponse
@@ -239,6 +279,10 @@ type OperationState = (
     | ScheduleExceptionResponse
     | ScheduleBlockResponse
     | AppointmentResponse
+    | ClinicalProfileResponse
+    | PatientConditionResponse
+    | ClinicalSectionReviewResponse
+    | PatientAllergyIntoleranceResponse
 )
 
 

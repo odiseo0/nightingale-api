@@ -42,6 +42,14 @@ from src.api.audit.application.audit_cases import record_operation
 from src.api.audit.domain.audit import OperationAudit
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
+from src.api.clinical_records.application.allergies_cases import apply_allergy_operation
+from src.api.clinical_records.application.clinical_cases import apply_clinical_operation
+from src.api.clinical_records.application.conditions_cases import (
+    apply_condition_operation,
+)
+from src.api.clinical_records.domain.conditions import (
+    SetPatientClinicalSectionReviewPayload,
+)
 from src.api.patients.application.contacts_cases import (
     apply_contact_operation,
 )
@@ -63,8 +71,10 @@ from src.api.services.application.services_cases import (
 from src.api.services.domain.offers import ServiceOfferResponse
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
 from src.api.sync.domain.operations import (
+    ALLERGY_SCHEMAS,
     APPOINTMENT_SCHEMAS,
     BLOCK_SCHEMAS,
+    CONDITION_SCHEMAS,
     CONTACT_SCHEMAS,
     EXCEPTION_SCHEMAS,
     OFFER_SCHEMAS,
@@ -283,6 +293,7 @@ async def accept_operation(
                 "CreateInvitation",
                 "RevokeInvitation",
                 "SetMembershipStatus",
+                "SetMemberClinicalPermissions",
                 "UpdateAccountDetails",
                 "UpdateAccountPolicy",
                 "SetAccountStatus",
@@ -361,6 +372,7 @@ async def accept_operation(
             "CreateInvitation": "invitation",
             "RevokeInvitation": "invitation",
             "SetMembershipStatus": "membership",
+            "SetMemberClinicalPermissions": "membership",
             "UpdateAccountDetails": "account",
             "UpdateAccountPolicy": "account",
             "SetAccountStatus": "account",
@@ -372,6 +384,14 @@ async def accept_operation(
             "SetPatientProfileStatus": "patient_profile",
             "SetPatientCompletion": "patient_profile",
             "AddPatientIdentifier": "patient_identifier",
+            "SetPatientSexAtBirth": "patient_clinical_profile",
+            "CreatePatientCondition": "patient_condition",
+            "UpdatePatientCondition": "patient_condition",
+            "InvalidatePatientCondition": "patient_condition",
+            "SetPatientClinicalSectionReview": "patient_clinical_section_review",
+            "CreatePatientAllergyIntolerance": "patient_allergy_intolerance",
+            "UpdatePatientAllergyIntolerance": "patient_allergy_intolerance",
+            "InvalidatePatientAllergyIntolerance": "patient_allergy_intolerance",
         }.get(operation.action, "invitation" if internal_invitation else "unknown")
         changes = []
         permission_changed = True
@@ -407,6 +427,8 @@ async def accept_operation(
                 or operation.action in EXCEPTION_SCHEMAS
                 or operation.action in BLOCK_SCHEMAS
                 or operation.action in APPOINTMENT_SCHEMAS
+                or operation.action in CONDITION_SCHEMAS
+                or operation.action in ALLERGY_SCHEMAS
                 or operation.action in OFFER_SCHEMAS
                 or operation.action in SERVICE_SCHEMAS
                 or operation.action in CONTACT_SCHEMAS
@@ -415,6 +437,7 @@ async def accept_operation(
                     "CreateInvitation",
                     "RevokeInvitation",
                     "SetMembershipStatus",
+                    "SetMemberClinicalPermissions",
                     "UpdateAccountDetails",
                     "UpdateAccountPolicy",
                     "SetAccountStatus",
@@ -426,6 +449,7 @@ async def accept_operation(
                     "SetPatientProfileStatus",
                     "SetPatientCompletion",
                     "AddPatientIdentifier",
+                    "SetPatientSexAtBirth",
                 )
                 or internal_invitation
             ):
@@ -479,6 +503,52 @@ async def accept_operation(
                         operation.expected_version,
                         payload,
                     )
+                elif operation.action in ALLERGY_SCHEMAS:
+                    if not isinstance(operation.entity_key, UUID):
+                        return Err(AccountRuleError("VALIDATION_ERROR"))
+
+                    effect = await apply_allergy_operation(
+                        db,
+                        context,
+                        operation.action,
+                        operation.entity_key,
+                        operation.expected_version,
+                        payload,
+                        operation.operation_id,
+                    )
+                elif operation.action in CONDITION_SCHEMAS:
+                    if not isinstance(operation.entity_key, UUID):
+                        return Err(AccountRuleError("VALIDATION_ERROR"))
+
+                    apply_operation = (
+                        apply_allergy_operation
+                        if operation.action == "SetPatientClinicalSectionReview"
+                        and isinstance(payload, SetPatientClinicalSectionReviewPayload)
+                        and payload.section == "allergies"
+                        else apply_condition_operation
+                    )
+                    effect = await apply_operation(
+                        db,
+                        context,
+                        operation.action,
+                        operation.entity_key,
+                        operation.expected_version,
+                        payload,
+                        operation.operation_id,
+                    )
+                elif operation.action == "SetPatientSexAtBirth":
+                    if not isinstance(operation.entity_key, UUID):
+                        return Err(AccountRuleError("VALIDATION_ERROR"))
+
+                    effect = await apply_clinical_operation(
+                        db,
+                        context,
+                        operation.action,
+                        operation.entity_key,
+                        operation.expected_version,
+                        payload,
+                        operation.operation_id,
+                    )
                 elif operation.action in (
                     "RegisterPatient",
                     "UpdatePatientProfile",
@@ -493,10 +563,16 @@ async def accept_operation(
                         operation.entity_key,
                         operation.expected_version,
                         payload,
+                        operation.operation_id,
                     )
                 elif (
                     operation.action
-                    in ("CreateInvitation", "RevokeInvitation", "SetMembershipStatus")
+                    in (
+                        "CreateInvitation",
+                        "RevokeInvitation",
+                        "SetMembershipStatus",
+                        "SetMemberClinicalPermissions",
+                    )
                     or internal_invitation
                 ):
                     effect = await apply_invitation_operation(
@@ -844,7 +920,28 @@ async def get_operation(
         if receipt is Empty:
             return Err(OperationNotFound())
 
+        if receipt.action == "SetMemberClinicalPermissions" and not context.owner:
+            return Err(AccessDenied())
+
         if context.account.status != "active" and receipt.action != "SetAccountStatus":
+            return Err(AccessDenied())
+
+        if (
+            receipt.action in ALLERGY_SCHEMAS
+            and context.clinical_permissions.allergies != "read_write"
+        ):
+            return Err(AccessDenied())
+
+        if (
+            receipt.action in CONDITION_SCHEMAS
+            and context.clinical_permissions.conditions != "read_write"
+        ):
+            return Err(AccessDenied())
+
+        if (
+            receipt.action == "SetPatientSexAtBirth"
+            and context.clinical_permissions.clinical_profile != "read_write"
+        ):
             return Err(AccessDenied())
 
         if receipt.action in SERVICE_SCHEMAS or receipt.action in OFFER_SCHEMAS:

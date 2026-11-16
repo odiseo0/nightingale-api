@@ -20,6 +20,7 @@ def get_capabilities() -> Result[CapabilitiesResponse, Never]:
                 "RevokeInvitation",
                 "SetAccountStatus",
                 "SetMembershipStatus",
+                "SetMemberClinicalPermissions",
                 "UpdateAccountDetails",
                 "UpdateAccountPolicy",
             ],

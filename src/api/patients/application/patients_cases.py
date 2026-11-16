@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from pydantic import ValidationError
 
@@ -13,10 +13,13 @@ from src.api.accounts.domain.accounts import (
     AccountEffect,
 )
 from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleError
+from src.api.audit.application.audit_cases import record_control
+from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied
 from src.api.patients.domain.patients import (
     AddPatientIdentifierPayload,
+    PatientBirthDateChangeResponse,
     PatientCompletionPayload,
     PatientFields,
     PatientIdentifierResponse,
@@ -27,6 +30,7 @@ from src.api.patients.domain.patients import (
     RegisterPatientPayload,
 )
 from src.api.patients.repository.dao import (
+    dao_birth_changes,
     dao_identifiers,
     dao_patients,
     dao_profiles,
@@ -35,7 +39,7 @@ from src.api.patients.repository.dao import (
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel, PageQuery, PaginatedResponse
-from src.core.utils.utils import Empty
+from src.core.utils.utils import Empty, EmptyType
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -129,6 +133,7 @@ async def apply_patient_operation(
     entity_key: UUID | dict[str, UUID],
     expected_version: int,
     payload: BaseModel | None,
+    operation_id: UUID,
 ) -> Result[AccountEffect, AccountObjectNotFound | AccountRuleError]:
     if not isinstance(entity_key, UUID):
         return Err(AccountRuleError("VALIDATION_ERROR"))
@@ -301,7 +306,25 @@ async def apply_patient_operation(
         ):
             return Err(AccountRuleError("COMPLETENESS_CONFLICT", row.version))
 
+        previous_birth_date = row.birth_date
         row = await dao_profiles.revise(db, row, values, now)
+
+        if action == "UpdatePatientProfile" and previous_birth_date != row.birth_date:
+            await dao_birth_changes.create(
+                db,
+                obj_in={
+                    "id": uuid7(),
+                    "account_id": context.account.id,
+                    "patient_id": row.patient_id,
+                    "previous_birth_date": previous_birth_date,
+                    "new_birth_date": row.birth_date,
+                    "patient_version": row.version,
+                    "actor_user_id": context.actor.user_id,
+                    "operation_id": operation_id,
+                    "changed_at": now,
+                },
+                commit=False,
+            )
         changes = []
 
     state = PatientProfileResponse.model_validate(row)
@@ -364,5 +387,98 @@ async def read_patients(
                 )
             else:
                 response = PatientProfileResponse.model_validate(row)
+
+    return Ok(response)
+
+
+async def clinical_patient(
+    db: AsyncSession, account_id: UUID, patient_id: UUID
+) -> PatientProfileResponse | EmptyType:
+    row = await dao_profiles.scoped(db, account_id, patient_id)
+
+    if row is Empty:
+        return Empty
+
+    return PatientProfileResponse.model_validate(row)
+
+
+async def lock_clinical_patient(
+    db: AsyncSession, account_id: UUID, patient_id: UUID
+) -> PatientProfileResponse | EmptyType:
+    row = await dao_profiles.lock_scoped(db, account_id, patient_id)
+
+    if row is Empty:
+        return Empty
+
+    return PatientProfileResponse.model_validate(row)
+
+
+async def clinical_server_time(db: AsyncSession) -> datetime:
+    return await dao_patients.server_time(db)
+
+
+async def clinical_today(db: AsyncSession, time_zone: str) -> date:
+    return await dao_patients.local_today(db, time_zone)
+
+
+async def read_birth_date_changes(
+    db: AsyncSession,
+    credential: str | None,
+    account_id: UUID,
+    patient_id: UUID,
+    query: PageQuery,
+):
+    async with transaction(db):
+        identity = await authenticate(db, credential)
+
+        if isinstance(identity, Err):
+            return identity
+
+        scope = await account_context(
+            db, identity.value, account_id, require_device=True
+        )
+
+        if isinstance(scope, Err):
+            return scope
+
+        if scope.value.account.status != "active":
+            return Err(AccessDenied())
+
+        if await dao_profiles.scoped(db, account_id, patient_id) is Empty:
+            return Err(AccountObjectNotFound())
+
+        rows, total = await dao_birth_changes.page(
+            db, account_id, patient_id, (query.page - 1) * query.shows, query.shows
+        )
+        response = PaginatedResponse[PatientBirthDateChangeResponse](
+            items=[
+                PatientBirthDateChangeResponse(
+                    change_id=row.id,
+                    patient_id=row.patient_id,
+                    previous_birth_date=row.previous_birth_date,
+                    new_birth_date=row.new_birth_date,
+                    patient_version=row.patient_version,
+                    actor_user_id=row.actor_user_id,
+                    operation_id=row.operation_id,
+                    changed_at=row.changed_at,
+                )
+                for row in rows
+            ],
+            total=total,
+        )
+        await record_control(
+            db,
+            ControlAudit(
+                account_id=account_id,
+                actor_user_id=scope.value.actor.user_id,
+                actor_device_id=scope.value.actor.device_id,
+                action="ReadBirthDateChanges",
+                object_type="patient_profile",
+                object_key=str(patient_id),
+                outcome="accepted",
+                correlation_id=uuid7(),
+                occurred_at=await dao_patients.server_time(db),
+            ),
+        )
 
     return Ok(response)

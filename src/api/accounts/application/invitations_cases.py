@@ -9,10 +9,12 @@ from src.api.accounts.domain.accounts import (
     AccountContext,
     AccountEffect,
     AccountResponse,
+    ClinicalPermissionsPayload,
     CreateInvitationPayload,
     InvitationAcceptanceResult,
     InvitationQuery,
     InvitationResponse,
+    MemberClinicalPermissionsResponse,
     MemberResponse,
     MembershipStatusPayload,
 )
@@ -115,10 +117,59 @@ async def apply_invitation_operation(
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
     if (
-        action not in ("CreateInvitation", "SetMembershipStatus")
+        action not in ("CreateInvitation", "SetMembershipStatus", "SetMemberClinicalPermissions")
         and payload.model_fields_set
     ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
+
+    if action == "SetMemberClinicalPermissions":
+        if not isinstance(payload, ClinicalPermissionsPayload):
+            return Err(AccountRuleError("VALIDATION_ERROR"))
+
+        if entity_key == context.account.owner_user_id:
+            return Err(AccessDenied())
+
+        membership = await dao_memberships.get_scoped(db, context.account.id, entity_key)
+        if membership is Empty:
+            return Err(AccountObjectNotFound())
+
+        if membership.version != expected_version:
+            return Err(AccountRuleError("VERSION_CONFLICT", membership.version))
+
+        data = payload.clinical_permissions
+        changes = {
+            "clinical_profile_access": data.clinical_profile,
+            "conditions_access": data.conditions,
+            "allergies_access": data.allergies,
+        }
+        if all(getattr(membership, name) == value for name, value in changes.items()):
+            return Err(AccountRuleError("NO_CHANGES", membership.version))
+
+        membership = await dao_memberships.set_clinical_permissions(db, membership, changes, now)
+        state = MemberClinicalPermissionsResponse(
+            user_id=membership.user_id,
+            clinical_permissions=data,
+            membership_version=membership.version,
+        )
+        users = await identified_users(db, [entity_key])
+        member = MemberResponse(
+            user_id=entity_key,
+            display_name=users[entity_key].display_name,
+            role="assistant",
+            status=membership.status,
+            created_at=membership.created_at,
+            updated_at=membership.updated_at,
+            version=membership.version,
+        )
+
+        return Ok(
+            AccountEffect(
+                state,
+                state.membership_version,
+                [AccountChange("membership", str(entity_key), member, member.version)],
+                True,
+            )
+        )
 
     if action == "SetMembershipStatus":
         if not isinstance(payload, MembershipStatusPayload):

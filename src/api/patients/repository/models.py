@@ -76,3 +76,15 @@ class PatientContactRelationship(Base):
     created_at: Mapped[datetime]
     updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
+
+
+class PatientBirthDateChange(Base):
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    account_id: Mapped[UUID]
+    patient_id: Mapped[UUID]
+    previous_birth_date: Mapped[date | None]
+    new_birth_date: Mapped[date | None]
+    patient_version: Mapped[int]
+    actor_user_id: Mapped[UUID]
+    operation_id: Mapped[UUID]
+    changed_at: Mapped[datetime]

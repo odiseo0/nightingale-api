@@ -163,6 +163,17 @@ class PatientProfileResponse(AdministrativeResponse):
         return age < 18
 
 
+class PatientBirthDateChangeResponse(BaseModel):
+    change_id: UUID7
+    patient_id: UUID7
+    previous_birth_date: date | None
+    new_birth_date: date | None
+    patient_version: int
+    actor_user_id: UUID7
+    operation_id: UUID7
+    changed_at: AwareDatetime
+
+
 class PatientIdentifierResponse(AdministrativeResponse):
     id: UUID7
     patient_id: UUID7

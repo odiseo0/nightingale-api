@@ -20,11 +20,16 @@ from .models import (
 
 class AccountDAO(DAO[Account, BaseModel, BaseModel]):
     async def revise(
-        self, db: AsyncSession, account_id: UUID, changes: dict[str, object], now: datetime
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        changes: dict[str, object],
+        now: datetime,
     ) -> Account:
         account = await self.get_for_update(
             db, account_id, execution_options={"populate_existing": True}
         )
+
         if account is Empty:
             raise DAOError("La cuenta que se va a actualizar no existe")
 
@@ -106,7 +111,9 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
 
 
 class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
-    async def page(self, db: AsyncSession, account_id: UUID, offset: int, shows: int) -> tuple[list[AccountMembership], int]:
+    async def page(
+        self, db: AsyncSession, account_id: UUID, offset: int, shows: int
+    ) -> tuple[list[AccountMembership], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
         total = await self.count(db, statement)
         rows = (
@@ -117,7 +124,9 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
         return list(rows), total
 
-    async def get_scoped(self, db: AsyncSession, account_id: UUID, user_id: UUID) -> AccountMembership | EmptyType:
+    async def get_scoped(
+        self, db: AsyncSession, account_id: UUID, user_id: UUID
+    ) -> AccountMembership | EmptyType:
         row = await db.scalar(
             select(self.model)
             .where(self.model.account_id == account_id, self.model.user_id == user_id)
@@ -147,6 +156,22 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
         return row
 
+    async def set_clinical_permissions(
+        self,
+        db: AsyncSession,
+        row: AccountMembership,
+        permissions: dict[str, str],
+        now: datetime,
+    ) -> AccountMembership:
+        for name, value in permissions.items():
+            setattr(row, name, value)
+
+        row.version += 1
+        row.updated_at = now
+        await self.flush(db)
+
+        return row
+
     async def create_membership(
         self,
         db: AsyncSession,
@@ -173,26 +198,53 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
 
 class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
-    async def scoped(self, db: AsyncSession, account_id: UUID, professional_id: UUID) -> Row[Professional, str, str] | None:
-        return (await db.execute(
-            select(self.model, AccountProfessional.status, AccountMembership.status)
-            .join(AccountProfessional, AccountProfessional.professional_id == self.model.id)
-            .join(AccountMembership, (AccountMembership.account_id == AccountProfessional.account_id) & (AccountMembership.user_id == self.model.user_id))
-            .where(AccountProfessional.account_id == account_id, self.model.id == professional_id)
-            .execution_options(populate_existing=True)
-        )).one_or_none()
+    async def scoped(
+        self, db: AsyncSession, account_id: UUID, professional_id: UUID
+    ) -> Row[Professional, str, str] | None:
+        return (
+            await db.execute(
+                select(self.model, AccountProfessional.status, AccountMembership.status)
+                .join(
+                    AccountProfessional,
+                    AccountProfessional.professional_id == self.model.id,
+                )
+                .join(
+                    AccountMembership,
+                    (AccountMembership.account_id == AccountProfessional.account_id)
+                    & (AccountMembership.user_id == self.model.user_id),
+                )
+                .where(
+                    AccountProfessional.account_id == account_id,
+                    self.model.id == professional_id,
+                )
+                .execution_options(populate_existing=True)
+            )
+        ).one_or_none()
 
-    async def catalog_accounts(self, db: AsyncSession, user_id: UUID, source_account_id: UUID) -> list[UUID]:
-        professional_id = select(AccountProfessional.professional_id).where(
-            AccountProfessional.account_id == source_account_id,
-            AccountProfessional.user_id == user_id,
-        ).scalar_subquery()
-        return list((await db.scalars(
-            select(AccountProfessional.account_id)
-            .join(Account, Account.id == AccountProfessional.account_id)
-            .where(AccountProfessional.professional_id == professional_id, Account.owner_user_id == user_id)
-            .order_by(AccountProfessional.account_id)
-        )).all())
+    async def catalog_accounts(
+        self, db: AsyncSession, user_id: UUID, source_account_id: UUID
+    ) -> list[UUID]:
+        professional_id = (
+            select(AccountProfessional.professional_id)
+            .where(
+                AccountProfessional.account_id == source_account_id,
+                AccountProfessional.user_id == user_id,
+            )
+            .scalar_subquery()
+        )
+        return list(
+            (
+                await db.scalars(
+                    select(AccountProfessional.account_id)
+                    .join(Account, Account.id == AccountProfessional.account_id)
+                    .where(
+                        AccountProfessional.professional_id == professional_id,
+                        Account.owner_user_id == user_id,
+                    )
+                    .order_by(AccountProfessional.account_id)
+                )
+            ).all()
+        )
 
     async def page(
         self,
@@ -287,7 +339,9 @@ class AccountProfessionalDAO(DAO[AccountProfessional, BaseModel, BaseModel]):
 
 
 class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
-    async def page(self, db: AsyncSession, account_id: UUID, offset: int, shows: int) -> tuple[list[AccountDeviceAccess], int]:
+    async def page(
+        self, db: AsyncSession, account_id: UUID, offset: int, shows: int
+    ) -> tuple[list[AccountDeviceAccess], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
         total = await self.count(db, statement)
         rows = (
@@ -362,7 +416,9 @@ class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
 
 
 class AccountInvitationDAO(DAO[AccountInvitation, BaseModel, BaseModel]):
-    async def get_scoped(self, db: AsyncSession, invitation_id: UUID, account_id: UUID) -> AccountInvitation | EmptyType:
+    async def get_scoped(
+        self, db: AsyncSession, invitation_id: UUID, account_id: UUID
+    ) -> AccountInvitation | EmptyType:
         row = await db.scalar(
             select(self.model)
             .where(self.model.id == invitation_id, self.model.account_id == account_id)

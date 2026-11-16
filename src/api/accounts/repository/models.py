@@ -32,6 +32,11 @@ class AccountMembership(Base):
     created_at: Mapped[datetime]
     updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
+    clinical_profile_access: Mapped[str] = mapped_column(
+        Text, server_default="read_write"
+    )
+    conditions_access: Mapped[str] = mapped_column(Text, server_default="read_write")
+    allergies_access: Mapped[str] = mapped_column(Text, server_default="read_write")
 
 
 class Professional(Base):

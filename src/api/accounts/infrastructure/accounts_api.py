@@ -12,18 +12,27 @@ from src.api.accounts.application.accounts_cases import (
     get_me,
     get_professional,
 )
-from src.api.accounts.application.management_cases import get_professionals, get_team
+from src.api.accounts.application.management_cases import (
+    get_member_clinical_permissions,
+    get_professionals,
+    get_team,
+)
 from src.api.accounts.domain.accounts import (
     AccessResponse,
     AccountDeviceResponse,
     AccountResponse,
     AccountSummary,
+    MemberClinicalPermissionsResponse,
     MemberResponse,
     MeResponse,
     ProfessionalQuery,
     ProfessionalResponse,
 )
-from src.api.accounts.domain.errors import AccountNotFound, ProfessionalNotFound
+from src.api.accounts.domain.errors import (
+    AccountNotFound,
+    AccountObjectNotFound,
+    ProfessionalNotFound,
+)
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.errors import no_query_parameters
 from src.core import Err, Ok
@@ -54,6 +63,38 @@ async def read_me(
             return response
         case Err(InvalidCredential()):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+        case unexpected:
+            assert_never(unexpected)
+
+
+@router.get(
+    "/accounts/{account_id}/members/{user_id}/clinical-permissions",
+    operation_id="getMemberClinicalPermissions",
+    dependencies=[Depends(no_query_parameters)],
+    responses={403: {"model": ApiError}, 404: {"model": ApiError}},
+)
+async def read_member_clinical_permissions(
+    account_id: UUID7,
+    user_id: UUID7,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    authorization: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+) -> MemberClinicalPermissionsResponse:
+    result = await get_member_clinical_permissions(
+        db,
+        authorization.credentials if authorization else None,
+        account_id,
+        user_id,
+    )
+
+    match result:
+        case Ok(response):
+            return response
+        case Err(InvalidCredential()):
+            raise HTTPException(401)
+        case Err(AccessDenied()):
+            raise HTTPException(403)
+        case Err(AccountNotFound() | AccountObjectNotFound()):
+            raise HTTPException(404)
         case unexpected:
             assert_never(unexpected)
 

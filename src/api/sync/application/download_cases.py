@@ -7,7 +7,8 @@ from uuid import UUID
 
 from pydantic import ValidationError
 
-from src.api.accounts.domain.accounts import AccountContext
+from src.api.accounts.application.accounts_cases import readable_clinical_sections
+from src.api.accounts.domain.accounts import AccountContext, ClinicalSection
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.appointments.application.appointments_cases import captured_history
 from src.api.appointments.domain.appointments import AppointmentResponse
@@ -59,6 +60,9 @@ def position_for_scope(
         or position.user_id != context.actor.user_id
         or position.device_id != context.actor.device_id
         or position.audience != ("owner" if context.owner else "members")
+        or not set(position.clinical_sections).issubset(
+            readable_clinical_sections(context)
+        )
         or position.permission_epoch != head.permission_epoch
         or position.sequence < head.retained_from_sequence - 1
         or position.sequence > head.last_sequence
@@ -68,6 +72,18 @@ def position_for_scope(
         return Err(SyncReadError("CURSOR_EXPIRED"))
 
     return Ok(position)
+
+
+CLINICAL_AUDIENCES: dict[str, ClinicalSection] = {
+    "clinical_profile": "profile",
+    "clinical_conditions": "conditions",
+    "clinical_allergies": "allergies",
+}
+
+
+def clinical_change_allowed(audience: str, sections: list[ClinicalSection]) -> bool:
+    section = CLINICAL_AUDIENCES.get(audience)
+    return section is None or section in sections
 
 
 def visible_change(row: ChangeLog, window: SyncWindow) -> SyncChange | None:
@@ -98,6 +114,7 @@ def visible_change(row: ChangeLog, window: SyncWindow) -> SyncChange | None:
         return change.model_copy(update={"change_kind": "remove", "state": None})
 
     in_window = True
+
     if isinstance(state, ScheduleBlockResponse):
         in_window = (
             state.starts_at < window.ends_at and window.starts_at < state.ends_at
@@ -167,6 +184,11 @@ async def read_changes(
 
             for row in group:
                 if row.audience == "owner" and not context.owner:
+                    continue
+
+                if not clinical_change_allowed(
+                    row.audience, position.clinical_sections
+                ):
                     continue
 
                 try:

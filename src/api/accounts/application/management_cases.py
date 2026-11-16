@@ -15,6 +15,8 @@ from src.api.accounts.domain.accounts import (
     AccountEffect,
     AccountPolicyPayload,
     AccountResponse,
+    ClinicalPermissions,
+    MemberClinicalPermissionsResponse,
     MemberResponse,
     MembershipStatusPayload,
     ProfessionalPayload,
@@ -370,6 +372,48 @@ async def get_professionals(
         response = PaginatedResponse[ProfessionalResponse](
             items=[ProfessionalResponse.model_validate(row) for row in rows],
             total=total,
+        )
+
+    return Ok(response)
+
+
+async def get_member_clinical_permissions(
+    db: AsyncSession,
+    credential: str | None,
+    account_id: UUID,
+    user_id: UUID,
+):
+    async with transaction(db):
+        identity = await authenticate(db, credential)
+
+        if isinstance(identity, Err):
+            return identity
+
+        scope = await account_context(
+            db, identity.value, account_id, require_device=True
+        )
+
+        if isinstance(scope, Err):
+            return scope
+
+        context = scope.value
+
+        if not context.owner or context.account.status != "active":
+            return Err(AccessDenied())
+
+        row = await dao_memberships.get_scoped(db, account_id, user_id)
+
+        if row is Empty:
+            return Err(AccountObjectNotFound())
+
+        response = MemberClinicalPermissionsResponse(
+            user_id=row.user_id,
+            clinical_permissions=ClinicalPermissions(
+                clinical_profile=row.clinical_profile_access,
+                conditions=row.conditions_access,
+                allergies=row.allergies_access,
+            ),
+            membership_version=row.version,
         )
 
     return Ok(response)

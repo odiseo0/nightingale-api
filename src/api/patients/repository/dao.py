@@ -9,12 +9,13 @@ from src.api.patients.domain.contacts import ContactQuery, RelationshipQuery
 from src.api.patients.domain.patients import PatientQuery
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import EmptyType
+from src.core.utils.utils import Empty, EmptyType
 
 from .models import (
     AccountPatient,
     ContactPerson,
     Patient,
+    PatientBirthDateChange,
     PatientContactRelationship,
     PatientIdentifier,
 )
@@ -25,12 +26,18 @@ class PatientDAO(DAO[Patient, BaseModel, BaseModel]):
         return (await db.execute(select(func.clock_timestamp()))).scalar_one()
 
     async def local_today(self, db: AsyncSession, time_zone: str) -> date:
-        return (await db.execute(
-            select(cast(func.timezone(time_zone, func.clock_timestamp()), Date))
-        )).scalar_one()
+        return (
+            await db.execute(
+                select(cast(func.timezone(time_zone, func.clock_timestamp()), Date))
+            )
+        ).scalar_one()
 
-    async def local_date(self, db: AsyncSession, time_zone: str, instant: datetime) -> date:
-        return (await db.execute(select(cast(func.timezone(time_zone, instant), Date)))).scalar_one()
+    async def local_date(
+        self, db: AsyncSession, time_zone: str, instant: datetime
+    ) -> date:
+        return (
+            await db.execute(select(cast(func.timezone(time_zone, instant), Date)))
+        ).scalar_one()
 
     async def reserve_id(self, db: AsyncSession, patient_id: UUID) -> bool:
         # Across accounts, reserve only a new identity. A collision reveals no
@@ -78,15 +85,35 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
 
         return row
 
-    async def scoped(self, db: AsyncSession, account_id: UUID, patient_id: UUID) -> AccountPatient | EmptyType:
+    async def scoped(
+        self, db: AsyncSession, account_id: UUID, patient_id: UUID
+    ) -> AccountPatient | EmptyType:
         return await self.get_by(
             db,
             where={"account_id": account_id, "patient_id": patient_id},
             execution_options={"populate_existing": True},
         )
 
+    async def lock_scoped(
+        self, db: AsyncSession, account_id: UUID, patient_id: UUID
+    ) -> AccountPatient | EmptyType:
+        row = await db.scalar(
+            select(self.model)
+            .where(
+                self.model.account_id == account_id, self.model.patient_id == patient_id
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
+        return row if row is not None else Empty
+
     async def revise(
-        self, db: AsyncSession, row: AccountPatient, changes: dict[str, object], now: datetime
+        self,
+        db: AsyncSession,
+        row: AccountPatient,
+        changes: dict[str, object],
+        now: datetime,
     ) -> AccountPatient:
         for name, value in changes.items():
             setattr(row, name, value)
@@ -97,7 +124,9 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
 
         return row
 
-    async def page(self, db: AsyncSession, account_id: UUID, query: PatientQuery) -> tuple[list[AccountPatient], int]:
+    async def page(
+        self, db: AsyncSession, account_id: UUID, query: PatientQuery
+    ) -> tuple[list[AccountPatient], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
 
         if query.status is not None:
@@ -159,7 +188,9 @@ class PatientIdentifierDAO(DAO[PatientIdentifier, BaseModel, BaseModel]):
             select(select(self.model.id).where(self.model.id.in_(identifiers)).exists())
         )
 
-    async def page(self, db: AsyncSession, patient_id: UUID, offset: int, shows: int) -> tuple[list[PatientIdentifier], int]:
+    async def page(
+        self, db: AsyncSession, patient_id: UUID, offset: int, shows: int
+    ) -> tuple[list[PatientIdentifier], int]:
         statement = select(self.model).where(self.model.patient_id == patient_id)
         total = await self.count(db, statement)
         rows = await db.scalars(
@@ -169,8 +200,30 @@ class PatientIdentifierDAO(DAO[PatientIdentifier, BaseModel, BaseModel]):
         return list(rows), total
 
 
+class PatientBirthDateChangeDAO(DAO[PatientBirthDateChange, BaseModel, BaseModel]):
+    async def page(
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        patient_id: UUID,
+        offset: int,
+        shows: int,
+    ) -> tuple[list[PatientBirthDateChange], int]:
+        statement = select(self.model).where(
+            self.model.account_id == account_id, self.model.patient_id == patient_id
+        )
+        total = await self.count(db, statement)
+        rows = await db.scalars(
+            statement.order_by(self.model.id).offset(offset).limit(shows)
+        )
+
+        return list(rows), total
+
+
 class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
-    async def lock_new_id(self, db: AsyncSession, contact_id: UUID) -> ContactPerson | EmptyType:
+    async def lock_new_id(
+        self, db: AsyncSession, contact_id: UUID
+    ) -> ContactPerson | EmptyType:
         await db.execute(
             text("SELECT pg_advisory_xact_lock(hashtextextended(:key,0))"),
             {"key": f"contact_person:{contact_id}"},
@@ -178,7 +231,9 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
 
         return await self.get(db, contact_id)
 
-    async def scoped(self, db: AsyncSession, account_id: UUID, contact_id: UUID) -> ContactPerson | EmptyType:
+    async def scoped(
+        self, db: AsyncSession, account_id: UUID, contact_id: UUID
+    ) -> ContactPerson | EmptyType:
         return await self.get_by(
             db,
             where={"account_id": account_id, "id": contact_id},
@@ -186,7 +241,11 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
         )
 
     async def revise(
-        self, db: AsyncSession, row: ContactPerson, changes: dict[str, object], now: datetime
+        self,
+        db: AsyncSession,
+        row: ContactPerson,
+        changes: dict[str, object],
+        now: datetime,
     ) -> ContactPerson:
         return await self.update(
             db,
@@ -195,7 +254,9 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
             commit=False,
         )
 
-    async def page(self, db: AsyncSession, account_id: UUID, query: ContactQuery) -> tuple[list[ContactPerson], int]:
+    async def page(
+        self, db: AsyncSession, account_id: UUID, query: ContactQuery
+    ) -> tuple[list[ContactPerson], int]:
         statement = select(self.model).where(self.model.account_id == account_id)
 
         if query.status is not None:
@@ -222,7 +283,9 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
 class PatientContactRelationshipDAO(
     DAO[PatientContactRelationship, BaseModel, BaseModel]
 ):
-    async def candidates(self, db: AsyncSession, account_id: UUID, patient_id: UUID) -> list[Row[PatientContactRelationship, ContactPerson]]:
+    async def candidates(
+        self, db: AsyncSession, account_id: UUID, patient_id: UUID
+    ) -> list[Row[PatientContactRelationship, ContactPerson]]:
         rows = await db.execute(
             select(self.model, ContactPerson)
             .join(
@@ -331,6 +394,7 @@ class PatientContactRelationshipDAO(
 
 dao_patients = PatientDAO(Patient)
 dao_profiles = AccountPatientDAO(AccountPatient)
+dao_birth_changes = PatientBirthDateChangeDAO(PatientBirthDateChange)
 dao_identifiers = PatientIdentifierDAO(PatientIdentifier)
 dao_contacts = ContactPersonDAO(ContactPerson)
 dao_relationships = PatientContactRelationshipDAO(PatientContactRelationship)

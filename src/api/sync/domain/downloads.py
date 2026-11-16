@@ -11,7 +11,14 @@ from pydantic import (
     model_validator,
 )
 
+from src.api.accounts.domain.accounts import ClinicalSection
 from src.api.appointments.domain.appointments import AppointmentHistoryProjection
+from src.api.clinical_records.domain.allergies import PatientAllergyIntoleranceResponse
+from src.api.clinical_records.domain.clinical import ClinicalProfileResponse
+from src.api.clinical_records.domain.conditions import (
+    ClinicalSectionReviewResponse,
+    PatientConditionResponse,
+)
 from src.api.schedule.domain.schedule import AbsoluteInterval, ScheduleRuleFields
 from src.api.sync.domain import operations as projections
 from src.api.sync.domain.operations import OperationState
@@ -35,6 +42,10 @@ PROJECTION_SCHEMAS: dict[str, type[BaseModel]] = {
     "schedule_block": projections.ScheduleBlockResponse,
     "appointment": projections.AppointmentResponse,
     "appointment_history": AppointmentHistoryProjection,
+    "patient_clinical_profile": ClinicalProfileResponse,
+    "patient_condition": PatientConditionResponse,
+    "patient_clinical_section_review": ClinicalSectionReviewResponse,
+    "patient_allergy_intolerance": PatientAllergyIntoleranceResponse,
 }
 
 
@@ -57,6 +68,7 @@ class SyncPosition(BaseModel):
     user_id: UUID7
     device_id: UUID7
     audience: Literal["members", "owner"]
+    clinical_sections: list[ClinicalSection] = Field(default_factory=list)
     permission_epoch: int = Field(strict=True, ge=1)
     sequence: int = Field(strict=True, ge=0)
     window: SyncWindow
@@ -72,6 +84,16 @@ class SyncPosition(BaseModel):
 
         return self
 
+    @field_validator("clinical_sections")
+    @classmethod
+    def unique_clinical_sections(
+        cls, value: list[ClinicalSection]
+    ) -> list[ClinicalSection]:
+        if len(set(value)) != len(value):
+            raise ValueError("Las secciones clínicas no admiten duplicados")
+
+        return value
+
 
 class ChangeQuery(BaseModel):
     cursor: str = Field(min_length=1, max_length=8192)
@@ -81,7 +103,7 @@ class ChangeQuery(BaseModel):
 
 class SyncChange(BaseModel):
     entity_type: str
-    entity_key: UUID7 | dict[str, UUID7]
+    entity_key: UUID7 | dict[str, UUID7 | str]
     entity_version: int = Field(ge=1)
     change_kind: Literal["upsert", "remove"]
     state: OperationState | AppointmentHistoryProjection | None
@@ -123,6 +145,7 @@ class ChangePage(BaseModel):
 class SnapshotRequest(BaseModel):
     appointments_from: date | None = None
     appointments_until: date | None = None
+    include_clinical: bool = Field(default=False, strict=True)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -155,6 +178,7 @@ class SnapshotResponse(BaseModel):
     base_cursor: str
     expires_at: AwareDatetime
     item_count: int = Field(ge=0)
+    clinical_sections: list[ClinicalSection] = Field(default_factory=list)
 
     @field_serializer("expires_at", when_used="json")
     def utc_expiry(self, value: datetime) -> SerializedInstant:
@@ -163,7 +187,7 @@ class SnapshotResponse(BaseModel):
 
 class SyncItem(BaseModel):
     entity_type: str
-    entity_key: UUID7 | dict[str, UUID7]
+    entity_key: UUID7 | dict[str, UUID7 | str]
     entity_version: int = Field(ge=1)
     state: OperationState | AppointmentHistoryProjection
 

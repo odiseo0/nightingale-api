@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
@@ -104,6 +105,35 @@ class AccountResponse(AdministrativeResponse):
     version: int
 
 
+type ClinicalSection = Literal["profile", "conditions", "allergies"]
+type ClinicalLevel = Literal["none", "read", "read_write"]
+
+
+class ClinicalPermissions(BaseModel):
+    clinical_profile: ClinicalLevel = "read_write"
+    conditions: ClinicalLevel = "read_write"
+    allergies: ClinicalLevel = "read_write"
+
+    def level(self, section: ClinicalSection) -> ClinicalLevel:
+        return {
+            "profile": self.clinical_profile,
+            "conditions": self.conditions,
+            "allergies": self.allergies,
+        }[section]
+
+
+class ClinicalPermissionsPayload(BaseModel):
+    clinical_permissions: ClinicalPermissions
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MemberClinicalPermissionsResponse(BaseModel):
+    user_id: UUID7
+    clinical_permissions: ClinicalPermissions
+    membership_version: int
+
+
 class AccessResponse(BaseModel):
     account_id: UUID7
     user_id: UUID7
@@ -112,6 +142,7 @@ class AccessResponse(BaseModel):
     status: Literal["active", "registration_required", "revoked", "inactive"]
     permission_epoch: int
     allowed_actions: list[str]
+    clinical_permissions: ClinicalPermissions
 
 
 class ProfessionalResponse(AdministrativeResponse):
@@ -197,7 +228,13 @@ class AccountChange:
     entity_key: str | dict[str, str]
     state: BaseModel | Mapping[str, object]
     version: int
-    audience: Literal["members", "owner"] = "owner"
+    audience: Literal[
+        "members",
+        "owner",
+        "clinical_profile",
+        "clinical_conditions",
+        "clinical_allergies",
+    ] = "owner"
     account_id: UUID | None = None
     previous_starts_at: datetime | None = None
     previous_ends_at: datetime | None = None
@@ -258,3 +295,6 @@ class AccountContext:
     account: AccountResponse
     device_status: str | None
     owner: bool
+    clinical_permissions: ClinicalPermissions = dataclass_field(
+        default_factory=ClinicalPermissions
+    )

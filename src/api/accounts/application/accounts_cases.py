@@ -11,6 +11,8 @@ from src.api.accounts.domain.accounts import (
     AccountResponse,
     AccountSummary,
     BootstrapPracticeInput,
+    ClinicalPermissions,
+    ClinicalSection,
     MeResponse,
     PracticeCreated,
     ProfessionalResponse,
@@ -275,6 +277,11 @@ async def account_context(
             account=AccountResponse.model_validate(account),
             device_status=None if registered is Empty else registered.status,
             owner=owner,
+            clinical_permissions=ClinicalPermissions(
+                clinical_profile=membership.clinical_profile_access,
+                conditions=membership.conditions_access,
+                allergies=membership.allergies_access,
+            ),
         )
     )
 
@@ -386,6 +393,7 @@ async def get_access(
             role="owner" if context.owner else "assistant",
             status=state,
             permission_epoch=epoch.value,
+            clinical_permissions=context.clinical_permissions,
             allowed_actions=(
                 (
                     ["RegisterAccountDevice"]
@@ -394,20 +402,62 @@ async def get_access(
                 )
                 + (
                     [
-                        "RegisterPatient", "UpdatePatientProfile", "SetPatientProfileStatus",
-                        "SetPatientCompletion", "AddPatientIdentifier",
-                        "CreateContactPerson", "UpdateContactPerson", "SetContactPersonStatus",
-                        "CreatePatientContactRelationship", "UpdatePatientContactRelationship", "SetPatientContactRelationshipStatus",
-                        "CreateScheduleRule", "UpdateScheduleRule", "SetScheduleRuleStatus",
-                        "CreateScheduleException", "UpdateScheduleException", "SetScheduleExceptionStatus",
-                        "CreateScheduleBlock", "UpdateScheduleBlock", "SetScheduleBlockStatus",
+                        "RegisterPatient",
+                        "UpdatePatientProfile",
+                        "SetPatientProfileStatus",
+                        "SetPatientCompletion",
+                        "AddPatientIdentifier",
+                        "CreateContactPerson",
+                        "UpdateContactPerson",
+                        "SetContactPersonStatus",
+                        "CreatePatientContactRelationship",
+                        "UpdatePatientContactRelationship",
+                        "SetPatientContactRelationshipStatus",
+                        "CreateScheduleRule",
+                        "UpdateScheduleRule",
+                        "SetScheduleRuleStatus",
+                        "CreateScheduleException",
+                        "UpdateScheduleException",
+                        "SetScheduleExceptionStatus",
+                        "CreateScheduleBlock",
+                        "UpdateScheduleBlock",
+                        "SetScheduleBlockStatus",
                         "CreateAppointment",
                         "ConfirmAppointment",
                         "RescheduleAppointment",
                         "CancelAppointment",
-                        "CompleteAppointment", "MarkAppointmentNoShow",
+                        "CompleteAppointment",
+                        "MarkAppointmentNoShow",
                     ]
                     if state == "active"
+                    else []
+                )
+                + (
+                    ["SetPatientSexAtBirth"]
+                    if state == "active"
+                    and context.clinical_permissions.clinical_profile == "read_write"
+                    else []
+                )
+                + (
+                    [
+                        "CreatePatientCondition",
+                        "UpdatePatientCondition",
+                        "InvalidatePatientCondition",
+                        "SetPatientClinicalSectionReview",
+                    ]
+                    if state == "active"
+                    and context.clinical_permissions.conditions == "read_write"
+                    else []
+                )
+                + (
+                    [
+                        "CreatePatientAllergyIntolerance",
+                        "UpdatePatientAllergyIntolerance",
+                        "InvalidatePatientAllergyIntolerance",
+                        "SetPatientClinicalSectionReview",
+                    ]
+                    if state == "active"
+                    and context.clinical_permissions.allergies == "read_write"
                     else []
                 )
                 + (
@@ -415,14 +465,19 @@ async def get_access(
                         "CreateInvitation",
                         "RevokeInvitation",
                         "SetMembershipStatus",
+                        "SetMemberClinicalPermissions",
                         "UpdateAccountDetails",
                         "UpdateAccountPolicy",
                         "SetAccountStatus",
                         "RevokeAccountDevice",
                         "RestoreAccountDevice",
                         "UpdateProfessionalProfile",
-                        "CreateService", "UpdateService", "SetServiceStatus",
-                        "OfferService", "UpdateServiceOffer", "SetServiceOfferStatus",
+                        "CreateService",
+                        "UpdateService",
+                        "SetServiceStatus",
+                        "OfferService",
+                        "UpdateServiceOffer",
+                        "SetServiceOfferStatus",
                     ]
                     if state == "active" and context.owner
                     else []
@@ -438,6 +493,15 @@ async def get_access(
         )
 
     return Ok(response)
+
+
+def readable_clinical_sections(context: AccountContext) -> list[ClinicalSection]:
+    sections: list[ClinicalSection] = ["profile", "conditions", "allergies"]
+    return [
+        section
+        for section in sections
+        if context.clinical_permissions.level(section) != "none"
+    ]
 
 
 async def get_professional(
