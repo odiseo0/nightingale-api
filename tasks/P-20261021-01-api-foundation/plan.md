@@ -4,6 +4,8 @@
 
 ## Registro histórico hasta la sustitución
 
+**Nota del 2026-11-14:** [D11](../../docs/decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) sustituye la propiedad del servidor del Hub y las propuestas entre dos servidores de T04/T15/T17 y P05. Esas tareas y sus concesiones/adaptadores quedan como historia; no son requisitos vigentes de un backend o almacén propio del Hub. API tendrá todas sus funciones de servidor; el contrato futuro sigue pendiente. No se cambia la evidencia ni se marca ninguna tarea terminada.
+
 **Estado:** In progress. **Fecha:** 2026-10-21. **Último cierre:** T24, revisión documental del esquema aceptada en C14 el 2026-10-24. El acuerdo parcial de T04 se conserva como siguiente tarea por retomar; no se inicia en esta entrega. **C03:** habilitado por el usuario tras corregir las anotaciones.
 
 **Actualización del 2026-10-24:** T24 toma `docs/database-schema.md` como única fuente del modelo según D08. El usuario retira el borrador lógico anterior, aplaza la corrección de identidad global y pide dejar el diseño preparado para avanzar. Solo se ajusta documentación: las dos propuestas de §8.9 siguen para revisión y los pendientes afectan al recorrido que los necesita. Se conservan IDs, dependencias y checkpoints del plan.

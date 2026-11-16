@@ -14,6 +14,8 @@
 
 ## Resultado y límites
 
+**Aclaración documental del 2026-11-14:** [D11](../../docs/decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) fija el alcance futuro del Hub, incluido el micrositio público de clínicas y todo su servidor en API. No amplía la implementación de este plan ni acepta C11. La exclusión siguiente sigue vigente para este contrato; el encargo documental se registra en [su propio plan](../P-20261114-01-patient-hub-docs/plan.md). Las referencias a T04/T15 del plan anterior no obligan a restaurar un backend o almacén del Hub.
+
 API funcional para un profesional y sus asistentes desde varios dispositivos. Solo este repositorio. Alta controlada; roles fijos; operaciones tipadas y lecturas por recurso; token opaco por usuario/dispositivo sin vencimiento y revocable; avisos inmediatos por SSE; PostgreSQL y Keycloak locales, sin exigir Docker. Ventana de sync de 90 días y recuperación por snapshot.
 
 No incluye escritorio, Hub, clínicas, varias sedes, transferencia de cuentas, roles personalizados, comunicaciones, espera, analítica, producción ni datos reales. Tampoco fusión/corrección global de identidad, verificación documental/representación o corrección de referencias y reapertura de citas terminales. No crear rutas simuladas para lo excluido.

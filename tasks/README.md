@@ -1,10 +1,18 @@
 # Planes y tareas
 
+Plan de etapa 1 clínica aprobado el 2026-11-15: [P-20261115-02-patient-clinical-data](P-20261115-02-patient-clinical-data/plan.md), **In progress**, con [lista de control](P-20261115-02-patient-clinical-data/todo.md). Concreta sexo al nacer, condiciones, alergias/intolerancias, permisos por asistente/sección, historia y descarga del estado actual. El usuario autorizó T01 → T02 → T03, en secuencia y sin delegación, hasta C01. T01–T03 están comprobadas y C01 aceptado por el usuario. T04–T06 están comprobadas y C02 aceptado. T07–T09 están comprobadas y C03 aceptado. T10–T12 están comprobadas y C04 aceptado. T13–T15 están comprobadas y C05 aceptado. T16–T18 están comprobadas; C06 espera revisión del usuario. La etapa 2 no se inicia. C02–C06 siguen sin aceptar. No se inicia T04 ni se aceptan revisiones previas.
+
+Encargo documental activo del 2026-11-15: [P-20261115-01-clinical-spec](P-20261115-01-clinical-spec/plan.md), con [lista y evidencia](P-20261115-01-clinical-spec/todo.md). Produce la [especificación clínica](../docs/patient-clinical-record.md) que servirá de referencia para los planes de datos, registro habitual y funciones completas. [D12](../docs/decisions.md#d12--registro-clínico-y-seguimiento-del-paciente) registra el alcance. Solo documentación, en secuencia y sin delegación; no inicia implementación ni acepta checkpoints previos.
+
+Encargo documental del 2026-11-14: [P-20261114-01-patient-hub-docs](P-20261114-01-patient-hub-docs/plan.md), con [lista y evidencia](P-20261114-01-patient-hub-docs/todo.md). Solo alinea el alcance futuro del Hub con [D11](../docs/decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api); no autoriza código ni acepta checkpoints del núcleo. Trabajo secuencial, sin delegación; C01 de este encargo conserva su revisión pendiente.
+
 Plan actual: [P-20261024-01-desktop-shared-api](P-20261024-01-desktop-shared-api/plan.md), **In progress**. Su [lista de control](P-20261024-01-desktop-shared-api/todo.md) conserva estados, evidencia y revisiones. C01–C06, C09/C10 y C12–C18 aceptados. T31–T33 comprobadas; trabajo detenido en C11 para revisión y aceptación expresa. C07/C08 conservaron autorización de paso sin aceptaciones separadas. Se conservan los 16 diagnósticos estáticos previos; no se declara análisis global correcto ni se cierra el plan.
 
 El [plan anterior](P-20261021-01-api-foundation/plan.md) queda **Superseded** para ejecución. Conserva T24/C14 y toda la evidencia previa; sus tareas pendientes no se marcan terminadas. La tabla de sucesión del plan nuevo asigna el núcleo y conserva Hub, comunicaciones, espera, analítica y producción para etapas posteriores. El esquema sigue en [database-schema.md](../docs/database-schema.md); el borrador lógico permanece retirado.
 
 Antecedente del 2026-10-23: el usuario aceptó C13 y P05/P06, revisables al implementar. Sus rutas e historia se conservan. La aprobación del sucesor no cierra los detalles del Hub o lista de espera ni acepta checkpoints pendientes del plan anterior.
+
+D11 sustituye el servidor y almacén propios del Hub y la autorización propuesta entre dos servidores. API tendrá todas sus funciones de servidor y Hub su interfaz web, con lectura pública de micrositios y acceso limitado a citas. El contrato y la implementación del Hub siguen pendientes; su presentación pública de clínicas no cambia el alcance interno del plan de escritorio.
 
 ## Convenciones
 

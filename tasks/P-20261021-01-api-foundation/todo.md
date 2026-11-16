@@ -4,6 +4,8 @@
 
 ## Registro histórico hasta la sustitución
 
+**Nota del 2026-11-14:** [D11](../../docs/decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) sustituye el backend/almacén propio del Hub y la autorización entre servidores. La evidencia y propuestas siguientes se conservan con su fecha; no son instrucciones vigentes para recrear ese reparto. El alcance nuevo se revisa solo como documentación en [P-20261114-01-patient-hub-docs](../P-20261114-01-patient-hub-docs/plan.md).
+
 **Plan:** [P-20261021-01-api-foundation](plan.md). **Estado:** In progress. **Último cierre:** T24 y C14 aceptados por el usuario el 2026-10-24. Se conserva el acuerdo parcial de T04 como siguiente tarea por retomar; no se inicia en esta entrega.
 
 ## Tareas
