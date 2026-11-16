@@ -38,10 +38,14 @@ from src.api.appointments.application.appointments_cases import (
     apply_appointment_operation,
 )
 from src.api.appointments.application.schedule_changes import apply_schedule_change
-from src.api.audit.application.audit_cases import record_operation
-from src.api.audit.domain.audit import OperationAudit
+from src.api.audit.application.audit_cases import record_control, record_operation
+from src.api.audit.domain.audit import ControlAudit, OperationAudit
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
+from src.api.clinical_records.application.access_cases import (
+    clinical_result_allowed,
+    clinical_result_section,
+)
 from src.api.clinical_records.application.allergies_cases import apply_allergy_operation
 from src.api.clinical_records.application.clinical_cases import apply_clinical_operation
 from src.api.clinical_records.application.conditions_cases import (
@@ -278,6 +282,14 @@ async def accept_operation(
 
         actor = context.actor
         account_id = context.account.id
+        clinical_section = clinical_result_section(operation.action, payload)
+
+        if (
+            operation.action == "SetPatientSexAtBirth"
+            or operation.action in CONDITION_SCHEMAS
+            or operation.action in ALLERGY_SCHEMAS
+        ) and not clinical_result_allowed(context, clinical_section):
+            return Err(AccessDenied())
 
         if operation.action in BLOCK_SCHEMAS and isinstance(operation.entity_key, UUID):
             permission = await block_permission(db, context, operation.entity_key)
@@ -317,6 +329,13 @@ async def accept_operation(
         )
 
         if receipt is not Empty:
+            if (
+                operation.action == "SetPatientSexAtBirth"
+                or operation.action in CONDITION_SCHEMAS
+                or operation.action in ALLERGY_SCHEMAS
+            ) and receipt.clinical_section != clinical_section:
+                return Err(AccessDenied())
+
             if receipt.request_hash != fingerprint:
                 return Ok(
                     operation_result(
@@ -331,6 +350,22 @@ async def accept_operation(
                 return Err(ResultExpired())
 
             original = OperationRecord.model_validate(receipt.result_json)
+
+            if clinical_section is not None:
+                await record_control(
+                    db,
+                    ControlAudit(
+                        account_id=account_id,
+                        actor_user_id=actor.user_id,
+                        actor_device_id=actor.device_id,
+                        action="ReadOperationResult",
+                        object_type="operation_result",
+                        object_key=str(operation.operation_id),
+                        outcome="accepted",
+                        correlation_id=correlation_id,
+                        occurred_at=now,
+                    ),
+                )
 
             return Ok(
                 OperationResult(
@@ -453,145 +488,50 @@ async def accept_operation(
                 )
                 or internal_invitation
             ):
-                if operation.action in APPOINTMENT_SCHEMAS:
-                    effect = await apply_appointment_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                    )
-                elif (
-                    operation.action in BLOCK_SCHEMAS
-                    or operation.action in EXCEPTION_SCHEMAS
-                    or operation.action in RULE_SCHEMAS
-                    or operation.action == "UpdateAccountDetails"
-                ):
-                    effect = await apply_schedule_change(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                    )
-                elif operation.action in OFFER_SCHEMAS:
-                    effect = await apply_offer_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                    )
-                elif operation.action in SERVICE_SCHEMAS:
-                    effect = await apply_service_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                    )
-                elif operation.action in CONTACT_SCHEMAS:
-                    effect = await apply_contact_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                    )
-                elif operation.action in ALLERGY_SCHEMAS:
-                    if not isinstance(operation.entity_key, UUID):
-                        return Err(AccountRuleError("VALIDATION_ERROR"))
+                if (
+                    operation.action in CONDITION_SCHEMAS
+                    or operation.action in ALLERGY_SCHEMAS
+                    or operation.action == "SetPatientSexAtBirth"
+                ) and not isinstance(operation.entity_key, UUID):
+                    return Err(AccountRuleError("VALIDATION_ERROR"))
 
-                    effect = await apply_allergy_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                        operation.operation_id,
-                    )
-                elif operation.action in CONDITION_SCHEMAS:
-                    if not isinstance(operation.entity_key, UUID):
-                        return Err(AccountRuleError("VALIDATION_ERROR"))
+                apply_condition = (
+                    apply_allergy_operation
+                    if operation.action == "SetPatientClinicalSectionReview"
+                    and isinstance(payload, SetPatientClinicalSectionReviewPayload)
+                    and payload.section == "allergies"
+                    else apply_condition_operation
+                )
+                handlers = (
+                    (APPOINTMENT_SCHEMAS, lambda: apply_appointment_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
+                    (set(BLOCK_SCHEMAS) | set(EXCEPTION_SCHEMAS) | set(RULE_SCHEMAS) | {"UpdateAccountDetails"}, lambda: apply_schedule_change(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
+                    (OFFER_SCHEMAS, lambda: apply_offer_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
+                    (SERVICE_SCHEMAS, lambda: apply_service_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
+                    (CONTACT_SCHEMAS, lambda: apply_contact_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
+                    (ALLERGY_SCHEMAS, lambda: apply_allergy_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
+                    (CONDITION_SCHEMAS, lambda: apply_condition(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
+                    ({"SetPatientSexAtBirth"}, lambda: apply_clinical_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
+                    ({"RegisterPatient", "UpdatePatientProfile", "SetPatientProfileStatus", "SetPatientCompletion", "AddPatientIdentifier"}, lambda: apply_patient_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
+                )
 
-                    apply_operation = (
-                        apply_allergy_operation
-                        if operation.action == "SetPatientClinicalSectionReview"
-                        and isinstance(payload, SetPatientClinicalSectionReviewPayload)
-                        and payload.section == "allergies"
-                        else apply_condition_operation
-                    )
-                    effect = await apply_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                        operation.operation_id,
-                    )
-                elif operation.action == "SetPatientSexAtBirth":
-                    if not isinstance(operation.entity_key, UUID):
-                        return Err(AccountRuleError("VALIDATION_ERROR"))
-
-                    effect = await apply_clinical_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                        operation.operation_id,
-                    )
-                elif operation.action in (
-                    "RegisterPatient",
-                    "UpdatePatientProfile",
-                    "SetPatientProfileStatus",
-                    "SetPatientCompletion",
-                    "AddPatientIdentifier",
-                ):
-                    effect = await apply_patient_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                        operation.operation_id,
-                    )
-                elif (
-                    operation.action
-                    in (
-                        "CreateInvitation",
-                        "RevokeInvitation",
-                        "SetMembershipStatus",
-                        "SetMemberClinicalPermissions",
-                    )
-                    or internal_invitation
-                ):
-                    effect = await apply_invitation_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
-                        operation.operation_id,
-                    )
+                for catalog, handle in handlers:
+                    if operation.action in catalog:
+                        effect = await handle()
+                        break
                 else:
-                    effect = await apply_management_operation(
-                        db,
-                        context,
-                        operation.action,
-                        operation.entity_key,
-                        operation.expected_version,
-                        payload,
+                    effect = await (
+                        apply_invitation_operation(
+                            db, context, operation.action, operation.entity_key,
+                            operation.expected_version, payload, operation.operation_id,
+                        )
+                        if operation.action in (
+                            "CreateInvitation", "RevokeInvitation",
+                            "SetMembershipStatus", "SetMemberClinicalPermissions",
+                        ) or internal_invitation
+                        else apply_management_operation(
+                            db, context, operation.action, operation.entity_key,
+                            operation.expected_version, payload,
+                        )
                     )
 
                 match effect:
@@ -689,6 +629,7 @@ async def accept_operation(
                 "entity_type": entity_type,
                 "entity_key": canonical["entityKey"],
                 "request_hash": fingerprint,
+                "clinical_section": clinical_result_section(operation.action, payload),
                 "status": result.status,
                 "entity_version": result.entity_version,
                 "result_json": result.model_dump(
@@ -913,36 +854,34 @@ async def get_operation(
                 pass
             case Err(error):
                 return Err(error)
+        result_scope = await dao_receipts.get_scope(
+            db, account_id, context.actor.user_id, operation_id
+        )
+
+        if result_scope is Empty:
+            return Err(OperationNotFound())
+
+        action, clinical_section = result_scope
+
+        if action == "SetMemberClinicalPermissions" and not context.owner:
+            return Err(AccessDenied())
+
+        if context.account.status != "active" and action != "SetAccountStatus":
+            return Err(AccessDenied())
+
+        if (
+            action == "SetPatientSexAtBirth"
+            or action in CONDITION_SCHEMAS
+            or action in ALLERGY_SCHEMAS
+        ) and not clinical_result_allowed(context, clinical_section):
+            return Err(AccessDenied())
+
         receipt = await dao_receipts.get_scoped(
             db, account_id, context.actor.user_id, operation_id
         )
 
         if receipt is Empty:
             return Err(OperationNotFound())
-
-        if receipt.action == "SetMemberClinicalPermissions" and not context.owner:
-            return Err(AccessDenied())
-
-        if context.account.status != "active" and receipt.action != "SetAccountStatus":
-            return Err(AccessDenied())
-
-        if (
-            receipt.action in ALLERGY_SCHEMAS
-            and context.clinical_permissions.allergies != "read_write"
-        ):
-            return Err(AccessDenied())
-
-        if (
-            receipt.action in CONDITION_SCHEMAS
-            and context.clinical_permissions.conditions != "read_write"
-        ):
-            return Err(AccessDenied())
-
-        if (
-            receipt.action == "SetPatientSexAtBirth"
-            and context.clinical_permissions.clinical_profile != "read_write"
-        ):
-            return Err(AccessDenied())
 
         if receipt.action in SERVICE_SCHEMAS or receipt.action in OFFER_SCHEMAS:
             permission = await service_permission(db, context)
@@ -962,5 +901,21 @@ async def get_operation(
             return Err(ResultExpired())
 
         response = OperationResult.model_validate(receipt.result_json)
+
+        if clinical_section is not None:
+            await record_control(
+                db,
+                ControlAudit(
+                    account_id=account_id,
+                    actor_user_id=context.actor.user_id,
+                    actor_device_id=context.actor.device_id,
+                    action="ReadOperationResult",
+                    object_type="operation_result",
+                    object_key=str(operation_id),
+                    outcome="accepted",
+                    correlation_id=uuid7(),
+                    occurred_at=now,
+                ),
+            )
 
     return Ok(response)

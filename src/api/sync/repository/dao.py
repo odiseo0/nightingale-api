@@ -169,6 +169,25 @@ class OperationReceiptDAO(DAO[OperationReceipt, BaseModel, BaseModel]):
 
         return receipt
 
+    async def get_scope(
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        actor_user_id: UUID,
+        operation_id: UUID,
+    ) -> tuple[str, str | None] | EmptyType:
+        row = (
+            await db.execute(
+                select(self.model.action, self.model.clinical_section).where(
+                    self.model.account_id == account_id,
+                    self.model.actor_user_id == actor_user_id,
+                    self.model.operation_id == operation_id,
+                )
+            )
+        ).one_or_none()
+
+        return Empty if row is None else (row.action, row.clinical_section)
+
     async def get_scoped(
         self,
         db: AsyncSession,

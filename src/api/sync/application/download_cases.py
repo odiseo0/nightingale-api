@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from itertools import groupby
 from typing import TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from pydantic import ValidationError
 
@@ -12,6 +12,8 @@ from src.api.accounts.domain.accounts import AccountContext, ClinicalSection
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.appointments.application.appointments_cases import captured_history
 from src.api.appointments.domain.appointments import AppointmentResponse
+from src.api.audit.application.audit_cases import record_control
+from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.schedule.domain.schedule import (
     ScheduleBlockResponse,
@@ -249,5 +251,20 @@ async def read_changes(
                 key,
             ),
         )
+
+        if position.clinical_sections:
+            await record_control(
+                db,
+                ControlAudit(
+                    account_id=account_id,
+                    actor_user_id=context.actor.user_id,
+                    actor_device_id=context.actor.device_id,
+                    action="ReadClinicalChanges",
+                    object_type="sync_changes",
+                    outcome="accepted",
+                    correlation_id=uuid7(),
+                    occurred_at=now,
+                ),
+            )
 
     return Ok(response)

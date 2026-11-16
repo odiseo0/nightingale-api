@@ -27,6 +27,7 @@ class OperationReceipt(Base):
     entity_type: Mapped[str] = mapped_column(Text)
     entity_key: Mapped[object] = mapped_column(JSONB)
     request_hash: Mapped[bytes] = mapped_column(LargeBinary)
+    clinical_section: Mapped[str | None]
     status: Mapped[str] = mapped_column(Text)
     entity_version: Mapped[int | None]
     result_json: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
@@ -36,6 +37,8 @@ class OperationReceipt(Base):
 
 
 class ChangeLog(Base):
+    __tablename__: str = "change_log"
+
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     sequence: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     ordinal: Mapped[int] = mapped_column(primary_key=True)

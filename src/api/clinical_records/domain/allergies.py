@@ -1,15 +1,23 @@
 from typing import Literal
 
-from pydantic import UUID7, AwareDatetime, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    UUID7,
+    AwareDatetime,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from src.api.clinical_records.domain.clinical import ClinicalSourceType
 from src.api.clinical_records.domain.conditions import ClinicalDate
 from src.core.schema import BaseModel, PageQuery
 
-
 type AllergyType = Literal["allergy", "intolerance", "unknown"]
 type AllergyClinicalStatus = Literal["active", "inactive", "resolved"]
-type AllergyVerificationStatus = Literal["unconfirmed", "presumed", "confirmed", "refuted", "entered-in-error"]
+type AllergyVerificationStatus = Literal[
+    "unconfirmed", "presumed", "confirmed", "refuted", "entered-in-error"
+]
 
 
 class AllergyFields(BaseModel):
@@ -28,6 +36,14 @@ class AllergyFields(BaseModel):
 
 class CreatePatientAllergyIntolerancePayload(AllergyFields):
     patient_id: UUID7
+
+    @field_validator("verification_status")
+    @classmethod
+    def no_initial_invalidation(cls, value: AllergyVerificationStatus):
+        if value == "entered-in-error":
+            raise ValueError("La anulación requiere su acción específica")
+
+        return value
 
 
 class UpdatePatientAllergyIntolerancePayload(AllergyFields):
@@ -49,7 +65,14 @@ class UpdatePatientAllergyIntolerancePayload(AllergyFields):
     def present_fields(self):
         if not self.model_fields_set:
             raise ValueError("El cambio requiere al menos un campo")
-        for name in ("substance", "type", "clinical_status", "verification_status", "source_type"):
+
+        for name in (
+            "substance",
+            "type",
+            "clinical_status",
+            "verification_status",
+            "source_type",
+        ):
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError("Un campo presente no puede ser nulo")
 

@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid7
+from uuid import UUID
 
-from src.api.accounts.application.accounts_cases import account_context
 from src.api.accounts.domain.accounts import (
     AccountChange,
     AccountContext,
     AccountEffect,
 )
 from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleError
-from src.api.audit.application.audit_cases import record_control
-from src.api.audit.domain.audit import ControlAudit
-from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied
+from src.api.clinical_records.application.access_cases import (
+    clinical_page,
+    clinical_read_scope,
+    record_clinical_read,
+)
 from src.api.clinical_records.domain.clinical import (
     ClinicalHistoryQuery,
     ClinicalProfileHistoryResponse,
@@ -35,7 +36,6 @@ from src.api.patients.application.patients_cases import (
 )
 from src.core import Err, Ok, Result
 from src.core.db import transaction
-from src.core.schema import PaginatedResponse
 from src.core.utils.utils import Empty
 
 if TYPE_CHECKING:
@@ -174,33 +174,11 @@ async def apply_clinical_operation(
     )
 
 
-async def clinical_read_scope(
-    db: AsyncSession, credential: str | None, account_id: UUID
-):
-    identity = await authenticate(db, credential)
-
-    if isinstance(identity, Err):
-        return identity
-
-    scope = await account_context(db, identity.value, account_id, require_device=True)
-
-    if isinstance(scope, Err):
-        return scope
-
-    if scope.value.account.status != "active":
-        return Err(AccessDenied())
-
-    if scope.value.clinical_permissions.clinical_profile == "none":
-        return Err(AccessDenied())
-
-    return scope
-
-
 async def read_clinical_profile(
     db: AsyncSession, credential: str | None, account_id: UUID, patient_id: UUID
 ):
     async with transaction(db):
-        scope = await clinical_read_scope(db, credential, account_id)
+        scope = await clinical_read_scope(db, credential, account_id, "profile")
 
         if isinstance(scope, Err):
             return scope
@@ -234,19 +212,12 @@ async def read_clinical_profile(
         else:
             response = clinical_profile_response(profile, patient, today)
 
-        await record_control(
+        await record_clinical_read(
             db,
-            ControlAudit(
-                account_id=account_id,
-                actor_user_id=scope.value.actor.user_id,
-                actor_device_id=scope.value.actor.device_id,
-                action="ReadClinicalProfile",
-                object_type="patient_clinical_profile",
-                object_key=str(patient_id),
-                outcome="accepted",
-                correlation_id=uuid7(),
-                occurred_at=await clinical_server_time(db),
-            ),
+            scope.value,
+            "ReadClinicalProfile",
+            "patient_clinical_profile",
+            str(patient_id),
         )
 
     return Ok(response)
@@ -260,7 +231,7 @@ async def read_clinical_history(
     query: ClinicalHistoryQuery,
 ):
     async with transaction(db):
-        scope = await clinical_read_scope(db, credential, account_id)
+        scope = await clinical_read_scope(db, credential, account_id, "profile")
 
         if isinstance(scope, Err):
             return scope
@@ -276,23 +247,15 @@ async def read_clinical_history(
             query.shows,
             query.after_version,
         )
-        response = PaginatedResponse[ClinicalProfileHistoryResponse](
-            items=[ClinicalProfileHistoryResponse.model_validate(row) for row in rows],
-            total=total,
+        response = clinical_page(
+            rows, total, ClinicalProfileHistoryResponse.model_validate
         )
-        await record_control(
+        await record_clinical_read(
             db,
-            ControlAudit(
-                account_id=account_id,
-                actor_user_id=scope.value.actor.user_id,
-                actor_device_id=scope.value.actor.device_id,
-                action="ReadClinicalProfileHistory",
-                object_type="patient_clinical_profile",
-                object_key=str(patient_id),
-                outcome="accepted",
-                correlation_id=uuid7(),
-                occurred_at=await clinical_server_time(db),
-            ),
+            scope.value,
+            "ReadClinicalProfileHistory",
+            "patient_clinical_profile",
+            str(patient_id),
         )
 
     return Ok(response)

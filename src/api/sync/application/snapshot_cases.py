@@ -20,6 +20,12 @@ from src.api.audit.application.audit_cases import record_control
 from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.clinical_records.application.snapshot_cases import snapshot_clinical
+from src.api.clinical_records.domain.allergies import PatientAllergyIntoleranceResponse
+from src.api.clinical_records.domain.clinical import ClinicalProfileResponse
+from src.api.clinical_records.domain.conditions import (
+    ClinicalSectionReviewResponse,
+    PatientConditionResponse,
+)
 from src.api.patients.application.snapshot_cases import snapshot_patients
 from src.api.schedule.application.snapshot_cases import snapshot_schedule
 from src.api.services.application.snapshot_cases import snapshot_services
@@ -136,6 +142,7 @@ async def create_snapshot(
         )
         items = await snapshot_accounts(db, context)
         appointments = await snapshot_appointments(db, context, window)
+        clinical_items = await snapshot_clinical(db, context, clinical_sections)
         states = [
             item.state
             for item in appointments
@@ -152,10 +159,19 @@ async def create_snapshot(
             for state in [*states, *histories]
             if state.responsible_contact_id is not None
         }
-        items.extend(
-            await snapshot_patients(
-                db, context, {state.patient_id for state in states}, required_contacts
+        required_patients = {state.patient_id for state in states} | {
+            item.state.patient_id
+            for item in clinical_items
+            if isinstance(
+                item.state,
+                ClinicalProfileResponse
+                | PatientConditionResponse
+                | ClinicalSectionReviewResponse
+                | PatientAllergyIntoleranceResponse,
             )
+        }
+        items.extend(
+            await snapshot_patients(db, context, required_patients, required_contacts)
         )
         professionals = [
             item.state for item in items if isinstance(item.state, ProfessionalResponse)
@@ -167,7 +183,7 @@ async def create_snapshot(
         )
         items.extend(await snapshot_schedule(db, context, window))
         items.extend(appointments)
-        items.extend(await snapshot_clinical(db, context, clinical_sections))
+        items.extend(clinical_items)
         items.sort(
             key=lambda item: (
                 item.entity_type,
@@ -199,6 +215,7 @@ async def create_snapshot(
                 "expires_at": now + timedelta(minutes=15),
             },
         )
+
         for ordinal, item in enumerate(items, 1):
             value = item.model_dump(mode="json", by_alias=True)
             await dao_snapshot_items.record(

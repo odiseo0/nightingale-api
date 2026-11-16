@@ -21,7 +21,7 @@ from src.api.patients.application.patients_cases import read_birth_date_changes
 from src.api.patients.domain.patients import PatientBirthDateChangeResponse
 from src.core import Err, Ok
 from src.core.db import get_db
-from src.core.schema import ApiError, PageQuery, PaginatedResponse
+from src.core.schema import ApiError, PaginatedResponse
 
 router = APIRouter(
     prefix="/v1/accounts/{account_id}/patients/{patient_id}",
@@ -92,7 +92,7 @@ async def list_clinical_profile_history(
 async def list_birth_date_changes(
     account_id: UUID7,
     patient_id: UUID7,
-    query: Annotated[PageQuery, Query()],
+    query: Annotated[ClinicalHistoryQuery, Query()],
     db: Annotated[AsyncSession, Depends(get_db)],
     authorization: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
 ) -> PaginatedResponse[PatientBirthDateChangeResponse]:

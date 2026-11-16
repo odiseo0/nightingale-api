@@ -17,6 +17,7 @@ from src.api.audit.application.audit_cases import record_control
 from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied
+from src.api.clinical_records.domain.clinical import ClinicalHistoryQuery
 from src.api.patients.domain.patients import (
     AddPatientIdentifierPayload,
     PatientBirthDateChangeResponse,
@@ -426,7 +427,7 @@ async def read_birth_date_changes(
     credential: str | None,
     account_id: UUID,
     patient_id: UUID,
-    query: PageQuery,
+    query: ClinicalHistoryQuery,
 ):
     async with transaction(db):
         identity = await authenticate(db, credential)
@@ -448,7 +449,8 @@ async def read_birth_date_changes(
             return Err(AccountObjectNotFound())
 
         rows, total = await dao_birth_changes.page(
-            db, account_id, patient_id, (query.page - 1) * query.shows, query.shows
+            db, account_id, patient_id, (query.page - 1) * query.shows, query.shows,
+            query.after_version,
         )
         response = PaginatedResponse[PatientBirthDateChangeResponse](
             items=[

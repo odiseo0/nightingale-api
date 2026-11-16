@@ -208,13 +208,20 @@ class PatientBirthDateChangeDAO(DAO[PatientBirthDateChange, BaseModel, BaseModel
         patient_id: UUID,
         offset: int,
         shows: int,
+        after_version: int | None,
     ) -> tuple[list[PatientBirthDateChange], int]:
         statement = select(self.model).where(
             self.model.account_id == account_id, self.model.patient_id == patient_id
         )
+
+        if after_version is not None:
+            statement = statement.where(self.model.patient_version > after_version)
+
         total = await self.count(db, statement)
         rows = await db.scalars(
-            statement.order_by(self.model.id).offset(offset).limit(shows)
+            statement.order_by(self.model.patient_version, self.model.id)
+            .offset(offset)
+            .limit(shows)
         )
 
         return list(rows), total

@@ -2,7 +2,15 @@ import re
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import UUID7, AfterValidator, AwareDatetime, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    UUID7,
+    AfterValidator,
+    AwareDatetime,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from src.api.clinical_records.domain.clinical import ClinicalSourceType
 from src.core.schema import BaseModel, PageQuery
@@ -21,8 +29,17 @@ class ClinicalDateValue:
 
 
 type ClinicalDate = Annotated[str, AfterValidator(ClinicalDateValue.validate)]
-type ConditionClinicalStatus = Literal["active", "recurrence", "relapse", "inactive", "remission", "resolved", "unknown"]
-type ConditionVerificationStatus = Literal["unconfirmed", "provisional", "differential", "confirmed", "refuted", "entered-in-error"]
+type ConditionClinicalStatus = Literal[
+    "active", "recurrence", "relapse", "inactive", "remission", "resolved", "unknown"
+]
+type ConditionVerificationStatus = Literal[
+    "unconfirmed",
+    "provisional",
+    "differential",
+    "confirmed",
+    "refuted",
+    "entered-in-error",
+]
 
 
 class ConditionFields(BaseModel):
@@ -39,6 +56,14 @@ class ConditionFields(BaseModel):
 
 class CreatePatientConditionPayload(ConditionFields):
     patient_id: UUID7
+
+    @field_validator("verification_status")
+    @classmethod
+    def no_initial_invalidation(cls, value: ConditionVerificationStatus):
+        if value == "entered-in-error":
+            raise ValueError("La anulación requiere su acción específica")
+
+        return value
 
 
 class UpdatePatientConditionPayload(ConditionFields):
@@ -59,6 +84,7 @@ class UpdatePatientConditionPayload(ConditionFields):
     def present_fields(self):
         if not self.model_fields_set:
             raise ValueError("El cambio requiere al menos un campo")
+
         for name in ("name", "clinical_status", "verification_status", "source_type"):
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError("Un campo presente no puede ser nulo")
@@ -107,7 +133,9 @@ class ConditionQuery(PageQuery):
 class ClinicalSectionReviewResponse(BaseModel):
     patient_id: UUID7
     section: Literal["conditions", "allergies"]
-    information_status: Literal["not_recorded", "not_asked", "unknown", "none_known", "has_entries"]
+    information_status: Literal[
+        "not_recorded", "not_asked", "unknown", "none_known", "has_entries"
+    ]
     source_type: ClinicalSourceType | None
     reviewed_by_user_id: UUID7 | None
     reviewed_at: AwareDatetime | None

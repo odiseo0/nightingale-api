@@ -105,6 +105,8 @@ def main():
             os.chdir(previous)
     encoded = {name: json_bytes(value) for name, value in result.items()}
     manifest = {"generated": True, "origin": "scripts/export_contracts.py", "modelRevision": "api-v1.2",
+                "sourceHead": result["openapi.json"]["x-generated"]["sourceHead"],
+                "sourceSha256": result["openapi.json"]["x-generated"]["sourceSha256"],
                 "files": {name: hashlib.sha256(value).hexdigest() for name, value in encoded.items()},
                 "paths": len(result["openapi.json"]["paths"]), "schemas": len(result["openapi.json"]["components"]["schemas"])}
     encoded["manifest.json"] = json_bytes(manifest)
