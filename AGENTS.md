@@ -35,10 +35,21 @@ Usa [la arquitectura](docs/architecture.md) y [la propiedad de contratos](docs/c
 - Las lecturas HTTP corregidas de servicios y reglas devuelven dicts con tipos y campos explícitos; las rutas declaran response_model y el tipo de retorno real. Recibos y journal validan y serializan sus proyecciones antes del commit. Conservar modelos que aplican reglas de dominio; no devolver un ORM completo ni __dict__.
 - Listas y páginas de snapshot usan `page` desde 1 y `shows` 100 por defecto, máximo 500, con LIMIT/OFFSET en DAO y `items`/`total`. No usar cursores de página ni su configuración. Conservar el avance incremental de sincronización, sus controles y su recuperación.
 - Sustituir `src/cli.py` por `scripts/create_practice.py`, un flujo pequeño de alta administrativa. No crear un sistema de comandos ni hacer que el servidor dependa de scripts.
+- `src/core/constants.py` aquí van todas las constantes, si vas a añadir en un archivo una constante que pueda ser compartida por otros componentes debería ir aquí, todo lo que sea estático y una constante debería ir aquí.
 
 Antes de cada cambio, releer el archivo y el diff actual. Al corregir cada componente, activar sus controles de estructura; el cierre no admite excepciones que oculten infracciones. No restaurar código retirado por el usuario para satisfacer pruebas antiguas. `core/` no contiene reglas del producto ni lógica de negocio.
 
 Toda operación remota sobre datos privados exige autorización vigente por cuenta, objeto y acción, aunque Rust o el Hub ya la hayan validado. La futura lectura pública del micrositio solo devolverá información destinada a publicación; no exigirá permisos del personal ni dará acceso a las rutas privadas. API verificará el acceso limitado a citas del paciente. No confíes en campos de identidad o fechas del cliente. No entregues credenciales SQL al escritorio o al Hub. n8n usa una API interna limitada.
+
+## Skills locales
+
+Lee y aplica la skill que corresponda a la tarea:
+
+- [minimal-code](.agents/minimal-code/SKILL.md): implementación, correcciones y cambios acotados.
+- [docs-first-framework-code](.agents/docs-first-framework-code/SKILL.md): consultar fuentes oficiales antes de usar bibliotecas o API de la plataforma.
+- [planning-task-breakdown](.agents/planning-task-breakdown/SKILL.md): planificar trabajo amplio o con dependencias; no hace falta para cambios pequeños y claros.
+- [code-review](.agents/code-review/SKILL.md): revisar cambios respecto de una referencia Git indicada.
+
 
 ## Evidencia y documentación
 
