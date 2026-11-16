@@ -1,0 +1,68 @@
+{
+  "deviceRegistration": {
+    "deviceName": "Equipo ficticio",
+    "clientVersion": "0.0.0-fixture",
+    "localSchemaVersion": 1
+  },
+  "registerAccountDevice": {
+    "operationId": "019a1234-0000-7000-8000-000000000010",
+    "contractVersion": 1,
+    "action": "RegisterAccountDevice",
+    "entityKey": "019a1234-0000-7000-8000-000000000011",
+    "expectedVersion": 0,
+    "payload": {}
+  },
+  "registerPatient": {
+    "operationId": "019a1234-0000-7000-8000-000000000012",
+    "contractVersion": 1,
+    "action": "RegisterPatient",
+    "entityKey": "019a1234-0000-7000-8000-000000000013",
+    "expectedVersion": 0,
+    "payload": {
+      "fullName": "Paciente ficticio",
+      "birthDate": "2000-02-29"
+    }
+  },
+  "updatePatient": {
+    "operationId": "019a1234-0000-7000-8000-000000000014",
+    "contractVersion": 1,
+    "action": "UpdatePatientProfile",
+    "entityKey": "019a1234-0000-7000-8000-000000000013",
+    "expectedVersion": 1,
+    "payload": {
+      "fullName": "Paciente ficticio corregido"
+    }
+  },
+  "staleUpdatePatient": {
+    "operationId": "019a1234-0000-7000-8000-000000000015",
+    "contractVersion": 1,
+    "action": "UpdatePatientProfile",
+    "entityKey": "019a1234-0000-7000-8000-000000000013",
+    "expectedVersion": 1,
+    "payload": {
+      "fullName": "Paciente con versión antigua"
+    }
+  },
+  "invalidPayload": {
+    "operationId": "019a1234-0000-7000-8000-000000000016",
+    "contractVersion": 1,
+    "action": "UpdatePatientProfile",
+    "entityKey": "019a1234-0000-7000-8000-000000000013",
+    "expectedVersion": 2,
+    "payload": {
+      "birthDate": "2023-02-29"
+    }
+  },
+  "snapshotRequest": {
+    "includeClinical": true
+  },
+  "heartbeat": {
+    "event": "heartbeat",
+    "data": {
+      "serverTime": "2026-11-16T12:00:00Z"
+    }
+  },
+  "accessRevoked": {
+    "event": "access_revoked"
+  }
+}

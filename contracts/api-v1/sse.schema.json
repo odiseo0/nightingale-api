@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "ChangesAvailable": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "cursor": {
+          "title": "Cursor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "cursor"
+      ],
+      "title": "ChangesAvailable",
+      "type": "object"
+    },
+    "Heartbeat": {
+      "properties": {
+        "serverTime": {
+          "format": "date-time",
+          "title": "Servertime",
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverTime"
+      ],
+      "title": "Heartbeat",
+      "type": "object"
+    }
+  },
+  "$id": "urn:nightingale:sse:1.2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ChangesAvailable"
+        },
+        {
+          "$ref": "#/$defs/Heartbeat"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Data"
+    },
+    "event": {
+      "enum": [
+        "changes_available",
+        "heartbeat",
+        "access_revoked"
+      ],
+      "title": "Event",
+      "type": "string"
+    },
+    "eventId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Eventid"
+    }
+  },
+  "required": [
+    "event"
+  ],
+  "title": "StreamEvent",
+  "type": "object",
+  "x-generated": {
+    "contractVersion": 1,
+    "generator": "scripts/export_contracts.py",
+    "modelRevision": "api-v1.2",
+    "origin": "src.application:app and src/api/*/domain",
+    "packages": {
+      "asyncpg": "0.32.0",
+      "fastapi": "0.159.1",
+      "nightingale-api": "0.1.0",
+      "pydantic": "2.14.1",
+      "sqlalchemy": "2.1.6"
+    },
+    "sourceHead": "e57918f0a33d6793774860887a4484744f3745f6",
+    "sourceSha256": "4b1e706e225c4d5d8c44e0484003815db76328bbd4c219fc05f59e8764570dc2"
+  }
+}

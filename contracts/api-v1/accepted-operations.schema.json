@@ -1,0 +1,2740 @@
+{
+  "$defs": {
+    "AccountDetailsPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "displayName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Displayname"
+        },
+        "locationAddress": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locationaddress"
+        },
+        "locationCity": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locationcity"
+        },
+        "locationCountry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locationcountry"
+        },
+        "locationName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locationname"
+        },
+        "locationState": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locationstate"
+        },
+        "timeZone": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timezone"
+        }
+      },
+      "title": "AccountDetailsPatch",
+      "type": "object"
+    },
+    "AccountPolicyPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "noShowGraceMinutes": {
+          "maximum": 1440,
+          "minimum": 0,
+          "title": "Noshowgraceminutes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "noShowGraceMinutes"
+      ],
+      "title": "AccountPolicyPayload",
+      "type": "object"
+    },
+    "AddPatientIdentifierPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "documentNumber": {
+          "minLength": 1,
+          "title": "Documentnumber",
+          "type": "string"
+        },
+        "documentType": {
+          "enum": [
+            "national_id",
+            "passport"
+          ],
+          "title": "Documenttype",
+          "type": "string"
+        },
+        "issuingCountry": {
+          "default": "VE",
+          "pattern": "^[A-Z]{2}$",
+          "title": "Issuingcountry",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "documentType",
+        "documentNumber",
+        "patientId"
+      ],
+      "title": "AddPatientIdentifierPayload",
+      "type": "object"
+    },
+    "AllergyClinicalStatus": {
+      "enum": [
+        "active",
+        "inactive",
+        "resolved"
+      ],
+      "type": "string"
+    },
+    "AllergyType": {
+      "enum": [
+        "allergy",
+        "intolerance",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "AllergyVerificationStatus": {
+      "enum": [
+        "unconfirmed",
+        "presumed",
+        "confirmed",
+        "refuted",
+        "entered-in-error"
+      ],
+      "type": "string"
+    },
+    "AppointmentInterval": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        },
+        "startsAt": {
+          "format": "date-time",
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt"
+      ],
+      "title": "AppointmentInterval",
+      "type": "object"
+    },
+    "AppointmentReasonPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "changeReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Changereason"
+        }
+      },
+      "title": "AppointmentReasonPayload",
+      "type": "object"
+    },
+    "ClinicalDate": {
+      "type": "string"
+    },
+    "ClinicalLevel": {
+      "enum": [
+        "none",
+        "read",
+        "read_write"
+      ],
+      "type": "string"
+    },
+    "ClinicalPermissions": {
+      "properties": {
+        "allergies": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "clinicalProfile": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "conditions": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        }
+      },
+      "title": "ClinicalPermissions",
+      "type": "object"
+    },
+    "ClinicalPermissionsPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "clinicalPermissions": {
+          "$ref": "#/$defs/ClinicalPermissions"
+        }
+      },
+      "required": [
+        "clinicalPermissions"
+      ],
+      "title": "ClinicalPermissionsPayload",
+      "type": "object"
+    },
+    "ClinicalSourceType": {
+      "enum": [
+        "patient",
+        "related_person",
+        "professional",
+        "external_document",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ConditionClinicalStatus": {
+      "enum": [
+        "active",
+        "recurrence",
+        "relapse",
+        "inactive",
+        "remission",
+        "resolved",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ConditionVerificationStatus": {
+      "enum": [
+        "unconfirmed",
+        "provisional",
+        "differential",
+        "confirmed",
+        "refuted",
+        "entered-in-error"
+      ],
+      "type": "string"
+    },
+    "ContactData": {
+      "additionalProperties": false,
+      "properties": {
+        "documentNumber": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Documentnumber"
+        },
+        "documentType": {
+          "anyOf": [
+            {
+              "enum": [
+                "national_id",
+                "passport"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Documenttype"
+        },
+        "fullName": {
+          "minLength": 1,
+          "title": "Fullname",
+          "type": "string"
+        },
+        "issuingCountry": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuingcountry"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "pattern": "^\\+[1-9][0-9]{0,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phonecode"
+        }
+      },
+      "required": [
+        "fullName"
+      ],
+      "title": "ContactData",
+      "type": "object"
+    },
+    "ContactPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "documentNumber": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Documentnumber"
+        },
+        "documentType": {
+          "anyOf": [
+            {
+              "enum": [
+                "national_id",
+                "passport"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Documenttype"
+        },
+        "fullName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fullname"
+        },
+        "issuingCountry": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuingcountry"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "pattern": "^\\+[1-9][0-9]{0,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phonecode"
+        }
+      },
+      "title": "ContactPatch",
+      "type": "object"
+    },
+    "CreateAppointmentPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "responsibleContactId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Responsiblecontactid"
+        },
+        "serviceId": {
+          "format": "uuid7",
+          "title": "Serviceid",
+          "type": "string"
+        },
+        "startsAt": {
+          "format": "date-time",
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "patientId",
+        "professionalId",
+        "serviceId"
+      ],
+      "title": "CreateAppointmentPayload",
+      "type": "object"
+    },
+    "CreateInvitationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "inviteeUserId": {
+          "format": "uuid7",
+          "title": "Inviteeuserid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "inviteeUserId"
+      ],
+      "title": "CreateInvitationPayload",
+      "type": "object"
+    },
+    "CreatePatientAllergyIntolerancePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "clinicalStatus": {
+          "$ref": "#/$defs/AllergyClinicalStatus",
+          "default": "active"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "lastOccurrenceDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "onsetDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "reactionDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reactiondescription"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "substance": {
+          "minLength": 1,
+          "title": "Substance",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/AllergyType",
+          "default": "unknown"
+        },
+        "verificationStatus": {
+          "$ref": "#/$defs/AllergyVerificationStatus",
+          "default": "unconfirmed"
+        }
+      },
+      "required": [
+        "substance",
+        "patientId"
+      ],
+      "title": "CreatePatientAllergyIntolerancePayload",
+      "type": "object"
+    },
+    "CreatePatientConditionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "abatementDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clinicalStatus": {
+          "$ref": "#/$defs/ConditionClinicalStatus",
+          "default": "active"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "onsetDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        },
+        "verificationStatus": {
+          "$ref": "#/$defs/ConditionVerificationStatus",
+          "default": "unconfirmed"
+        }
+      },
+      "required": [
+        "name",
+        "patientId"
+      ],
+      "title": "CreatePatientConditionPayload",
+      "type": "object"
+    },
+    "CreateScheduleBlockPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Accountid"
+        },
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "reasonCode": {
+          "enum": [
+            "vacation",
+            "administrative",
+            "unavailable"
+          ],
+          "title": "Reasoncode",
+          "type": "string"
+        },
+        "startsAt": {
+          "format": "date-time",
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "reasonCode",
+        "professionalId",
+        "accountId"
+      ],
+      "title": "CreateScheduleBlockPayload",
+      "type": "object"
+    },
+    "CreateScheduleExceptionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "closed",
+            "replacement"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "localDate": {
+          "format": "date",
+          "title": "Localdate",
+          "type": "string"
+        },
+        "localEndMinute": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localendminute"
+        },
+        "localStartMinute": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localstartminute"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "localDate",
+        "kind",
+        "professionalId"
+      ],
+      "title": "CreateScheduleExceptionPayload",
+      "type": "object"
+    },
+    "CreateScheduleRulePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "isoWeekday": {
+          "maximum": 7,
+          "minimum": 1,
+          "title": "Isoweekday",
+          "type": "integer"
+        },
+        "localEndMinute": {
+          "maximum": 1440,
+          "minimum": 1,
+          "title": "Localendminute",
+          "type": "integer"
+        },
+        "localStartMinute": {
+          "maximum": 1439,
+          "minimum": 0,
+          "title": "Localstartminute",
+          "type": "integer"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "validFrom": {
+          "format": "date",
+          "title": "Validfrom",
+          "type": "string"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validuntil"
+        }
+      },
+      "required": [
+        "localStartMinute",
+        "localEndMinute",
+        "isoWeekday",
+        "validFrom",
+        "professionalId"
+      ],
+      "title": "CreateScheduleRulePayload",
+      "type": "object"
+    },
+    "CreateServicePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "defaultDurationMinutes": {
+          "maximum": 1440,
+          "minimum": 1,
+          "title": "Defaultdurationminutes",
+          "type": "integer"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "defaultDurationMinutes",
+        "professionalId"
+      ],
+      "title": "CreateServicePayload",
+      "type": "object"
+    },
+    "EmptyAppointmentPayload": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyAppointmentPayload",
+      "type": "object"
+    },
+    "IdentifierInput": {
+      "additionalProperties": false,
+      "properties": {
+        "documentNumber": {
+          "minLength": 1,
+          "title": "Documentnumber",
+          "type": "string"
+        },
+        "documentType": {
+          "enum": [
+            "national_id",
+            "passport"
+          ],
+          "title": "Documenttype",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid7",
+          "title": "Id",
+          "type": "string"
+        },
+        "issuingCountry": {
+          "default": "VE",
+          "pattern": "^[A-Z]{2}$",
+          "title": "Issuingcountry",
+          "type": "string"
+        }
+      },
+      "required": [
+        "documentType",
+        "documentNumber",
+        "id"
+      ],
+      "title": "IdentifierInput",
+      "type": "object"
+    },
+    "InvalidatePatientAllergyIntolerancePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidatePatientAllergyIntolerancePayload",
+      "type": "object"
+    },
+    "InvalidatePatientConditionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidatePatientConditionPayload",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "MembershipStatusPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "MembershipStatusPayload",
+      "type": "object"
+    },
+    "OfferServicePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "durationMinutesOverride": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Durationminutesoverride"
+        }
+      },
+      "title": "OfferServicePayload",
+      "type": "object"
+    },
+    "OperationEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "contractVersion": {
+          "maximum": 1,
+          "minimum": 1,
+          "title": "Contractversion",
+          "type": "integer"
+        },
+        "dependsOn": {
+          "items": {
+            "format": "uuid7",
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Dependson",
+          "type": "array"
+        },
+        "entityKey": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "additionalProperties": {
+                "format": "uuid7",
+                "type": "string"
+              },
+              "type": "object"
+            }
+          ],
+          "title": "Entitykey"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "occurredAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occurredatlocal"
+        },
+        "operationId": {
+          "format": "uuid7",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Payload",
+          "type": "object"
+        }
+      },
+      "required": [
+        "operationId",
+        "contractVersion",
+        "action",
+        "entityKey",
+        "expectedVersion",
+        "payload"
+      ],
+      "title": "OperationEnvelope",
+      "type": "object"
+    },
+    "PatientCompletionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "completionStatus": {
+          "enum": [
+            "draft",
+            "complete"
+          ],
+          "title": "Completionstatus",
+          "type": "string"
+        }
+      },
+      "required": [
+        "completionStatus"
+      ],
+      "title": "PatientCompletionPayload",
+      "type": "object"
+    },
+    "PatientPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "birthDate": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Birthdate"
+        },
+        "fullName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fullname"
+        },
+        "identificationBasis": {
+          "anyOf": [
+            {
+              "enum": [
+                "own_document",
+                "minor_without_document"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identificationbasis"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "pattern": "^\\+[1-9][0-9]{0,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phonecode"
+        }
+      },
+      "title": "PatientPatch",
+      "type": "object"
+    },
+    "PatientStatusPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "PatientStatusPayload",
+      "type": "object"
+    },
+    "ProfessionalPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "publicName": {
+          "minLength": 1,
+          "title": "Publicname",
+          "type": "string"
+        }
+      },
+      "required": [
+        "publicName"
+      ],
+      "title": "ProfessionalPayload",
+      "type": "object"
+    },
+    "RegisterPatientPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "birthDate": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Birthdate"
+        },
+        "fullName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fullname"
+        },
+        "identificationBasis": {
+          "anyOf": [
+            {
+              "enum": [
+                "own_document",
+                "minor_without_document"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identificationbasis"
+        },
+        "identifiers": {
+          "items": {
+            "$ref": "#/$defs/IdentifierInput"
+          },
+          "maxItems": 100,
+          "title": "Identifiers",
+          "type": "array"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone"
+        },
+        "phoneCode": {
+          "anyOf": [
+            {
+              "pattern": "^\\+[1-9][0-9]{0,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phonecode"
+        }
+      },
+      "title": "RegisterPatientPayload",
+      "type": "object"
+    },
+    "RelationshipData": {
+      "additionalProperties": false,
+      "properties": {
+        "isResponsibleContact": {
+          "default": false,
+          "title": "Isresponsiblecontact",
+          "type": "boolean"
+        },
+        "relationshipKind": {
+          "enum": [
+            "mother",
+            "father",
+            "guardian",
+            "other"
+          ],
+          "title": "Relationshipkind",
+          "type": "string"
+        },
+        "validFrom": {
+          "format": "date-time",
+          "title": "Validfrom",
+          "type": "string"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validuntil"
+        }
+      },
+      "required": [
+        "relationshipKind",
+        "validFrom"
+      ],
+      "title": "RelationshipData",
+      "type": "object"
+    },
+    "RelationshipPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "isResponsibleContact": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Isresponsiblecontact"
+        },
+        "relationshipKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "mother",
+                "father",
+                "guardian",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relationshipkind"
+        },
+        "validFrom": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validfrom"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validuntil"
+        }
+      },
+      "title": "RelationshipPatch",
+      "type": "object"
+    },
+    "ScheduleBlockPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endsat"
+        },
+        "reasonCode": {
+          "anyOf": [
+            {
+              "enum": [
+                "vacation",
+                "administrative",
+                "unavailable"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reasoncode"
+        },
+        "startsAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Startsat"
+        }
+      },
+      "title": "ScheduleBlockPatch",
+      "type": "object"
+    },
+    "ScheduleExceptionPatch": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "closed",
+                "replacement"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "localDate": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localdate"
+        },
+        "localEndMinute": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localendminute"
+        },
+        "localStartMinute": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localstartminute"
+        }
+      },
+      "title": "ScheduleExceptionPatch",
+      "type": "object"
+    },
+    "ScheduleRulePatch": {
+      "additionalProperties": false,
+      "properties": {
+        "isoWeekday": {
+          "anyOf": [
+            {
+              "maximum": 7,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Isoweekday"
+        },
+        "localEndMinute": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localendminute"
+        },
+        "localStartMinute": {
+          "anyOf": [
+            {
+              "maximum": 1439,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localstartminute"
+        },
+        "validFrom": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validfrom"
+        },
+        "validUntil": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Validuntil"
+        }
+      },
+      "title": "ScheduleRulePatch",
+      "type": "object"
+    },
+    "ScheduleRuleStatusPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ScheduleRuleStatusPayload",
+      "type": "object"
+    },
+    "ServicePatch": {
+      "additionalProperties": false,
+      "properties": {
+        "defaultDurationMinutes": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Defaultdurationminutes"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        }
+      },
+      "title": "ServicePatch",
+      "type": "object"
+    },
+    "ServiceStatusPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ServiceStatusPayload",
+      "type": "object"
+    },
+    "SetPatientClinicalSectionReviewPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "informationStatus": {
+          "enum": [
+            "not_asked",
+            "unknown",
+            "none_known",
+            "has_entries"
+          ],
+          "title": "Informationstatus",
+          "type": "string"
+        },
+        "section": {
+          "enum": [
+            "conditions",
+            "allergies"
+          ],
+          "title": "Section",
+          "type": "string"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        }
+      },
+      "required": [
+        "section",
+        "informationStatus"
+      ],
+      "title": "SetPatientClinicalSectionReviewPayload",
+      "type": "object"
+    },
+    "SetPatientSexAtBirthPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "sexAtBirth": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SexAtBirth"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        }
+      },
+      "required": [
+        "sexAtBirth"
+      ],
+      "title": "SetPatientSexAtBirthPayload",
+      "type": "object"
+    },
+    "SexAtBirth": {
+      "enum": [
+        "male",
+        "female",
+        "other",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "UpdatePatientAllergyIntolerancePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "clinicalStatus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AllergyClinicalStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "lastOccurrenceDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "onsetDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reactionDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reactiondescription"
+        },
+        "sourceType": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalSourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "substance": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Substance"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AllergyType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "verificationStatus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AllergyVerificationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "UpdatePatientAllergyIntolerancePayload",
+      "type": "object"
+    },
+    "UpdatePatientConditionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "abatementDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clinicalStatus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConditionClinicalStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "onsetDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceType": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalSourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "verificationStatus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConditionVerificationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "UpdatePatientConditionPayload",
+      "type": "object"
+    },
+    "UpdateServiceOfferPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "durationMinutesOverride": {
+          "anyOf": [
+            {
+              "maximum": 1440,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Durationminutesoverride"
+        }
+      },
+      "required": [
+        "durationMinutesOverride"
+      ],
+      "title": "UpdateServiceOfferPayload",
+      "type": "object"
+    }
+  },
+  "$id": "urn:nightingale:accepted-operations:1.2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    {
+      "$ref": "#/$defs/OperationEnvelope"
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "action": {
+              "const": "AddPatientIdentifier"
+            },
+            "payload": {
+              "$ref": "#/$defs/AddPatientIdentifierPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CancelAppointment"
+            },
+            "payload": {
+              "$ref": "#/$defs/AppointmentReasonPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CompleteAppointment"
+            },
+            "payload": {
+              "$ref": "#/$defs/AppointmentReasonPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "ConfirmAppointment"
+            },
+            "payload": {
+              "$ref": "#/$defs/EmptyAppointmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateAppointment"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateAppointmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateContactPerson"
+            },
+            "payload": {
+              "$ref": "#/$defs/ContactData"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateInvitation"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateInvitationPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreatePatientAllergyIntolerance"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreatePatientAllergyIntolerancePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreatePatientCondition"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreatePatientConditionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreatePatientContactRelationship"
+            },
+            "payload": {
+              "$ref": "#/$defs/RelationshipData"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateScheduleBlock"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateScheduleBlockPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateScheduleException"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateScheduleExceptionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateScheduleRule"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateScheduleRulePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreateService"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateServicePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidatePatientAllergyIntolerance"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidatePatientAllergyIntolerancePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidatePatientCondition"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidatePatientConditionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "MarkAppointmentNoShow"
+            },
+            "payload": {
+              "$ref": "#/$defs/AppointmentReasonPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "OfferService"
+            },
+            "payload": {
+              "$ref": "#/$defs/OfferServicePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RegisterAccountDevice"
+            },
+            "payload": {
+              "maxProperties": 0,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RegisterPatient"
+            },
+            "payload": {
+              "$ref": "#/$defs/RegisterPatientPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RescheduleAppointment"
+            },
+            "payload": {
+              "$ref": "#/$defs/AppointmentInterval"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RestoreAccountDevice"
+            },
+            "payload": {
+              "maxProperties": 0,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RevokeAccountDevice"
+            },
+            "payload": {
+              "maxProperties": 0,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RevokeInvitation"
+            },
+            "payload": {
+              "maxProperties": 0,
+              "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetAccountStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/MembershipStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetContactPersonStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/PatientStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetMemberClinicalPermissions"
+            },
+            "payload": {
+              "$ref": "#/$defs/ClinicalPermissionsPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetMembershipStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/MembershipStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetPatientClinicalSectionReview"
+            },
+            "payload": {
+              "$ref": "#/$defs/SetPatientClinicalSectionReviewPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetPatientCompletion"
+            },
+            "payload": {
+              "$ref": "#/$defs/PatientCompletionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetPatientContactRelationshipStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/PatientStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetPatientProfileStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/PatientStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetPatientSexAtBirth"
+            },
+            "payload": {
+              "$ref": "#/$defs/SetPatientSexAtBirthPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetScheduleBlockStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/ScheduleRuleStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetScheduleExceptionStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/ScheduleRuleStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetScheduleRuleStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/ScheduleRuleStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetServiceOfferStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/ServiceStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetServiceStatus"
+            },
+            "payload": {
+              "$ref": "#/$defs/ServiceStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateAccountDetails"
+            },
+            "payload": {
+              "$ref": "#/$defs/AccountDetailsPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateAccountPolicy"
+            },
+            "payload": {
+              "$ref": "#/$defs/AccountPolicyPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateContactPerson"
+            },
+            "payload": {
+              "$ref": "#/$defs/ContactPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdatePatientAllergyIntolerance"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdatePatientAllergyIntolerancePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdatePatientCondition"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdatePatientConditionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdatePatientContactRelationship"
+            },
+            "payload": {
+              "$ref": "#/$defs/RelationshipPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdatePatientProfile"
+            },
+            "payload": {
+              "$ref": "#/$defs/PatientPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateProfessionalProfile"
+            },
+            "payload": {
+              "$ref": "#/$defs/ProfessionalPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateScheduleBlock"
+            },
+            "payload": {
+              "$ref": "#/$defs/ScheduleBlockPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateScheduleException"
+            },
+            "payload": {
+              "$ref": "#/$defs/ScheduleExceptionPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateScheduleRule"
+            },
+            "payload": {
+              "$ref": "#/$defs/ScheduleRulePatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateService"
+            },
+            "payload": {
+              "$ref": "#/$defs/ServicePatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateServiceOffer"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateServiceOfferPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  ],
+  "title": "Known operations with valid payloads; business rules still apply",
+  "x-generated": {
+    "contractVersion": 1,
+    "generator": "scripts/export_contracts.py",
+    "modelRevision": "api-v1.2",
+    "origin": "src.application:app and src/api/*/domain",
+    "packages": {
+      "asyncpg": "0.32.0",
+      "fastapi": "0.159.1",
+      "nightingale-api": "0.1.0",
+      "pydantic": "2.14.1",
+      "sqlalchemy": "2.1.6"
+    },
+    "sourceHead": "e57918f0a33d6793774860887a4484744f3745f6",
+    "sourceSha256": "4b1e706e225c4d5d8c44e0484003815db76328bbd4c219fc05f59e8764570dc2"
+  }
+}
