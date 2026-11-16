@@ -47,10 +47,20 @@ from src.api.clinical_records.application.access_cases import (
     clinical_result_section,
 )
 from src.api.clinical_records.application.allergies_cases import apply_allergy_operation
+from src.api.clinical_records.application.antecedents_cases import (
+    apply_antecedent_operation,
+)
 from src.api.clinical_records.application.clinical_cases import apply_clinical_operation
 from src.api.clinical_records.application.conditions_cases import (
     apply_condition_operation,
 )
+from src.api.clinical_records.application.immunizations_cases import (
+    apply_immunization_operation,
+)
+from src.api.clinical_records.application.measurements_cases import (
+    apply_measurement_operation,
+)
+from src.api.clinical_records.application.notes_cases import apply_note_operation
 from src.api.clinical_records.domain.conditions import (
     SetPatientClinicalSectionReviewPayload,
 )
@@ -77,12 +87,16 @@ from src.api.services.domain.offers import ServiceOfferResponse
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
 from src.api.sync.domain.operations import (
     ALLERGY_SCHEMAS,
+    ANTECEDENT_SCHEMAS,
     APPOINTMENT_SCHEMAS,
     BLOCK_SCHEMAS,
     CONDITION_SCHEMAS,
     CONTACT_SCHEMAS,
     ENCOUNTER_SCHEMAS,
     EXCEPTION_SCHEMAS,
+    IMMUNIZATION_SCHEMAS,
+    MEASUREMENT_SCHEMAS,
+    NOTE_SCHEMAS,
     OFFER_SCHEMAS,
     RULE_SCHEMAS,
     SERVICE_SCHEMAS,
@@ -429,6 +443,18 @@ async def accept_operation(
             "CreatePatientEncounter": "clinical_encounter",
             "UpdatePatientEncounter": "clinical_encounter",
             "InvalidatePatientEncounter": "clinical_encounter",
+            "CreatePatientNote": "patient_note",
+            "UpdatePatientNote": "patient_note",
+            "InvalidatePatientNote": "patient_note",
+            "RecordPatientMeasurement": "patient_measurement",
+            "CorrectPatientMeasurement": "patient_measurement",
+            "InvalidatePatientMeasurement": "patient_measurement",
+            "RecordPatientImmunization": "patient_immunization",
+            "UpdatePatientImmunization": "patient_immunization",
+            "InvalidatePatientImmunization": "patient_immunization",
+            "CreatePatientAntecedent": "patient_antecedent",
+            "UpdatePatientAntecedent": "patient_antecedent",
+            "InvalidatePatientAntecedent": "patient_antecedent",
         }.get(operation.action, "invitation" if internal_invitation else "unknown")
         changes = []
         permission_changed = True
@@ -467,6 +493,10 @@ async def accept_operation(
                 or operation.action in CONDITION_SCHEMAS
                 or operation.action in ALLERGY_SCHEMAS
                 or operation.action in ENCOUNTER_SCHEMAS
+                or operation.action in NOTE_SCHEMAS
+                or operation.action in MEASUREMENT_SCHEMAS
+                or operation.action in IMMUNIZATION_SCHEMAS
+                or operation.action in ANTECEDENT_SCHEMAS
                 or operation.action in OFFER_SCHEMAS
                 or operation.action in SERVICE_SCHEMAS
                 or operation.action in CONTACT_SCHEMAS
@@ -495,6 +525,10 @@ async def accept_operation(
                     operation.action in CONDITION_SCHEMAS
                     or operation.action in ALLERGY_SCHEMAS
                     or operation.action in ENCOUNTER_SCHEMAS
+                    or operation.action in NOTE_SCHEMAS
+                    or operation.action in MEASUREMENT_SCHEMAS
+                    or operation.action in IMMUNIZATION_SCHEMAS
+                    or operation.action in ANTECEDENT_SCHEMAS
                     or operation.action == "SetPatientSexAtBirth"
                 ) and not isinstance(operation.entity_key, UUID):
                     return Err(AccountRuleError("VALIDATION_ERROR"))
@@ -507,16 +541,180 @@ async def accept_operation(
                     else apply_condition_operation
                 )
                 handlers = (
-                    (APPOINTMENT_SCHEMAS, lambda: apply_appointment_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
-                    (set(BLOCK_SCHEMAS) | set(EXCEPTION_SCHEMAS) | set(RULE_SCHEMAS) | {"UpdateAccountDetails"}, lambda: apply_schedule_change(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
-                    (OFFER_SCHEMAS, lambda: apply_offer_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
-                    (SERVICE_SCHEMAS, lambda: apply_service_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
-                    (CONTACT_SCHEMAS, lambda: apply_contact_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload)),
-                    (ENCOUNTER_SCHEMAS, lambda: apply_encounter_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id, operation.occurred_at_local)),
-                    (ALLERGY_SCHEMAS, lambda: apply_allergy_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
-                    (CONDITION_SCHEMAS, lambda: apply_condition(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
-                    ({"SetPatientSexAtBirth"}, lambda: apply_clinical_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
-                    ({"RegisterPatient", "UpdatePatientProfile", "SetPatientProfileStatus", "SetPatientCompletion", "AddPatientIdentifier"}, lambda: apply_patient_operation(db, context, operation.action, operation.entity_key, operation.expected_version, payload, operation.operation_id)),
+                    (
+                        APPOINTMENT_SCHEMAS,
+                        lambda: apply_appointment_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                        ),
+                    ),
+                    (
+                        set(BLOCK_SCHEMAS)
+                        | set(EXCEPTION_SCHEMAS)
+                        | set(RULE_SCHEMAS)
+                        | {"UpdateAccountDetails"},
+                        lambda: apply_schedule_change(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                        ),
+                    ),
+                    (
+                        OFFER_SCHEMAS,
+                        lambda: apply_offer_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                        ),
+                    ),
+                    (
+                        SERVICE_SCHEMAS,
+                        lambda: apply_service_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                        ),
+                    ),
+                    (
+                        CONTACT_SCHEMAS,
+                        lambda: apply_contact_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                        ),
+                    ),
+                    (
+                        ANTECEDENT_SCHEMAS,
+                        lambda: apply_antecedent_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        IMMUNIZATION_SCHEMAS,
+                        lambda: apply_immunization_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        MEASUREMENT_SCHEMAS,
+                        lambda: apply_measurement_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                            operation.occurred_at_local,
+                        ),
+                    ),
+                    (
+                        NOTE_SCHEMAS,
+                        lambda: apply_note_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        ENCOUNTER_SCHEMAS,
+                        lambda: apply_encounter_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                            operation.occurred_at_local,
+                        ),
+                    ),
+                    (
+                        ALLERGY_SCHEMAS,
+                        lambda: apply_allergy_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        CONDITION_SCHEMAS,
+                        lambda: apply_condition(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        {"SetPatientSexAtBirth"},
+                        lambda: apply_clinical_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        {
+                            "RegisterPatient",
+                            "UpdatePatientProfile",
+                            "SetPatientProfileStatus",
+                            "SetPatientCompletion",
+                            "AddPatientIdentifier",
+                        },
+                        lambda: apply_patient_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
                 )
 
                 for catalog, handle in handlers:
@@ -526,16 +724,29 @@ async def accept_operation(
                 else:
                     effect = await (
                         apply_invitation_operation(
-                            db, context, operation.action, operation.entity_key,
-                            operation.expected_version, payload, operation.operation_id,
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
                         )
-                        if operation.action in (
-                            "CreateInvitation", "RevokeInvitation",
-                            "SetMembershipStatus", "SetMemberClinicalPermissions",
-                        ) or internal_invitation
+                        if operation.action
+                        in (
+                            "CreateInvitation",
+                            "RevokeInvitation",
+                            "SetMembershipStatus",
+                            "SetMemberClinicalPermissions",
+                        )
+                        or internal_invitation
                         else apply_management_operation(
-                            db, context, operation.action, operation.entity_key,
-                            operation.expected_version, payload,
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
                         )
                     )
 

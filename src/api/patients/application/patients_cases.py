@@ -418,6 +418,12 @@ async def clinical_server_time(db: AsyncSession) -> datetime:
     return await dao_patients.server_time(db)
 
 
+async def clinical_date(
+    db: AsyncSession, time_zone: str, instant: datetime
+) -> date:
+    return await dao_patients.local_date(db, time_zone, instant)
+
+
 async def clinical_today(db: AsyncSession, time_zone: str) -> date:
     return await dao_patients.local_today(db, time_zone)
 

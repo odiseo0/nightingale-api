@@ -17,6 +17,7 @@ from src.api.clinical_records.application.access_cases import (
     clinical_read_scope,
     record_clinical_read,
 )
+from src.api.clinical_records.application.timeline_cases import project_entry
 from src.api.clinical_records.domain.allergies import (
     CreatePatientAllergyIntolerancePayload,
     InvalidatePatientAllergyIntolerancePayload,
@@ -378,6 +379,7 @@ async def apply_entry_write(
     ) -> AccountEffect:
         await adapter.history(context, entry, event, operation_id)
         state = adapter.response(entry)
+        await project_entry(db, context.account.id, state)
         entity_type = (
             "patient_condition"
             if section == "conditions"
@@ -421,6 +423,7 @@ async def apply_entry_write(
         entry = await adapter.create(
             context, entity_key, payload, await clinical_server_time(db)
         )
+
         return Ok(await finish(entry, patient_id, was_pertinent, "created"))
 
     entry = await adapter.scoped(entity_key)

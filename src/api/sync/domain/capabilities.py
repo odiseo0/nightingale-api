@@ -11,7 +11,7 @@ class DefaultAppointmentWindow(BaseModel):
 
 class CapabilitiesResponse(BaseModel):
     contract_version: Literal[1] = 1
-    model_revision: Literal["api-v1.2"] = "api-v1.2"
+    model_revision: Literal["api-v1.3"] = "api-v1.3"
     operation_catalog: list[str]
     online_only_actions: list[str]
     max_batch_operations: Literal[100] = 100

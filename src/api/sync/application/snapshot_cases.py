@@ -21,11 +21,15 @@ from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.clinical_records.application.snapshot_cases import snapshot_clinical
 from src.api.clinical_records.domain.allergies import PatientAllergyIntoleranceResponse
+from src.api.clinical_records.domain.antecedents import PatientAntecedentResponse
 from src.api.clinical_records.domain.clinical import ClinicalProfileResponse
 from src.api.clinical_records.domain.conditions import (
     ClinicalSectionReviewResponse,
     PatientConditionResponse,
 )
+from src.api.clinical_records.domain.immunizations import PatientImmunizationResponse
+from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
+from src.api.clinical_records.domain.notes import PatientNoteResponse
 from src.api.encounters.application.snapshot_cases import snapshot_encounters
 from src.api.encounters.domain.encounters import PatientEncounterResponse
 from src.api.patients.application.snapshot_cases import snapshot_patients
@@ -64,6 +68,7 @@ type SnapshotError = (
 
 def snapshot_response(row: SyncSnapshot) -> Result[SnapshotResponse, SyncReadError]:
     secret = api_settings.sync_signing_key
+
     if secret is None:
         return Err(SyncReadError("DEPENDENCY_UNAVAILABLE"))
 
@@ -113,6 +118,7 @@ async def create_snapshot(
 ) -> Result[SnapshotResponse, SnapshotError]:
     async with transaction(db, isolation_level="REPEATABLE READ"):
         scope = await authorized_context(db, credential, account_id)
+
         if isinstance(scope, Err):
             return scope
 
@@ -128,6 +134,7 @@ async def create_snapshot(
         starts_at, ends_at = await dao_heads.window_bounds(
             db, start, end, context.account.time_zone
         )
+
         try:
             window = SyncWindow(
                 appointments_from=start,
@@ -148,6 +155,7 @@ async def create_snapshot(
 
         if "encounters" in clinical_sections:
             clinical_items.extend(await snapshot_encounters(db, account_id))
+
         states = [
             item.state
             for item in appointments
@@ -173,7 +181,11 @@ async def create_snapshot(
                 | PatientConditionResponse
                 | ClinicalSectionReviewResponse
                 | PatientAllergyIntoleranceResponse
-                | PatientEncounterResponse,
+                | PatientEncounterResponse
+                | PatientNoteResponse
+                | PatientMeasurementResponse
+                | PatientImmunizationResponse
+                | PatientAntecedentResponse,
             )
         }
         items.extend(
@@ -206,7 +218,7 @@ async def create_snapshot(
                 "user_id": context.actor.user_id,
                 "device_id": context.actor.device_id,
                 "contract_version": 1,
-                "model_revision": "api-v1.2",
+                "model_revision": "api-v1.3",
                 "appointments_from": start,
                 "appointments_until": end,
                 "window_time_zone": window.time_zone,
@@ -335,6 +347,7 @@ async def snapshot_page(
         rows = await dao_snapshot_items.page(
             db, row.id, (query.page - 1) * query.shows, query.shows
         )
+
         try:
             response = PaginatedResponse[SyncItem](
                 total=row.item_count,

@@ -282,6 +282,32 @@ async def apply_encounter_operation(
     )
 
 
+async def encounter_for_record(
+    db: AsyncSession, account_id: UUID, patient_id: UUID, encounter_id: UUID | None
+) -> bool:
+    if encounter_id is None:
+        return True
+
+    row = await dao_encounters.scoped(db, account_id, encounter_id)
+
+    return row is not Empty and row.patient_id == patient_id
+
+
+async def valid_encounter_for_record(
+    db: AsyncSession, account_id: UUID, patient_id: UUID, encounter_id: UUID | None
+) -> bool:
+    if encounter_id is None:
+        return False
+
+    row = await dao_encounters.scoped(db, account_id, encounter_id)
+
+    return (
+        row is not Empty
+        and row.patient_id == patient_id
+        and row.record_status == "valid"
+    )
+
+
 async def read_encounters(
     db: AsyncSession,
     credential: str | None,

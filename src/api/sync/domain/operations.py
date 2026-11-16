@@ -43,6 +43,12 @@ from src.api.clinical_records.domain.allergies import (
     PatientAllergyIntoleranceResponse,
     UpdatePatientAllergyIntolerancePayload,
 )
+from src.api.clinical_records.domain.antecedents import (
+    CreatePatientAntecedentPayload,
+    InvalidatePatientAntecedentPayload,
+    PatientAntecedentResponse,
+    UpdatePatientAntecedentPayload,
+)
 from src.api.clinical_records.domain.clinical import (
     ClinicalProfileResponse,
     SetPatientSexAtBirthPayload,
@@ -54,6 +60,24 @@ from src.api.clinical_records.domain.conditions import (
     PatientConditionResponse,
     SetPatientClinicalSectionReviewPayload,
     UpdatePatientConditionPayload,
+)
+from src.api.clinical_records.domain.immunizations import (
+    InvalidatePatientImmunizationPayload,
+    PatientImmunizationResponse,
+    RecordPatientImmunizationPayload,
+    UpdatePatientImmunizationPayload,
+)
+from src.api.clinical_records.domain.measurements import (
+    CorrectPatientMeasurementPayload,
+    InvalidatePatientMeasurementPayload,
+    PatientMeasurementResponse,
+    RecordPatientMeasurementPayload,
+)
+from src.api.clinical_records.domain.notes import (
+    CreatePatientNotePayload,
+    InvalidatePatientNotePayload,
+    PatientNoteResponse,
+    UpdatePatientNotePayload,
 )
 from src.api.encounters.domain.encounters import (
     CreatePatientEncounterPayload,
@@ -141,6 +165,34 @@ CONDITION_SCHEMAS: dict[str, type[BaseModel]] = {
 }
 
 
+ANTECEDENT_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientAntecedent": CreatePatientAntecedentPayload,
+    "UpdatePatientAntecedent": UpdatePatientAntecedentPayload,
+    "InvalidatePatientAntecedent": InvalidatePatientAntecedentPayload,
+}
+
+
+IMMUNIZATION_SCHEMAS: dict[str, type[BaseModel]] = {
+    "RecordPatientImmunization": RecordPatientImmunizationPayload,
+    "UpdatePatientImmunization": UpdatePatientImmunizationPayload,
+    "InvalidatePatientImmunization": InvalidatePatientImmunizationPayload,
+}
+
+
+MEASUREMENT_SCHEMAS: dict[str, type[BaseModel]] = {
+    "RecordPatientMeasurement": RecordPatientMeasurementPayload,
+    "CorrectPatientMeasurement": CorrectPatientMeasurementPayload,
+    "InvalidatePatientMeasurement": InvalidatePatientMeasurementPayload,
+}
+
+
+NOTE_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientNote": CreatePatientNotePayload,
+    "UpdatePatientNote": UpdatePatientNotePayload,
+    "InvalidatePatientNote": InvalidatePatientNotePayload,
+}
+
+
 ENCOUNTER_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreatePatientEncounter": CreatePatientEncounterPayload,
     "UpdatePatientEncounter": UpdatePatientEncounterPayload,
@@ -174,6 +226,10 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     **CONDITION_SCHEMAS,
     **ALLERGY_SCHEMAS,
     **ENCOUNTER_SCHEMAS,
+    **NOTE_SCHEMAS,
+    **MEASUREMENT_SCHEMAS,
+    **IMMUNIZATION_SCHEMAS,
+    **ANTECEDENT_SCHEMAS,
     **CONTACT_SCHEMAS,
     **SERVICE_SCHEMAS,
     **OFFER_SCHEMAS,
@@ -298,6 +354,10 @@ type OperationState = (
     | ClinicalSectionReviewResponse
     | PatientAllergyIntoleranceResponse
     | PatientEncounterResponse
+    | PatientNoteResponse
+    | PatientMeasurementResponse
+    | PatientImmunizationResponse
+    | PatientAntecedentResponse
 )
 
 

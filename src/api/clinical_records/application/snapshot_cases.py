@@ -7,6 +7,7 @@ from src.api.clinical_records.application.allergies_cases import (
     allergy_response,
     allergy_review_response,
 )
+from src.api.clinical_records.application.antecedents_cases import antecedent_response
 from src.api.clinical_records.application.clinical_cases import (
     clinical_profile_response,
 )
@@ -14,10 +15,19 @@ from src.api.clinical_records.application.conditions_cases import (
     condition_response,
     condition_review_response,
 )
+from src.api.clinical_records.application.immunizations_cases import (
+    immunization_response,
+)
+from src.api.clinical_records.application.measurements_cases import measurement_response
+from src.api.clinical_records.application.notes_cases import note_response
 from src.api.clinical_records.repository.dao import (
     dao_allergies,
+    dao_antecedents,
     dao_clinical_profiles,
     dao_conditions,
+    dao_immunizations,
+    dao_measurements,
+    dao_notes,
     dao_section_reviews,
 )
 from src.api.patients.application.patients_cases import clinical_patient, clinical_today
@@ -126,5 +136,49 @@ async def snapshot_clinical(
                     state=await allergy_review_response(db, context, review.patient_id),
                 )
             )
+
+    if "antecedents" in sections:
+        items.extend(
+            SyncItem(
+                entity_type="patient_antecedent",
+                entity_key=antecedent.id,
+                entity_version=antecedent.version,
+                state=antecedent_response(antecedent),
+            )
+            for antecedent in await dao_antecedents.valid_snapshot(db, account_id)
+        )
+
+    if "immunizations" in sections:
+        items.extend(
+            SyncItem(
+                entity_type="patient_immunization",
+                entity_key=immunization.id,
+                entity_version=immunization.version,
+                state=immunization_response(immunization),
+            )
+            for immunization in await dao_immunizations.valid_snapshot(db, account_id)
+        )
+
+    if "measurements" in sections:
+        for measurement in await dao_measurements.valid_snapshot(db, account_id):
+            items.append(
+                SyncItem(
+                    entity_type="patient_measurement",
+                    entity_key=measurement.id,
+                    entity_version=measurement.version,
+                    state=await measurement_response(db, context, measurement),
+                )
+            )
+
+    if "notes" in sections:
+        items.extend(
+            SyncItem(
+                entity_type="patient_note",
+                entity_key=note.id,
+                entity_version=note.version,
+                state=note_response(note),
+            )
+            for note in await dao_notes.valid_snapshot(db, account_id)
+        )
 
     return items
