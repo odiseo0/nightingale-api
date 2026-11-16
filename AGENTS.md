@@ -6,7 +6,11 @@
 2. Inspecciona los archivos y el estado real de Git, si existe. Conserva el trabajo ajeno. No crees repositorios, remotos, commits o despliegues como efecto de otra tarea.
 3. Si una instrucción nueva cambia con claridad el alcance, regístrala. Ante una contradicción sin resolver, detén solo el trabajo afectado y pide una decisión.
 
-El contrato de diseño v1 está en [api-v1.md](docs/api-v1.md); el modelo físico conserva su única fuente en [database-schema.md](docs/database-schema.md). Keycloak autentica al emitir un token opaco de dispositivo sin vencimiento y revocable en API. No añadir sesiones/renovación de API ni prometer revocación por logout del proveedor. Hub y funciones posteriores permanecen fuera de la etapa; su acuerdo pendiente no bloquea el núcleo independiente aprobado.
+El contrato de diseño v1 está en [api-v1.md](docs/api-v1.md); el modelo físico conserva su única fuente en [database-schema.md](docs/database-schema.md). Keycloak autentica al emitir un token opaco de dispositivo sin vencimiento y revocable en API. No añadir sesiones/renovación de API ni prometer revocación por logout del proveedor. La implementación del Hub permanece fuera de esa etapa; [D11](docs/decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) fija su alcance futuro sin bloquear el núcleo aprobado.
+
+Patient Hub tendrá repositorio propio para la interfaz web. Nightingale API tendrá todas sus funciones de servidor, sin servidor ni almacén privado del Hub y sin SQL desde la web. Su primera versión incluirá micrositios con plantillas para profesional independiente y clínica/centro, sin editor libre ni gestión de pacientes. La lectura pública no exige cuenta de paciente, inicio de sesión ni permisos del personal y solo entrega información destinada a publicación. Las rutas internas siguen protegidas; el micrositio no publica fichas, citas ni notas privadas.
+
+La gestión de una cita existente usará acceso limitado a cita/acción e información necesaria, sin credenciales del personal: consultar, confirmar, cancelar según reglas, solicitar reprogramación y consultar resultado. El paciente no crea ni reserva citas, no explora horarios para elegir otro ni marca ausencias. La solicitud conserva estado, horario y confirmación; el personal decide el cambio y API lo aplica con las reglas comunes. El mecanismo del enlace y las formas HTTP siguen pendientes. No tratar la propuesta anterior entre dos servidores como obligatoria ni presentar estas funciones como implementadas. La presentación pública de clínicas no autoriza toda su gestión interna, varias sedes o cambios generales del escritorio.
 
 ## Trabajo por tareas
 
@@ -34,7 +38,7 @@ Usa [la arquitectura](docs/architecture.md) y [la propiedad de contratos](docs/c
 
 Antes de cada cambio, releer el archivo y el diff actual. Al corregir cada componente, activar sus controles de estructura; el cierre no admite excepciones que oculten infracciones. No restaurar código retirado por el usuario para satisfacer pruebas antiguas. `core/` no contiene reglas del producto ni lógica de negocio.
 
-Toda operación remota exige autorización vigente por cuenta, objeto y acción, aunque Rust o el Hub ya la hayan validado. No confíes en campos de identidad o fechas del cliente. No entregues credenciales SQL al escritorio o al Hub. n8n usa una API interna limitada.
+Toda operación remota sobre datos privados exige autorización vigente por cuenta, objeto y acción, aunque Rust o el Hub ya la hayan validado. La futura lectura pública del micrositio solo devolverá información destinada a publicación; no exigirá permisos del personal ni dará acceso a las rutas privadas. API verificará el acceso limitado a citas del paciente. No confíes en campos de identidad o fechas del cliente. No entregues credenciales SQL al escritorio o al Hub. n8n usa una API interna limitada.
 
 ## Evidencia y documentación
 

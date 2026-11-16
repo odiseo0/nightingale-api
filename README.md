@@ -2,13 +2,18 @@
 
 API de autorización, aceptación del estado compartido y sincronización de Nightingale. Python y FastAPI; PostgreSQL operativo privado. Este repositorio también tendrá los módulos y workers de recordatorios, entregas, integración con n8n e indicadores básicos.
 
-El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient Hub tiene su web, backend y datos propios; usa esta API para consultar y cambiar citas autorizadas. Ninguno recibe acceso SQL al PostgreSQL operativo.
+El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient Hub tendrá su propio repositorio para la interfaz web; Nightingale API tendrá todas sus funciones de servidor. Ninguno recibe acceso SQL al PostgreSQL operativo. Este reparto sustituye el servidor y almacén propios antes propuestos para el Hub ([D11](docs/decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api)).
+
+El alcance futuro del Hub incluye micrositios públicos con plantillas para médico independiente y clínica o centro médico, sin cuentas de paciente ni inicio de sesión. El acceso a una cita existente será limitado: consulta permitida, confirmación, cancelación según reglas, solicitud de reprogramación y consulta del resultado. El paciente no podrá reservar, explorar horarios para elegir otro ni marcar ausencias. Pedir un cambio conserva estado, horario y confirmación; el personal decide y API aplica la reprogramación.
+
+El [contrato actual](docs/api-v1.md) sirve al escritorio y al personal autorizado. No incluye endpoints públicos de micrositio ni acciones del paciente. Sus datos y rutas internas no son un contrato público del Hub. D11 acuerda el alcance futuro; quedan por diseñar accesos, proyecciones y formas HTTP. La presentación pública de clínicas no amplía por sí sola su gestión interna, las sedes o el escritorio.
 
 ## Documentos
 
 | Documento | Función |
 |---|---|
 | [Especificación](docs/nightingale-api.md) | Fuente del alcance y los límites confirmados |
+| [Registro clínico y seguimiento del paciente](docs/patient-clinical-record.md) | Referencia funcional para los planes de las tres etapas clínicas; acuerdos, requisitos, pendientes y fuentes FHIR/OMS |
 | [Reglas de trabajo](AGENTS.md) | Guía común para colaboradores y agentes |
 | [Desarrollo y evidencia](docs/operations/development.md) | Corrección actual y registros de comprobaciones previas |
 | [Soporte local de pruebas](test-support/README.md) | PostgreSQL y Keycloak sin Docker; OIDC, migraciones y transacciones con datos ficticios |
@@ -21,9 +26,10 @@ El escritorio guarda su trabajo con Rust/SQLite sin esperar a esta API. Patient 
 | [Esquema físico de diseño](docs/database-schema.md) | Única fuente del modelo; implementación parcial en migraciones y pruebas aisladas |
 | [Calidad y pruebas](docs/quality.md) | Requisitos verificables y pruebas futuras |
 | [Decisiones](docs/decisions.md) | Qué está confirmado, propuesto o pendiente |
-| [Diseño de acceso](docs/access-design.md) | OIDC de emisión y token API sin vencimiento/revocable; Hub posterior aún en revisión |
+| [Diseño de acceso](docs/access-design.md) | Acceso actual del personal; lectura pública y acceso limitado a citas del futuro Hub |
 | [Fuentes y revisión](docs/sources.md) | Referencias, diferencias y comprobaciones documentales |
 | [Plan sucesor aprobado](tasks/P-20261024-01-desktop-shared-api/plan.md) | Tareas, dependencias y checkpoints de API para escritorio |
+| [Revisión documental del Hub](tasks/P-20261114-01-patient-hub-docs/plan.md) | Alcance del encargo del 2026-11-14 y comprobaciones; sin implementar funciones |
 
 
 ## Entorno local de desarrollo
