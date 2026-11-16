@@ -1,6 +1,6 @@
 # Estado y evidencia: P-20261115-02-patient-clinical-data
 
-**Estado del plan:** In progress. **Fecha:** 2026-11-15. **Plan:** [plan.md](plan.md).
+**Estado del plan:** Completed. **Fecha:** 2026-11-15. **Plan:** [plan.md](plan.md).
 
 El usuario solicitó primero guardar el plan y esta lista tras la planificación conversada. Después aprobó el plan y autorizó T01 → T02 → T03, en secuencia y sin delegación, hasta C01. No autorizó T04, aceptación de checkpoints ni inicio de etapa 2. Esta autorización no acepta C11 del núcleo ni revisiones de los encargos documentales anteriores. La creación inicial de estos documentos no completó T01; su alcance incluye integrar las decisiones en las fuentes indicadas en el plan.
 
@@ -36,7 +36,7 @@ Los propietarios, entradas, datos/contratos, límites de transacción, efecto en
 - [x] C03 — Perfil y nacimiento: aceptado por el usuario el 2026-11-15; autoriza T10 → T11 → T12 hasta C04.
 - [x] C04 — Condiciones: aceptado por el usuario el 2026-11-16; autoriza T13 → T14 → T15 hasta C05.
 - [x] C05 — Alergias e intolerancias: aceptado por el usuario el 2026-11-16; autoriza T16 → T17 → T18 hasta C06.
-- [ ] C06 — Etapa 1 completa: después de T18; detenerse sin iniciar etapa 2.
+- [x] C06 — Etapa 1 completa: aceptado por el usuario el 2026-11-16; plan Completed, sin iniciar etapa 2 por esta aceptación.
 
 Solo el usuario acepta estos checkpoints. Se conservan sin cambios las revisiones pendientes de otros planes.
 

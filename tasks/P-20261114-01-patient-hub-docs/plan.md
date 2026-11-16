@@ -1,6 +1,6 @@
 # P-20261114-01-patient-hub-docs: alcance documental de Patient Hub
 
-**Estado:** In progress. **Fecha:** 2026-11-14. **Lista:** [todo.md](todo.md).
+**Estado:** Completed. **Fecha:** 2026-11-14. **Lista:** [todo.md](todo.md).
 
 El encargo del usuario autoriza ajustar la documentación de API a las decisiones sobre Patient Hub. Se trabaja una tarea a la vez, sin delegación. El plan de API para escritorio conserva C11 pendiente; este encargo no lo acepta ni reanuda su implementación.
 

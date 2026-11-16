@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.2. **Fecha:** 2026-11-16. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 del núcleo. La etapa clínica y su corrección están implementadas para revisión C07. Los contratos generados contienen 60 rutas, 98 esquemas y 51 acciones por lote, con origen, HEAD y huellas reproducibles. C11 del núcleo, consumidores y producción conservan sus límites.
+**Versión de diseño:** 1.3 para C01. **Fecha:** 2026-11-16. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 del núcleo. La etapa clínica y su corrección están implementadas para revisión C07. Los contratos generados actuales contienen 60 rutas, 98 esquemas y 51 acciones por lote, con origen, HEAD y huellas reproducibles. §11 propone Etapa 2 sin cambiar los artefactos ni aceptar C01. C11 del núcleo, consumidores y producción conservan sus límites.
 
 Este documento conserva explicación de transporte, permisos y recuperación. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas. Los esquemas Pydantic de domain, derivados del BaseModel del proyecto, son la fuente de OpenAPI/JSON Schema exportados por scripts/export_contracts.py. Los generados identifican origen/versión/huella y no se editan a mano. La [guía Rust](rust-api-guide.md) explica su uso y enlaza ejemplos comprobados. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -65,6 +65,10 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 | GET | `A/patients` | miembro | PaginatedResponse<PatientProfileResponse> | q, status, completionStatus; búsqueda por nombre o documento registrado de sus fichas |
 | GET | `A/patients/{patient_id}` | miembro | PatientProfileResponse | solo ficha de esta cuenta |
 | GET | `A/patients/{patient_id}/identifiers` | miembro | PaginatedResponse<PatientIdentifierResponse> | documentos de identidad vinculada a esa ficha; sin búsqueda global ni verificador de otra cuenta |
+| GET | `A/patients/{patient_id}/encounters` | atenciones `read`/`read_write` | PaginatedResponse<PatientEncounterResponse> | filtros recordStatus/from/until; orden occurredAt,id |
+| GET | `A/patients/{patient_id}/encounters/{encounter_id}` | atenciones `read`/`read_write` | PatientEncounterResponse | solo esa cuenta/ficha |
+| GET | `A/patients/{patient_id}/encounters/{encounter_id}/history` | atenciones `read`/`read_write` | PaginatedResponse<PatientEncounterHistoryResponse> | versión ascendente, afterVersion |
+| GET | `A/patients/{patient_id}/last-visit` | atenciones `read`/`read_write` | LastVisitResponse | última atención válida de cuenta/paciente |
 | GET | `A/patients/{patient_id}/clinical-profile` | perfil `read`/`read_write` | ClinicalProfileResponse | versión 0 sin fila, sin escritura |
 | GET | `A/patients/{patient_id}/clinical-profile/history` | perfil `read`/`read_write` | PaginatedResponse<ClinicalProfileHistoryResponse> | versión ascendente, afterVersion opcional |
 | GET | `A/patients/{patient_id}/birth-date-changes` | miembro | PaginatedResponse<PatientBirthDateChangeResponse> | solo cambios desde esta entrega |
@@ -167,6 +171,9 @@ Actor/dispositivo no se aceptan en payload. UUID de nuevas entidades procede del
 | UpdateAccountDetails | accountId | Patch de displayName, timeZone, locationName, locationAddress, locationCountry, locationState y locationCity. | propietario; online | No cambia kind/ownerUserId; coordina profesional y rechaza agenda incompatible. |
 | UpdateAccountPolicy | accountId | noShowGraceMinutes requerido, entero 0–1440. | propietario; online | Margen se revalida al marcar ausencia; no cambia citas/historia anteriores. |
 | SetAccountStatus | accountId | status active / inactive. | propietario; online | Propietario activo puede reactivar aunque cuenta esté inactiva; no borra citas. |
+| CreatePatientEncounter | encounterId nuevo | patientId, appointmentId?, attendingProfessionalId, assistantUserId?, occurredAt?, endedAt?, capturedAtLocal?, motivo/fuente y contenido clínico opcional. | atenciones read_write | Atención real sin cierre; varias por cita; vínculos de la misma ficha. |
+| UpdatePatientEncounter | encounterId | Patch de tiempos/captura/contenido/fuente/correctionReason; versión actual. | atenciones read_write | No cambia ficha/cita/profesional; sin reasignación. |
+| InvalidatePatientEncounter | encounterId | correctionReason opcional; versión actual. | atenciones read_write | Anulación terminal entered-in-error. |
 | CreateInvitation | invitationId nuevo | inviteeUserId requerido; rol assistant implícito. | propietario; online | Destinatario ya identificado por OIDC; vence 72 h después del instante del servidor; no correo. |
 | RevokeInvitation | invitationId | Objeto vacío. | propietario; online | Solo pending no vencida; aceptación/revocación coordinadas; conserva evidencia. |
 | SetMembershipStatus | userId destinatario | status active / inactive. | propietario; online | Solo asistentes ya vinculados; no transfiere propiedad ni desactiva usuario global. |
@@ -409,3 +416,87 @@ Cambio de niveles o época exige otra captura; SSE cierra el alcance anterior. E
 Cada operación conserva efecto, historias/revisión derivada, auditoría, recibo y grupo en una transacción. El recibo clínico persiste `clinical_section`; duplicados y GET exigen `read_write` vigente en esa sección antes de entregar resultados o conflictos informativos. Lecturas clínicas correctas, recuperaciones de resultados, capturas, páginas y deltas con clínica registran actor, dispositivo, cuenta, paciente/objeto o sección, acción, resultado, correlación e instante. No registran nombres, sustancias, reacciones, filtros clínicos, cuerpos o cursores. Si falla esa evidencia, la lectura no entrega datos y devuelve el fallo temporal común; SSE no audita heartbeats.
 
 Las fechas parciales usan biblioteca estándar y validadores del proyecto. Las rutas declaran `response_model` y retorno real; proyecciones se validan antes de commit. Fuentes oficiales: [FastAPI response models](https://fastapi.tiangolo.com/tutorial/response-model/), [Pydantic 2.14.1 validators](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/validators.md), [PostgreSQL 18 constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [SQLAlchemy 2.1 transactions](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html) y FHIR R5 enlazado en el plan.
+
+## 11. Diseño clínico de etapa 2 para C01
+
+Diseño futuro de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md), no implementado. Conserva `contractVersion=1`; `modelRevision=api-v1.3` se publicará solo al completar T26. Los modelos Pydantic reales seguirán siendo la fuente de los artefactos; esta sección fija comportamiento, nombres y campos sin editar generados.
+
+### 11.1 Forma común
+
+Todas las rutas nuevas están bajo `A/patients/{patient_id}`, exigen token, dispositivo y permiso de la sección. JSON camelCase, `page`/`shows`, `items`/`total`, autorización/filtros antes de contar/paginar y orden estable. Historias usan versión ascendente y `afterVersion`. Detalles/lecturas de objeto ajeno devuelven la misma ausencia que uno inexistente.
+
+Respuestas actuales incluyen `patientId`, `recordStatus`, `correctionReason`, `createdAt`, `updatedAt`, `version` y su ID propio. No repiten `accountId`. Historias contienen el contenido resultante, `action`, `actorUserId`, `operationId`, `changedAt`. El actor procede del contexto; los instantes técnicos no se aceptan como autoridad del cliente.
+
+Parches conservan campos ausentes, admiten null solo en campos anulables, exigen al menos un campo y devuelven `NO_CHANGES` sin crear versión. Crear usa UUID nuevo y `expectedVersion=0`; actualizar/corregir/anular usa la versión actual. `capturedAtLocal` es dato reportado. En atenciones/mediciones, el instante del hecho usa el campo explícito, luego `occurredAtLocal` de la envoltura o reloj del servidor. Un instante futuro se rechaza. Vacunas/antecedentes conservan `ClinicalDate` parcial sin hora ficticia.
+
+### 11.2 Rutas y lecturas
+
+| Recurso | Rutas GET bajo `A/patients/{patient_id}` | Acceso, filtros y orden |
+|---|---|---|
+| Atenciones | `/encounters`; `/encounters/{encounter_id}`; `/encounters/{encounter_id}/history`; `/last-visit` | `encounters`; lista `recordStatus`, rango `[from,until)`; orden `(occurredAt,id)`; última visita devuelve `encounterId`,`occurredAt`,`scope=account`, todos nulos salvo scope si no hay atención válida |
+| Notas | `/notes`; `/notes/{note_id}`; `/notes/{note_id}/history` | `notes`; `recordStatus`, `encounterId`; orden `(createdAt,id)` |
+| Mediciones | `/measurements`; `/measurements/{measurement_id}`; `/measurements/{measurement_id}/history`; `/measurements/summary` | `measurements`; `kind`,`recordStatus`, rango de `measuredAt`; orden `(measuredAt,id)`; resumen por tipo solo válidos |
+| Vacunas | `/immunizations`; `/immunizations/{immunization_id}`; `/immunizations/{immunization_id}/history` | `immunizations`; `recordKind`,`recordStatus`; orden `(occurrenceDate,id)` |
+| Antecedentes | `/antecedents`; `/antecedents/{antecedent_id}`; `/antecedents/{antecedent_id}/history` | `antecedents`; `category`,`recordStatus`; orden `(createdAt,id)` |
+| Historial | `/clinical-history` | Permiso por fuente; `sections`,`entryTypes`,`recordStatus`,`from`,`until`; filtra secciones antes de total/página y ordena `(sortKey,entryType,entryId)` |
+
+Las listas ordinarias excluyen `entered-in-error`; solo el filtro explícito lo incluye. `from`/`until` se aplica al tiempo clínico cuando existe y a la referencia documentada en otro caso, sin completar fechas parciales. El resumen de mediciones devuelve una entrada por cada tipo con toma válida; una toma corregida solo aporta su versión actual.
+
+`ClinicalHistoryEntry` contiene `entryType`,`entryId`,`sourceSection`,`occurredAt`,`occurrenceDate`,`datePrecision`,`acceptedAt`,`entityVersion`,`recordStatus`; no contiene cuerpo, nombre, sustancia o valor. Cada referencia se resuelve por la ruta de su fuente y vuelve a autorizar. `LastVisitResponse` se limita a la referencia e instante, sin contenido de atención.
+
+### 11.3 Modelos públicos
+
+| Modelo | Campos específicos además de los comunes |
+|---|---|
+| `PatientEncounterResponse` | `encounterId`,`appointmentId`,`attendingProfessionalId`,`assistantUserId`,`occurredAt`,`endedAt`,`capturedAtLocal`,`reason`,`reasonSourceType`,`historyPresentIllness`,`findings`,`assessment`,`indications` |
+| `PatientNoteResponse` | `noteId`,`encounterId`,`body`,`capturedAtLocal` |
+| `PatientMeasurementResponse` | `measurementId`,`encounterId`,`kind`,`measuredAt`,`capturedAtLocal`,`method`,`bodySite`,`value`,`systolicValue`,`diastolicValue`,`unit`,`ageYears`,`ageAsOf`,`patientVersion` |
+| `PatientImmunizationResponse` | `immunizationId`,`encounterId`,`vaccineName`,`occurrenceDate`,`recordKind`,`sourceType`,`capturedAtLocal`,`productName`,`doseDescription`,`lotNumber`,`route`,`bodySite`,`locationText`,`administratorName` |
+| `PatientAntecedentResponse` | `antecedentId`,`encounterId`,`category`,`content`,`relatedPersonDescription`,`occurrenceDate`,`sourceType`,`capturedAtLocal` |
+| `MeasurementSummaryResponse` | `patientId`,`items` de última toma por tipo; cada item es `PatientMeasurementResponse` |
+| `LastVisitResponse` | `encounterId`,`occurredAt`,`scope=account` |
+| `ClinicalHistoryEntry` | Referencias, tiempos, precisión, versión y estado indicados en §11.2 |
+
+Los valores numéricos se serializan como números decimales JSON sin NaN/infinito ni formato regional. `blood_pressure` admite un componente nulo y `value` nulo; los demás tipos exigen `value` y componentes nulos. Unidad y tipo no se cambian por corrección. `ageYears`,`ageAsOf`,`patientVersion` se derivan del nacimiento en la fecha local de `measuredAt`; nacimiento ausente da edad nula y no se persiste el derivado.
+
+`ClinicalPermissions` añade `encounters`,`notes`,`measurements`,`immunizations`,`antecedents`. `MemberClinicalPermissionsResponse` y `AccessResponse` los incluyen al publicar el contrato. Las respuestas de historia añaden el sufijo `HistoryResponse` al modelo actual correspondiente.
+
+### 11.4 Quince acciones nuevas
+
+Todas conservan envoltura, huella, idempotencia, permiso vigente, alcance persistido en recibo, auditoría y grupo. Los UUID nuevos proceden del cliente. No aceptan autor/cuenta/aceptación del payload.
+
+| Acción | `entityKey` | Payload | Permiso / regla |
+|---|---|---|---|
+| `CreatePatientEncounter` | `encounterId` nuevo | `patientId`,`appointmentId?`,`attendingProfessionalId`,`assistantUserId?`,`occurredAt?`,`endedAt?`,`capturedAtLocal?`,`reason?`,`reasonSourceType=unknown`,`historyPresentIllness?`,`findings?`,`assessment?`,`indications?` | `encounters read_write`; sin cierre; varias por cita |
+| `UpdatePatientEncounter` | `encounterId` | Patch de tiempos/captura/contenido/fuente/`correctionReason` | Igual; no cambia ficha/cita/profesional; anulación aparte |
+| `InvalidatePatientEncounter` | `encounterId` | `correctionReason?` | Igual; `entered-in-error` terminal |
+| `CreatePatientNote` | `noteId` nuevo | `patientId`,`encounterId?`,`body`,`capturedAtLocal?` | `notes read_write`; sin efecto clínico derivado |
+| `UpdatePatientNote` | `noteId` | Patch de `body`,`capturedAtLocal`,`correctionReason` | Igual; no cambia ficha/atención |
+| `InvalidatePatientNote` | `noteId` | `correctionReason?` | Igual; terminal |
+| `RecordPatientMeasurement` | `measurementId` nuevo | `patientId`,`encounterId?`,`kind`,`measuredAt?`,`capturedAtLocal?`,`method?`,`bodySite?`,`value?`,`systolicValue?`,`diastolicValue?`,`unit` | `measurements read_write`; forma/unidad/rango cerrados |
+| `CorrectPatientMeasurement` | `measurementId` | Patch de tiempo/captura/método/sitio/valores/`correctionReason` | Igual; no cambia ficha/tipo/unidad |
+| `InvalidatePatientMeasurement` | `measurementId` | `correctionReason?` | Igual; terminal |
+| `RecordPatientImmunization` | `immunizationId` nuevo | `patientId`,`encounterId?`,`vaccineName`,`occurrenceDate`,`recordKind=unknown`,`sourceType=unknown`,`capturedAtLocal?` y siete detalles opcionales de §11.3 | `immunizations read_write`; `administered_here` exige atención válida |
+| `UpdatePatientImmunization` | `immunizationId` | Patch de vacuna/fecha/tipo/fuente/captura/detalles/`correctionReason` | Igual; no cambia ficha/atención |
+| `InvalidatePatientImmunization` | `immunizationId` | `correctionReason?` | Igual; terminal |
+| `CreatePatientAntecedent` | `antecedentId` nuevo | `patientId`,`encounterId?`,`category`,`content`,`relatedPersonDescription?`,`occurrenceDate?`,`sourceType=unknown`,`capturedAtLocal?` | `antecedents read_write`; `family` exige persona relacionada |
+| `UpdatePatientAntecedent` | `antecedentId` | Patch de contenido/persona/fecha/fuente/captura/`correctionReason` | Igual; no cambia ficha/atención/categoría |
+| `InvalidatePatientAntecedent` | `antecedentId` | `correctionReason?` | Igual; terminal |
+
+`SetMemberClinicalPermissions` acepta las ocho secciones. En payloads anteriores, las cinco omitidas se normalizan a `read_write` antes de huella/ejecución. La configuración conserva versiones, época, recibo, auditoría y journal juntos.
+
+### 11.5 Permisos, auditoría y transacción
+
+Cada nivel es independiente: `none` excluye lecturas, historias, resúmenes, resultados y descarga; `read` permite lecturas y excluye escrituras/reintentos; `read_write` permite ambos. Última visita exige `encounters`. El historial no tiene permiso global: filtra por `source_section` antes de contar/paginar y cada detalle vuelve a autorizar. La autorización precede a duplicados y resultados.
+
+Escrituras conservan efecto, historia, timeline, auditoría, recibo y grupo en una transacción. Lecturas de recursos, historias, última visita, historial, resultados, capturas, páginas y deltas clínicos registran actor, dispositivo, cuenta, objeto/sección, acción, resultado, correlación e instante. No guardan motivos, cuerpos, valores, nombres, filtros o cursores. Si falla la evidencia, no se entregan datos.
+
+### 11.6 Captura, delta y compatibilidad
+
+`includeClinical=false` conserva capturas sin clínica. Con `true`, incluye todas las secciones legibles de Etapas 1 y 2 y `clinicalSections` amplía su conjunto cerrado. Cursores/recibos/audiencias conservan ese alcance; cambiar permisos exige nueva captura y cierra SSE anterior.
+
+La captura de Etapa 2 contiene atenciones válidas actuales y vínculos, versión actual válida de notas/antecedentes, todas las tomas válidas y vacunas válidas actuales. No incluye historias de versiones, timeline derivado ni adjuntos. Incluye referencias administrativas necesarias, incluso pacientes inactivos/completos y profesionales necesarios. Ningún hecho se filtra por ventana de citas.
+
+El delta publica correcciones con la versión actual y anulaciones como `entered-in-error`; una captura posterior no incluye la entrada inválida. Los grupos invisibles permiten avanzar sin contenido. La retención de 90 días no borra hechos/historias. No se promete borrado de copias descargadas ni aplicación atómica en SQLite sin prueba del consumidor.
+
+Al completar T26 se generan desde la app real OpenAPI, esquemas, ejemplos y manifiesto con `modelRevision=api-v1.3`. Los recuentos proceden del catálogo real, no de cifras fijas. Hasta entonces los artefactos actuales permanecen en `api-v1.2` y `contractVersion=1`.

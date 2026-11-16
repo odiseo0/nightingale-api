@@ -1,6 +1,6 @@
 # P-20261116-01-clinical-review-refactor: corrección y simplificación de Clinical Records Etapa 1
 
-**Estado:** In progress. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16. **Lista de tareas:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16. **Lista de tareas:** [todo.md](todo.md).
 
 ## Contexto
 

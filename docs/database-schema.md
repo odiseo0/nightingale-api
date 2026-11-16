@@ -1,8 +1,8 @@
 # Esquema de base de datos de Nightingale
 
-**Versión:** 1.2; conserva la ampliación 1.0 aceptada en C01, el soporte de T31 y añade el diseño clínico de etapa 1 para revisión C01.\
-**Fecha:** 2026-11-15.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09/C10 aceptados. T31–T33 para revisión C11 del núcleo. El diseño clínico de §10 pertenece a P-20261115-02-patient-clinical-data, aprobado para T01–T03; no está implementado ni aceptado en su C01. Consumidores y producción siguen pendientes.\
+**Versión:** 1.3; conserva la ampliación 1.0 aceptada en C01, el soporte de T31, el diseño clínico de etapa 1 y añade el diseño de etapa 2 para revisión C01.\
+**Fecha:** 2026-11-16.\
+**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09/C10 aceptados. T31–T33 para revisión C11 del núcleo. El diseño clínico de §11 pertenece a P-20261116-02-clinical-routine; no está implementado ni aceptado en su C01. Consumidores y producción siguen pendientes.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.
@@ -1866,3 +1866,210 @@ Consultadas el 2026-10-23; restricciones, triggers, fechas y tipo UUID de Postgr
 | Diagramas | [Mermaid: entity relationship diagrams](https://mermaid.js.org/syntax/entityRelationshipDiagram.html) | Cardinalidades y atributos del diagrama. |
 | Países | [ISO 3166: country codes](https://www.iso.org/iso-3166-country-codes.html) | Código alfa-2 del país emisor y de la ubicación; distinto del indicativo telefónico. |
 | Teléfonos | [UIT-T E.164](https://www.itu.int/rec/T-REC-E.164/en) | Indicativo internacional separado de la parte nacional; validación por plan nacional pendiente. |
+
+## 11. Registro clínico habitual · revisión 1.3 para C01
+
+**Estado:** diseño físico propuesto para [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md), pendiente de C01. No crea migraciones, modelos ni datos. Las reglas funcionales proceden de D13 y patient-clinical-record.md §4.2.1.
+
+### 11.1 Cambios existentes y reglas comunes
+
+`appointments` añade UQ `(account_id,id,patient_id)` como destino del vínculo de atenciones. No añade unicidad por cita ni contenido clínico; `service_id` sigue obligatorio y las transiciones de cita no crean atenciones.
+
+`account_memberships` añade `encounters_access`, `notes_access`, `measurements_access`, `immunizations_access` y `antecedents_access`: cinco columnas `text` NN, valor inicial `read_write`, CHECK `none`/`read`/`read_write`. `operation_receipts.clinical_section`, `sync_snapshots.clinical_sections` y `change_log.audience` amplían sus conjuntos cerrados con `encounters`,`notes`,`measurements`,`immunizations`,`antecedents`; las audiencias de journal usan el prefijo `clinical_` ya establecido. Los cambios de nivel conservan versión, época, capturas, cursores y SSE de §§9–10.
+
+Las once tablas nuevas son cinco pares de estado actual/historia y `patient_clinical_timeline`. Reglas comunes:
+
+- IDs `uuid` UUIDv7; cuenta, paciente e ID estables. Toda fila funcional actual tiene FK `(account_id,patient_id)` a `account_patients`; no hay borrado en cascada ni reasignación.
+- `record_status` `text` NN, inicial `valid`, CHECK `valid`/`entered-in-error`. Solo describe validez de la afirmación; no es ciclo de atención. La anulación es terminal y una nueva afirmación usa otro ID.
+- `version` `integer` NN desde 1; cada cambio añade la siguiente versión. La FK actual→historia es NO ACTION diferida. Controles diferidos comprueban continuidad, máximo e igualdad completa del contenido resultante; historias son append-only y el rol operativo recibe SELECT/INSERT, no UPDATE/DELETE/TRUNCATE.
+- Autores `(account_id,created_by_user_id)` y `(account_id,updated_by_user_id)` referencian `account_memberships`; historia referencia `(account_id,actor_user_id,operation_id)` a `operation_receipts`. Todas RESTRICT salvo la FK de versión actual.
+- `created_at`,`updated_at`,`changed_at` y demás instantes son `timestamptz` finitos. `updated_at >= created_at`; `created_at` coincide con la primera historia y `updated_at` con la última. `captured_at_local` conserva captura reportada y no sustituye hecho o aceptación.
+- `occurrence_date` usa `text` con `YYYY`,`YYYY-MM` o `YYYY-MM-DD`, validación de calendario y precisión conservada. Textos presentes no vacíos tras quitar espacios. Los CHECK de fila protegen forma; autorización, fechas futuras y vínculos válidos se comprueban en la aceptación coordinada.
+- Cada historia contiene todo el contenido resultante, `action` `created`/`updated`/`invalidated`, actor, operación e instante, sin defaults de inserción. No duplica autores ni `created_at`/`updated_at`: se derivan de la primera/última versión.
+- Efecto, historia, timeline cuando aplique, auditoría, recibo y grupo comparten transacción. Proyecciones se validan antes del commit. No se crean filas vacías al migrar.
+
+### 11.2 `clinical_encounters`
+
+**Propietario:** `encounters`. Una atención real de una ficha; no existe una atención planificada por deducción de una cita.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id,patient_id)`; CHECK UUIDv7 | Atención estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK | Cuenta de la ficha. |
+| `patient_id` | `uuid` | Sí | Sin valor | UQ/FK | Paciente atendido. |
+| `appointment_id` | `uuid` | No | Nulo | FK compuesta | Cita de la misma ficha, si existe. |
+| `attending_professional_id` | `uuid` | Sí | Sin valor | FK compuesta | Profesional vinculado a la cuenta. |
+| `assistant_user_id` | `uuid` | No | Nulo | FK compuesta | Asistente perteneciente a la cuenta. |
+| `occurred_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Inicio/hecho de la atención. |
+| `ended_at` | `timestamptz` | No | Nulo | CHECK finito y `>= occurred_at` | Fin conocido; no cierre. |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito | Captura reportada. |
+| `reason` | `text` | No | Nulo | Texto no vacío | Motivo, incluso sin cita/servicio. |
+| `reason_source_type` | `text` | Sí | `unknown` | CHECK de fuente | Fuente declarada del motivo. |
+| `history_present_illness` | `text` | No | Nulo | Texto no vacío | Relato del problema actual. |
+| `findings` | `text` | No | Nulo | Texto no vacío | Hallazgos. |
+| `assessment` | `text` | No | Nulo | Texto no vacío | Valoración; no crea condición. |
+| `indications` | `text` | No | Nulo | Texto no vacío | Indicaciones; no crea prescripción/plan. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez, no ciclo asistencial. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+PK `id`; UQ `(account_id,id)` para la historia y UQ `(account_id,id,patient_id)` para notas/mediciones/vacunas/antecedentes. F82 a ficha; F83 opcional `(account_id,appointment_id,patient_id)` a `appointments`; F84 `(account_id,attending_professional_id)` a `account_professionals`; F85 opcional `(account_id,assistant_user_id)` a `account_memberships`; F86/F87 autores; F88 diferida a historia. No hay UQ por `appointment_id`.
+
+Índices B-tree `(account_id,patient_id,record_status,occurred_at,id)` para atenciones/última visita; `(account_id,appointment_id,patient_id)` para el vínculo; autores, profesional y asistente para sus FK. Varios registros pueden compartir cita. Corregir no cambia paciente/cita/profesional: un vínculo erróneo exige anular y crear otro registro. Completar/cancelar/ausentar una cita no crea una atención ni escribe `appointment_histories`.
+
+### 11.3 `clinical_encounter_histories`
+
+Contiene `account_id`,`id`,`patient_id`,`appointment_id`,`attending_professional_id`,`assistant_user_id`,`occurred_at`,`ended_at`,`captured_at_local`,`reason`,`reason_source_type`,`history_present_illness`,`findings`,`assessment`,`indications`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con tipos/nulabilidad/conjuntos de §11.2 y campos técnicos NN.
+
+PK `(account_id,id,version)`; F109 a `(account_id,id)` actual y F110 a recibo. Índice de recibo. Cada fila conserva el contenido resultante completo y es inmutable.
+
+### 11.4 `patient_notes`
+
+**Propietario:** `clinical_records`. Nota actual independiente o vinculada a una atención de la misma ficha.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | UQ `(account_id,id)`; FK a ficha |
+| `encounter_id` | `uuid` | No | Nulo | FK `(account_id,encounter_id,patient_id)` a atención |
+| `body` | `text` | Sí | Sin valor | Texto no vacío |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito |
+| `record_status` | `text` | Sí | `valid` | CHECK común |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
+
+F89 ficha; F90 atención; F91/F92 autores; F93 diferida a historia. Índices `(account_id,patient_id,record_status,id)`, vínculo de atención y autores. No hay firma/cierre ni efecto clínico automático. Paciente y atención no se reasignan por edición.
+
+### 11.5 `patient_note_histories`
+
+Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`body`,`captured_at_local`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §11.4. PK `(account_id,id,version)`; F111 actual y F112 recibo; índice de recibo; append-only.
+
+### 11.6 `patient_measurements`
+
+**Propietario:** `clinical_records`. Cada fila es una toma; una toma nueva usa otro ID y una corrección conserva el mismo.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | UQ `(account_id,id)`; FK a ficha |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta a atención de la ficha |
+| `kind` | `text` | Sí | Sin valor | CHECK `weight`,`temperature`,`oxygen_saturation`,`heart_rate`,`blood_pressure` |
+| `measured_at` | `timestamptz` | Sí | Sin valor | CHECK finito; fecha del hecho |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito |
+| `method`,`body_site` | `text` | No | Nulo | Texto no vacío |
+| `value` | `numeric` | No | Nulo | CHECK por tipo; finito por rechazo de NaN/infinity |
+| `systolic_value`,`diastolic_value` | `numeric` | No | Nulo | CHECK por tipo y presencia |
+| `unit` | `text` | Sí | Sin valor | CHECK de unidad fija por tipo |
+| `record_status` | `text` | Sí | `valid` | CHECK común |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
+
+F94 ficha; F95 atención; F96/F97 autores; F98 diferida a historia. Índices `(account_id,patient_id,kind,record_status,measured_at,id)`, vínculo y autores. `kind`, paciente y unidad son inmutables por corrección.
+
+| `kind` | Forma y rango técnico | Unidad exacta |
+|---|---|---|
+| `weight` | `value` 0,01–500; componentes nulos | `kg` |
+| `temperature` | `value` 20–45; componentes nulos | `Cel` |
+| `oxygen_saturation` | `value` 0–100; componentes nulos | `%` |
+| `heart_rate` | `value` 1–300; componentes nulos | `/min` |
+| `blood_pressure` | `value` nulo; sistólico y/o diastólico 20–300, al menos uno presente | `mm[Hg]` |
+
+Los límites son de captura, no umbrales clínicos. No se admiten otras unidades ni se inventa cero. La serie ordena `(measured_at,id)` y usa solo tomas válidas; la carga histórica no desplaza una toma posterior por `created_at`.
+
+### 11.7 `patient_measurement_histories`
+
+Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`kind`,`measured_at`,`captured_at_local`,`method`,`body_site`,`value`,`systolic_value`,`diastolic_value`,`unit`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §11.6. PK `(account_id,id,version)`; F113 actual y F114 recibo; índice de recibo; append-only.
+
+### 11.8 `patient_immunizations`
+
+**Propietario:** `clinical_records`. Vacuna administrada en la atención, declarada o de tipo desconocido.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | UQ `(account_id,id)`; FK a ficha |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta a atención de la ficha |
+| `vaccine_name` | `text` | Sí | Sin valor | Texto no vacío |
+| `occurrence_date` | `text` | Sí | Sin valor | Fecha clínica parcial válida |
+| `record_kind` | `text` | Sí | `unknown` | CHECK `administered_here`,`reported`,`unknown` |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito |
+| `product_name`,`dose_description`,`lot_number`,`route`,`body_site`,`location_text`,`administrator_name` | `text` | No | Nulo | Texto no vacío si presente |
+| `record_status` | `text` | Sí | `valid` | CHECK común |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
+
+F99 ficha; F100 atención; F101/F102 autores; F103 diferida a historia. Índices `(account_id,patient_id,record_status,occurrence_date,id)`, vínculo y autores. `administered_here` exige `encounter_id` y atención válida en la aceptación; `reported`/`unknown` no afirman administración actual. No hay catálogo, recomendación, reacción o alergia automática.
+
+### 11.9 `patient_immunization_histories`
+
+Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`vaccine_name`,`occurrence_date`,`record_kind`,`source_type`,`captured_at_local`,`product_name`,`dose_description`,`lot_number`,`route`,`body_site`,`location_text`,`administrator_name`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §11.8. PK `(account_id,id,version)`; F115 actual y F116 recibo; índice de recibo; append-only.
+
+### 11.10 `patient_antecedents`
+
+**Propietario:** `clinical_records`. Relato narrativo tipado, sin codificación o atribución automática.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | UQ `(account_id,id)`; FK a ficha |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta a atención de la ficha |
+| `category` | `text` | Sí | Sin valor | CHECK `personal`,`family`,`other` |
+| `content` | `text` | Sí | Sin valor | Texto no vacío |
+| `related_person_description` | `text` | No | Nulo | Texto no vacío; obligatorio si `family` |
+| `occurrence_date` | `text` | No | Nulo | Fecha clínica parcial válida |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito |
+| `record_status` | `text` | Sí | `valid` | CHECK común |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
+
+F104 ficha; F105 atención; F106/F107 autores; F108 diferida a historia. Índices `(account_id,patient_id,category,record_status,id)`, vínculo y autores. `family` no atribuye el relato como condición del paciente. Categoría y ficha no se reasignan por corrección.
+
+### 11.11 `patient_antecedent_histories`
+
+Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`category`,`content`,`related_person_description`,`occurrence_date`,`source_type`,`captured_at_local`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §11.10. PK `(account_id,id,version)`; F117 actual y F118 recibo; índice de recibo; append-only.
+
+### 11.12 `patient_clinical_timeline`
+
+**Propietario:** `clinical_records`. Proyección actual reconstruible, sin segunda fuente editable ni contenido clínico.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | PK; FK a ficha |
+| `entry_type` | `text` | Sí | Sin valor | PK; CHECK `encounter`,`note`,`measurement`,`immunization`,`antecedent`,`condition`,`allergy_intolerance` |
+| `entry_id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7; referencia lógica a la fuente |
+| `source_section` | `text` | Sí | Sin valor | CHECK coherente con tipo |
+| `occurred_at` | `timestamptz` | No | Nulo | CHECK finito; instante o referencia explícita |
+| `occurrence_date` | `text` | No | Nulo | Fecha parcial; no completar |
+| `date_precision` | `text` | Sí | Sin valor | CHECK `instant`,`year`,`month`,`day`,`reference` |
+| `sort_key` | `text` | Sí | Sin valor | Texto no vacío | Clave técnica estable, no afirmación de exactitud |
+| `accepted_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Aceptación de la versión actual |
+| `entity_version` | `integer` | Sí | Sin valor | CHECK positivo | Versión de la fuente |
+| `record_status` | `text` | Sí | Sin valor | CHECK común | Estado actual de la fuente |
+
+PK `(account_id,patient_id,entry_type,entry_id)`; F119 a ficha. Índice `(account_id,patient_id,record_status,sort_key,entry_type,entry_id)` y `(account_id,patient_id,source_section,record_status,sort_key,entry_type,entry_id)`. La pareja `entry_type`/`source_section` se limita a `encounter/encounters`, `note/notes`, `measurement/measurements`, `immunization/immunizations`, `antecedent/antecedents`, `condition/conditions`, `allergy_intolerance/allergies`. Exactamente uno de `occurred_at`/`occurrence_date` es no nulo; su precisión coincide con el valor original o `reference`.
+
+Atenciones/mediciones usan su instante exacto. Notas usan aceptación como referencia temporal, sin llamarla momento clínico. Vacunas/antecedentes conservan fecha parcial; antecedente sin fecha usa aceptación como `reference`. Condiciones/alergias usan inicio conocido o marca actual como `reference`, sin presentarla como inicio. `sort_key` se deriva sin cambiar el valor/precisión públicos y desempata por tipo/ID.
+
+La fuente escribe/actualiza timeline en la misma aceptación. La migración de integración rellena Etapa 1 de forma idempotente; la proyección puede borrarse y reconstruirse desde estados actuales sin borrar historias. No se descarga como entidad adicional.
+
+### 11.13 Integridad, conservación e inventario
+
+F82–F119 continúan F01–F81. Las referencias actuales a ficha, cita, atención, profesional y autores usan RESTRICT; las de versión actual son NO ACTION diferidas. Las historias usan RESTRICT a actual y recibo. Los vínculos opcionales solo anulan su identificador; cuenta/paciente siguen NN.
+
+El estado actual y su historia comparten contenido, versión y marcas; los controles diferidos exigen secuencia desde 1 sin huecos y máximo actual. La guarda de identidad existente se aplica a las cinco tablas actuales. `patient_clinical_timeline` se reconstruye y no recibe una FK polimórfica que no pueda expresar su destino; su escritura transaccional y las pruebas contra fuentes mantienen la correspondencia.
+
+Las once tablas añaden 197 columnas y 38 FK; cinco columnas de permisos y la UQ técnica modifican tablas existentes. El inventario objetivo es **48 tablas, 622 columnas y 119 FK**. Las cifras son documentales y deberán contrastarse con las migraciones reales. No se purgan historias funcionales por retención técnica de 90 días.

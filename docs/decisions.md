@@ -160,6 +160,21 @@ La tercera etapa incluye planes de cuidados, medicación declarada y prescripci�
 
 **Ejecución aprobada de etapa 1 el 2026-11-15:** el usuario aprobó [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) y autorizó T01 → T02 → T03, una tarea a la vez y sin delegación, hasta presentar C01. Aprueba las decisiones de producto de §1.1 del plan: sexo al nacer opcional; nacimiento completo opcional existente; edad calculada; texto libre para condiciones y sustancias; alergias, intolerancias y tipo desconocido; fechas clínicas históricas opcionales con precisión variable; permisos por asistente/sección con lectura/escritura inicial; descarga del estado actual e historial aparte; aislamiento por cuenta/paciente. El diseño físico y HTTP se incorpora a sus fuentes únicas para revisión C01. No se acepta C01, no se habilita T04 y no cambian los límites de C11 o de los encargos documentales anteriores.
 
+### D13 · Registro clínico habitual de etapa 2
+
+**Confirmada por el usuario el 2026-11-16** al aprobar [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md) y autorizar T01–T03. Integra O02/O03/O06/O07/O08/O14/O15 de [patient-clinical-record.md](patient-clinical-record.md); no acepta C01 ni autoriza T04.
+
+- Una atención registrada afirma que ocurrió, sin estados de planificación, firma o cierre. Puede existir sin cita; una cita admite varias atenciones. La anulación por error es terminal y no representa evolución clínica.
+- Última visita es el `occurredAt` de la última atención válida de la cuenta/paciente. No depende de citas, notas, aceptación remota ni cierre.
+- `serviceId` continúa obligatorio al reservar. Etapa 2 no cambia disponibilidad, duración o snapshots; una atención sin cita conserva el motivo en palabras del paciente.
+- Atenciones/notas se editan con versión esperada. Nueva entrada, corrección y anulación se distinguen para mediciones, vacunas y antecedentes; el motivo de corrección es opcional.
+- Las mediciones iniciales son peso, presión arterial, temperatura, saturación de oxígeno y frecuencia cardíaca. Talla, perímetro cefálico, frecuencia respiratoria, IMC y curvas quedan fuera.
+- Los detalles de vacunas no conocidos son opcionales. Antecedentes narrativos `personal`, `family` u `other` no crean condiciones automáticamente.
+- Las cinco nuevas clases de datos tienen permisos por sección; el historial filtra cada fuente antes de contar/paginar.
+- La descarga incluye atenciones válidas, versión actual válida de notas/antecedentes, todas las tomas válidas y vacunas vigentes, sin versiones anteriores ni adjuntos.
+
+D08 conserva la fuente física y D10 la arquitectura. El diseño detallado se revisa en C01. Las políticas de copias, restauración, datos reales y producción no quedan resueltas; Etapa 1 conserva sus aceptaciones y límites.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |

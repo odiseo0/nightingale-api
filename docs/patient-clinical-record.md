@@ -1,7 +1,7 @@
 # Registro clínico y seguimiento del paciente
 
-**Versión:** 0.3. **Fecha:** 2026-11-16.
-**Estado:** especificación funcional vigente. La etapa 1 y su corrección están implementadas para revisión C07: permisos por sección, resultados con alcance persistido, revisiones coherentes, historial de nacimiento, descarga con referencias completas, auditoría y guardas de identidad. El usuario aceptó C01–C06 del plan sucesor; C07 espera revisión. La etapa 2 no se inicia.
+**Versión:** 0.4. **Fecha:** 2026-11-16.
+**Estado:** especificación funcional vigente. La etapa 1 y su corrección están implementadas para revisión C07: permisos por sección, resultados con alcance persistido, revisiones coherentes, historial de nacimiento, descarga con referencias completas, auditoría y guardas de identidad. El usuario aceptó C01–C06 del plan sucesor; C07 espera revisión. El diseño de etapa 2 está en preparación para C01; su implementación no se inicia.
 **Decisión de alcance:** [D12](decisions.md#d12--registro-clínico-y-seguimiento-del-paciente).
 **Entrega documental:** [P-20261115-01-clinical-spec](../tasks/P-20261115-01-clinical-spec/plan.md), con [evidencia](../tasks/P-20261115-01-clinical-spec/todo.md).
 
@@ -107,6 +107,23 @@ Vacunas en esta etapa significa registrar y consultar dosis recibidas o declarad
 
 Resultado esperado: trabajar desde la ficha y las consultas con entrada breve, historia de mediciones y correcciones claras, dejando datos aptos para análisis posterior.
 
+#### 4.2.1 Concreciones aprobadas para la etapa 2
+
+El usuario aprobó [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md) el 2026-11-16 y autorizó integrar sus decisiones antes de revisar C01. Estas reglas no acreditan implementación ni habilitan T04.
+
+| Decisión | Regla aprobada |
+|---|---|
+| O02 | Registrar una atención afirma que ocurrió, sin ciclo de planificación, firma o cierre. Puede existir sin cita y una cita puede tener varias atenciones. Solo la anulación por error usa una marca terminal distinta del ciclo asistencial. |
+| O02 / última visita | Es la última vez que paciente y profesional se vieron. Se calcula desde `occurredAt` de la última atención válida de la cuenta/paciente; no depende de citas, notas, aceptación remota ni cierre. |
+| O03 | `serviceId` sigue obligatorio al reservar. Etapa 2 no cambia disponibilidad, duración ni snapshots de citas; una atención sin cita admite el motivo en palabras del paciente. |
+| O06 | Atenciones y notas se editan con versión esperada, sin cierre universal. Mediciones, vacunas y antecedentes distinguen nueva entrada, corrección y anulación; el motivo de corrección es opcional. |
+| O07 | Las cinco mediciones iniciales son peso, presión arterial, temperatura, saturación de oxígeno y frecuencia cardíaca. Talla, perímetro cefálico, frecuencia respiratoria, IMC y curvas quedan fuera. |
+| O08 | Los detalles de vacunas son opcionales cuando no se conocen. Antecedentes narrativos tipados como `personal`, `family` u `other` no crean condiciones automáticamente. |
+| O14 | Atenciones, notas, mediciones, vacunas y antecedentes tienen permisos independientes por asistente. El historial filtra cada elemento por la sección de su fuente. |
+| O15 | La descarga para evolución incluye atenciones válidas, versión actual válida de notas/antecedentes, todas las tomas válidas y vacunas vigentes; excluye versiones anteriores y adjuntos. |
+
+El diseño físico, HTTP, acceso y sincronización se incorpora a las fuentes únicas para C01. O04 conserva fechas parciales solo donde el diseño las admite; O11 y la analítica/crecimiento siguen en etapa 3. Las políticas de copias, restauración y operación con datos reales permanecen pendientes.
+
 ### 4.3 Etapa 3: funciones clínicas completas
 
 Base A11–A14. Incluye los siguientes bloques funcionales, cuyo orden interno debe decidir un plan por dependencias y uso:
@@ -135,7 +152,7 @@ La tercera etapa no debe convertirse en una única tarea ni en un requisito de t
 | Registro que continúa entre consultas | Condición, alergia, medicación o plan | Se referencia desde consultas sin recrearlo por visita |
 | Hecho fechado | Medición, vacuna, resultado o revisión | Conserva su fecha y fuente; puede referirse a atención, problema o plan |
 
-Este cuadro expresa relaciones de diseño, no tablas aprobadas. La cardinalidad exacta entre atención y cita queda en O02: no imponer aún una atención por cita ni una cita obligatoria para cada atención. Una ausencia o cancelación no acredita atención realizada.
+La cardinalidad está resuelta por §4.2.1: una atención no exige cita y una cita admite varias atenciones. No existe una atención planificada por deducción de una cita; una ausencia o cancelación no acredita atención realizada.
 
 Las notas y diagnósticos no se guardan en `appointment_histories`. Esa tabla conserva la historia funcional de la cita según el esquema actual. El historial clínico y la auditoría técnica también tienen fines distintos.
 
@@ -153,7 +170,7 @@ Dentro de la cuenta, varias consultas pueden relacionarse con la misma condició
 
 R02 · Base A05. El paciente puede decir «me salió un moretón en el cuello y quiero revisarlo» sin identificar un diagnóstico, servicio o especialidad. El personal puede registrar ese motivo y después organizar la atención y duración.
 
-El contrato actual exige `serviceId` al crear cita y conserva referencias de nombre/duración. Este descubrimiento no decide eliminar esa relación ni mantenerla siempre obligatoria. O03 debe resolver el recorrido: cuándo asigna el personal un servicio y cómo se reserva con una duración válida si aún no se conoce. Hay que revisar disponibilidad, validación, snapshots e integridad, además del formulario.
+El contrato actual exige `serviceId` al crear cita y conserva referencias de nombre/duración. O03 conserva esa obligación y no cambia disponibilidad, validación, duración o snapshots. El motivo en palabras del paciente pertenece a una atención sin cita; no se convierte en una reserva incompleta ni autoriza autorreserva del Hub.
 
 La razón breve usada para coordinar puede necesitar una proyección distinta del relato clínico completo. Conservar origen y autor de cada entrada; una clasificación posterior no debe reemplazar silenciosamente las palabras registradas. No se autoriza por este acuerdo una nueva ruta de autorreserva del paciente en el Hub.
 
@@ -209,7 +226,7 @@ R07 · Base A03 y A05. Propuesta de contenido de una atención: paciente/cuenta,
 
 La historia del problema actual —History of Present Illness— describe cuándo comenzó lo que motiva la atención, cómo cambió y el contexto que el profesional considera pertinente. Es distinta de los antecedentes generales y del motivo breve de contacto. Se puede iniciar con texto; una estructura posterior debe partir del uso y conservar lo registrado.
 
-La fecha de cita y la de atención pueden diferir. El cierre administrativo de una cita no finaliza por deducción una nota ni crea toda una consulta clínica. El plan de etapa 2 debe definir inicio, guardado y cierre de atención, participantes y correcciones, en O02/O06.
+La fecha de cita y la de atención pueden diferir. El cierre administrativo de una cita no finaliza por deducción una nota ni crea toda una consulta clínica. O02/O06 fijan que registrar la atención afirma que ocurrió, sin ciclo de cierre; las correcciones usan versiones y la anulación por error es terminal.
 
 ### 7.2 Notas sobre el paciente
 
@@ -223,7 +240,7 @@ Ejemplo ficticio: durante una revisión dermatológica el profesional observa al
 
 R09 · Base A08–A09 y A14. Cada toma conserva qué se midió, su valor y unidad, fecha del hecho, fecha de registro, autor y estado de validez. El contexto necesario puede incluir método o lugar de medición cuando afecte a su interpretación. El plan elegirá los datos mínimos por tipo; no se crea un formulario universal con todos los campos posibles.
 
-El alcance inicial solicitado incluye peso, presión arterial, temperatura, saturación de oxígeno y frecuencia cardíaca. Propuesta para preparar pediatría: añadir talla/longitud y perímetro cefálico cuando se definan sus recorridos. La frecuencia respiratoria puede incorporarse al definir el conjunto inicial. Estas ampliaciones se revisan en O07; figuran aquí para no confundir la tabla de referencia con una aprobación de todas las mediciones.
+O07 fija como alcance inicial peso, presión arterial, temperatura, saturación de oxígeno y frecuencia cardíaca, con unidades fijas. Talla/longitud, perímetro cefálico, frecuencia respiratoria, IMC y curvas quedan fuera de etapa 2. Las demás filas de la tabla son referencias futuras, no mediciones aprobadas para esta entrega.
 
 Selección propuesta de unidades iniciales a partir de FHIR [Vital Signs](https://hl7.org/fhir/R5/observation-vitalsigns.html) [F07]:
 
@@ -264,9 +281,9 @@ Las vistas deben distinguir información vigente, pasada, corregida y anulada, c
 
 ### 7.6 Última visita
 
-R12 · Base A07. Calcularla desde atención realizada conforme a una regla aprobada en O02: qué estados cuentan, qué fecha se usa y si se muestra por cuenta o profesional. El resumen debe identificar ese alcance.
+R12 · Base A07 y O02. Calcularla desde `occurredAt` de la última atención válida de la cuenta/paciente. El resumen identifica `scope=account` y permite acceder a la atención autorizada. No depende de cita, nota, fecha de aceptación remota ni cierre.
 
-La propuesta inicial es mostrar la última atención de la cuenta y permitir acceder a ella. Una cita futura, cancelada, ausente o una ficha recién editada no acreditan visita. Una nota fuera de consulta no debe cambiarla por sí sola. Hasta implementar atención y su regla, no declarar que la última cita programada es ese dato.
+Una cita futura, cancelada, ausente o una ficha recién editada no acreditan visita. Una nota fuera de consulta no cambia el dato. Anular la última atención obliga a recalcular desde las demás atenciones válidas.
 
 ## 8. Funciones completas: etapa 3
 
@@ -400,7 +417,7 @@ Cuando una vista muestra un resumen o una nota referencia una condición, debe p
 
 ### 10.1 Permisos configurables por cuenta
 
-R23 · Base A10. El médico y su asistente son los usuarios principales. La configuración permitirá ajustar quién consulta y escribe cada clase de dato o realiza una acción. El detalle se diseñará en O14, sin crear ahora un sistema general de roles ni cambiar los permisos actuales.
+R23 · Base A10 y O14. El médico y su asistente son los usuarios principales. Además de las secciones de etapa 1, atenciones, notas, mediciones, vacunas y antecedentes tienen niveles independientes por asistente, sin crear un sistema general de roles. El historial integrado filtra cada fuente por su permiso antes de contar o paginar.
 
 La matriz que deberá resolver el plan distingue lectura, alta, corrección/anulación, revisión clínica y acciones de emisión o cierre que la función requiera. Debe definir quién cambia esa configuración y sus valores iniciales. Las acciones concretas se diseñan por función: por ejemplo, registrar una medición y emitir una receta pueden necesitar permisos distintos.
 
@@ -420,7 +437,7 @@ Dos mediciones independientes son dos hechos; dos ediciones del mismo registro p
 
 R25 · Propuesta que desarrolla A04, A10 y A14. Definir proyecciones clínicas autorizadas y un alcance explícito de descarga. La audiencia actual owner/members y la ventana de citas no bastan por deducción para los nuevos permisos y datos.
 
-Una alergia o condición vigente no desaparece porque su fecha de registro quede fuera de la ventana de citas. A la vez, una captura no debe copiar sin criterio toda la historia y todos los adjuntos a cada dispositivo. El plan debe decidir resúmenes necesarios sin red, detalle bajo demanda, límites y recuperación, y probar que se aplican los mismos permisos en ambos casos.
+Una alergia o condición vigente no desaparece porque su fecha de registro quede fuera de la ventana de citas. O15 fija para etapa 2 la descarga de atenciones válidas, versión actual válida de notas/antecedentes, todas las tomas válidas y vacunas vigentes, sin historias de versiones ni adjuntos. Ningún hecho se filtra por la ventana de citas; se aplican los mismos permisos en captura y delta.
 
 La retención técnica actual de cambios/resultados de 90 días no fija la vida de la historia clínica. O15 debe resolver retención y recuperación por clase de dato y sus copias. Vencer un cursor o retirar un resultado técnico no borra una medición, una nota o una receta funcional.
 
@@ -480,20 +497,20 @@ Los identificadores Oxx siguientes pertenecen solo a esta especificación. Al ci
 | ID | Decisión necesaria | Antes de |
 |---|---|---|
 | O01 | **Resuelto para etapa 1:** sexo al nacer opcional, con valores y fuente definidos en el plan. La elección de curvas pediátricas conserva sus reglas para etapa 3 | Campo aprobado; revisión de curvas en etapa 3 |
-| O02 | Ciclo de atención, participantes, relación/cardinalidad con cita y regla de última visita | Atención y última visita en etapa 2 |
-| O03 | Servicio obligatorio o asignable después; duración, disponibilidad y referencias conservadas cuando el motivo no identifica servicio | Cambio del recorrido de cita |
+| O02 | **Resuelto para etapa 2:** atención real sin ciclo de cierre, sin cita obligatoria, varias por cita y última visita desde atenciones válidas de la cuenta/paciente | Revisión del diseño en C01 |
+| O03 | **Resuelto para etapa 2:** `serviceId` obligatorio al reservar; motivo de atención sin cita no cambia disponibilidad, duración ni snapshots | Revisión del diseño en C01 |
 | O04 | **Resuelto para etapa 1:** nacimiento completo opcional existente; fechas históricas opcionales completas o parciales y sus reglas. Otros tipos y etapas conservan su precisión por decidir | Payload y modelo de los datos afectados |
 | O05 | **Resuelto para etapa 1:** estados/transiciones, texto libre, intolerancias, tipo desconocido y revisiones de información definidos en el plan | Revisión del diseño en C01 |
-| O06 | **Resuelto para etapa 1:** versiones, correcciones, anulación terminal, motivos opcionales e historial aparte. Notas, atención y otros tipos conservan sus reglas pendientes | Escrituras de etapa 1 y notas/atención de etapa 2, según el tipo |
-| O07 | Conjunto de mediciones inicial, métodos, unidades alternativas, límites de captura y asociación de peso/talla | Mediciones y sus derivados |
-| O08 | Alcance y estructura de antecedentes personales/familiares y de vacunas; registros históricos y fuentes | Funciones de etapa 2 afectadas |
+| O06 | **Resuelto para etapas 1 y 2:** versiones, correcciones, anulación terminal, motivos opcionales e historial aparte; atenciones/notas editables sin cierre y nueva toma distinta de corrección | Revisión del diseño en C01 |
+| O07 | **Resuelto para etapa 2:** cinco mediciones con unidades fijas y límites de captura definidos en las fuentes técnicas. Talla, peso/talla, IMC y curvas quedan para etapa 3 | Revisión del diseño en C01 |
+| O08 | **Resuelto para etapa 2:** detalles opcionales de vacunas y antecedentes narrativos `personal`,`family`,`other` sin efectos automáticos | Revisión del diseño en C01 |
 | O09 | Catálogo farmacológico, datos/ciclo de receta, permisos de emisión y requisitos del ámbito de uso | Prescripción y medicación de etapa 3 |
 | O10 | Objetivos, acciones, estados/revisiones y relación entre tratamiento, plan y otras indicaciones | Planes de cuidados |
 | O11 | Indicadores OMS iniciales, métodos y versiones, precisión, rangos, límites, prematuridad, pruebas numéricas y avisos si se desean | Analítica de etapa 3 |
 | O12 | Entrada de informes/resultados, correcciones, adjuntos, límites y posible integración externa | Laboratorio |
 | O13 | Primeras especialidades, plantillas definidas o configurables y alcance del ejemplo odontológico | Plantillas y módulos por especialidad |
-| O14 | **Resuelto para etapa 1:** permisos por asistente/sección, lectura/escritura inicial, configuración por propietario y aplicación a resultados, descargas y dispositivos | Revisión del diseño en C01 |
-| O15 | **Resuelto para etapa 1:** descarga opcional del estado actual, historial aparte, auditoría de acceso y conservación de historia funcional. Copias, recuperación, datos reales y operación conservan su política pendiente | Contratos clínicos y antes de operación con datos reales |
+| O14 | **Resuelto para etapas 1 y 2:** permisos por asistente/sección, lectura/escritura inicial, configuración por propietario y aplicación a resultados, descargas, dispositivos e historial por fuente | Revisión del diseño en C01 |
+| O15 | **Resuelto para etapas 1 y 2:** descarga opcional de hechos vigentes/válidos, todas las tomas para evolución, historial aparte y conservación funcional. Copias, recuperación, datos reales y operación conservan su política pendiente | Revisión del diseño en C01 y antes de operación con datos reales |
 
 Los planes de desarrollo deben partir de esta especificación revisada y de las fuentes actuales de datos/contratos. Para cada entrega deben:
 
@@ -559,5 +576,6 @@ Los acuerdos de §3 concretan la ampliación futura. Las propuestas y pendientes
 | 0.1 | 2026-11-15 | Especificación de descubrimiento: acuerdos, tres etapas, funciones y datos, reglas comunes, integración, casos de aceptación, pendientes y fuentes oficiales |
 | 0.2 | 2026-11-15 | Aprobación del plan de etapa 1 y concreción de O01, O04–O06, O14 y la parte funcional de O15; pendientes de otras etapas y operación conservados |
 | 0.3 | 2026-11-16 | Corrección de alcance de resultados, estados, historial, descarga, auditoría e integridad; C01–C06 del sucesor aceptados, C07 pendiente |
+| 0.4 | 2026-11-16 | Decisiones O02/O03/O06/O07/O08/O14/O15 para etapa 2; diseño pendiente de C01, sin implementación |
 
 La comprobación de esta entrega vive en [la lista documental](../tasks/P-20261115-01-clinical-spec/todo.md). Escribir y revisar el documento no prueba la API, el escritorio, PostgreSQL, exactitud clínica, métodos de crecimiento ni producción. La aceptación de la especificación y los futuros planes corresponde al usuario.

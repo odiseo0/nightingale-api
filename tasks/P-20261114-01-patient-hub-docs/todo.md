@@ -1,6 +1,6 @@
 # Lista de control · P-20261114-01-patient-hub-docs
 
-**Plan:** [plan.md](plan.md). **Estado:** In progress. **Fecha:** 2026-11-14.
+**Plan:** [plan.md](plan.md). **Estado:** Completed. **Fecha:** 2026-11-14.
 
 | Tarea | Estado | Evidencia |
 |---|---|---|
@@ -8,9 +8,9 @@
 | T02 | Done | D11 registra las decisiones y sus sustituciones; fuentes e índices alineados. Revisión secuencial de contenido y diff: lectura pública y acceso privado a cita separados, contrato actual sin ampliación y antecedentes conservados |
 | T03 | Done | 27 Markdown, 196 enlaces locales y 43 anclas comprobados; cero destinos ausentes nuevos y cero anclas rotas. Permanecen los 15 enlaces ausentes previos. git diff --check correcto; 18 archivos cambiados, todos Markdown. Catálogo/modelos HTTP actuales y esquema físico sin cambios, salvo aclaraciones de alcance |
 
-- [ ] C01: revisión y aceptación expresa del usuario.
+- [x] C01: aceptación expresa del usuario el 2026-11-16; plan Completed.
 
-**Entrega C01 lista para revisión.** T01–T03 comprobadas en secuencia; el plan conserva In progress y no se registra aceptación del usuario.
+**C01 aceptado por el usuario el 2026-11-16.** T01–T03 comprobadas en secuencia y el plan queda Completed.
 
 No se ejecutan pruebas de producto por este cambio documental. No se acepta C11 del plan de escritorio ni se acredita implementación del Hub.
 

@@ -123,3 +123,19 @@ Los casos de alcance ajeno, revocación, versión antigua y respuesta perdida si
 - Precisar alta administrativa/invitaciones, vínculo dispositivo/sesión, recuperación y matriz mínima de permisos. Duraciones y límites requieren una decisión explícita antes de implementar acceso.
 
 En aquel cierre T04 seguía en curso: OIDC y permisos vigentes estaban confirmados, O01/O02 abiertos y aún no había pruebas de seguridad ejecutadas. Es un registro histórico; el contrato del personal y su evidencia actual se consultan arriba y en el plan de escritorio. D11 sustituye las condiciones ligadas al segundo servidor del Hub. [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) respalda comprobar cada solicitud y denegar por defecto; no sustituye estas decisiones.
+
+## Permisos clínicos de etapa 2 · diseño para C01
+
+Diseño de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md), pendiente de C01 y sin implementación. Conserva las reglas vigentes de identidad, dispositivo y autorización por objeto.
+
+`ClinicalSection` y `ClinicalPermissions` añaden `encounters`,`notes`,`measurements`,`immunizations`,`antecedents`; `account_memberships` conserva un nivel independiente para cada una. Propietario conserva acceso completo; asistentes existentes/nuevos empiezan con `read_write` y solo propietario reduce niveles online. `SetMemberClinicalPermissions` acepta las ocho secciones; un cliente anterior que omita las nuevas conserva su default `read_write`.
+
+- `none` excluye lecturas, historias, resúmenes, última visita, resultados y descargas de esa sección.
+- `read` permite lecturas/historias y excluye escrituras, duplicados de escritura y reintentos.
+- `read_write` permite lecturas, acciones y recuperación de resultados de esa sección.
+
+Cada recibo conserva su `clinical_section`; autorización precede a duplicados, validación de resultados, conteos y proyecciones. Los conjuntos cerrados de capturas, cursores y audiencias añaden las cinco secciones. Cambiar niveles incrementa pertenencia/época, invalida capturas/cursores y cierra SSE. Una cuenta, paciente o registro ajeno devuelve la misma ausencia que uno inexistente, también en errores y totales.
+
+`last-visit` exige lectura de `encounters`. `clinical-history` no usa permiso global: filtra `source_section` antes de contar/paginar y cada detalle vuelve a autorizar su fuente. La captura con `includeClinical=true` solo incluye secciones legibles; los hechos nuevos no heredan permiso de citas, perfil u otra sección. Grupos invisibles permiten avanzar sin cuerpos.
+
+Escrituras y lecturas clínicas conservan auditoría sin motivos, texto, valores, nombres, filtros, cuerpos o cursores. Si la evidencia falla, no se entregan datos. Revocar permisos no promete borrar copias ya descargadas.

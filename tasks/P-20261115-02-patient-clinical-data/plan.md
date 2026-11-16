@@ -1,8 +1,8 @@
 # P-20261115-02-patient-clinical-data: etapa 1 de datos clínicos de referencia
 
-**Estado:** In progress. **Fecha:** 2026-11-15. **Lista de ejecución y evidencia:** [todo.md](todo.md).
+**Estado:** Completed. **Fecha:** 2026-11-15. **Lista de ejecución y evidencia:** [todo.md](todo.md).
 
-El usuario solicitó primero guardar el plan presentado y su lista de tareas. El 2026-11-15 aprobó el plan y autorizó ejecutar T01 → T02 → T03, una tarea a la vez y sin delegación, hasta presentar C01 para revisión. Después aceptó C01 y autorizó T04 → T05 → T06 hasta C02, en la misma forma. Posteriormente aceptó C02 y autorizó T07 → T08 → T09 hasta C03. Después aceptó C03 y autorizó T10 → T11 → T12 hasta C04. Posteriormente aceptó C04 y autorizó T13 → T14 → T15 hasta C05. Después aceptó C05 y autorizó T16 → T17 → T18 hasta C06. C06 permanece sin aceptar y la etapa 2 no se inicia. C11 del núcleo y los checkpoints de los encargos documentales anteriores conservan su estado.
+El usuario solicitó primero guardar el plan presentado y su lista de tareas. El 2026-11-15 aprobó el plan y autorizó ejecutar T01 → T02 → T03, una tarea a la vez y sin delegación, hasta presentar C01 para revisión. Después aceptó C01 y autorizó T04 → T05 → T06 hasta C02, en la misma forma. Posteriormente aceptó C02 y autorizó T07 → T08 → T09 hasta C03. Después aceptó C03 y autorizó T10 → T11 → T12 hasta C04. Posteriormente aceptó C04 y autorizó T13 → T14 → T15 hasta C05. Después aceptó C05 y autorizó T16 → T17 → T18 hasta C06. El 2026-11-16 aceptó C06 y todas las revisiones pendientes de trabajo ya comprobado; el plan queda Completed. La etapa 2 conserva su plan y autorización de ejecución separados.
 
 ## 1. Objetivo y decisiones de alcance
 

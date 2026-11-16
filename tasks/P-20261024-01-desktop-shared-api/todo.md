@@ -1,6 +1,6 @@
 # Estado y evidencia: P-20261024-01-desktop-shared-api
 
-**Plan:** [plan.md](plan.md). **Estado:** In progress. **Actualizado:** 2026-10-28.
+**Plan:** [plan.md](plan.md). **Estado:** Completed. **Actualizado:** 2026-11-16.
 
 El usuario aprobó el plan al pedir «Por favor, implementa este plan». El usuario aceptó después C01 al decir «Válido, puedes continuar con el objetivo, por favor». Tras revertir la primera continuación, autorizó retomar el trabajo con su estilo de código. C01 conserva su aceptación. Una tarea a la vez, sin delegación. Los estados se registran solo tras comprobar.
 
@@ -1400,7 +1400,7 @@ Fuentes de Pydantic 2.14.1: [validadores](https://github.com/pydantic/pydantic/b
 
 - [x] T31–T33 comprobadas y evidencia registrada.
 - [x] Pruebas aplicables y recorrido del bloque comprobados; límites externos identificados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Revisión y aceptación expresa del usuario el 2026-11-16; plan Completed.
 
 ### C12: Reglas, contrato y soporte
 

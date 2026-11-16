@@ -1,8 +1,8 @@
 # Lista de tareas: P-20261116-01-clinical-review-refactor
 
-**Plan:** [plan.md](plan.md). **Estado del plan:** In progress. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16.
+**Plan:** [plan.md](plan.md). **Estado del plan:** Completed. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16.
 
-El usuario aprobó el plan sucesor, aceptó C01–C07 y autorizó finalizar. T01–T20 quedan comprobadas. C08 permanece pendiente de revisión y aceptación expresa por el usuario. El plan anterior `P-20261115-02-patient-clinical-data` conserva su C06 pendiente y no inicia nuevas tareas.
+El usuario aprobó el plan sucesor, aceptó C01–C07 y autorizó finalizar. T01–T20 quedan comprobadas. El 2026-11-16 aceptó C08 y cerró este plan; después aceptó C06 del plan anterior. La etapa 2 conserva su autorización de ejecución separada.
 
 ## Resumen de estados
 
@@ -630,7 +630,7 @@ El usuario aprobó el plan sucesor, aceptó C01–C07 y autorizó finalizar. T01
 
 - [x] Todas las observaciones y bloqueos están corregidos y comprobados según la matriz aprobada.
 - [x] La reducción de código, la legibilidad y la conexión entre componentes son revisables en el diff.
-- [ ] El usuario revisa este plan sucesor y después vuelve a C06 de `P-20261115-02-patient-clinical-data`; ningún plan se marca aceptado o completado automáticamente.
+- [x] El usuario aceptó C08 el 2026-11-16 y después C06 de `P-20261115-02-patient-clinical-data`; ambos planes quedan Completed.
 
 ## Reglas de ejecución y evidencia
 

@@ -73,3 +73,20 @@ Estos criterios derivan del [alcance acordado](nightingale-api.md#5-integración
 - Impedir creación/reserva de citas, exploración de disponibilidad para elegir otro horario y registro de ausencia por el paciente. El personal conserva las ausencias bajo las reglas actuales.
 - Comprobar que una solicitud conserva estado, horario y confirmación y no reserva otro intervalo. Solo el personal decide el cambio; API aplica versiones, restricciones e invalidación de confirmación al reprogramar.
 - Probar revocación, acción concurrente y respuesta perdida cuando exista el contrato de acceso. No exigir un segundo backend ni un almacén propio del Hub. No deducir gestión interna completa de clínicas, varias sedes o cambios generales del escritorio de su micrositio público.
+
+## Criterios clínicos de etapa 2 · diseño para C01
+
+Casos de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md), preparados pero no ejecutados. Todos usan datos ficticios y marcadores reconocibles para revisar que contenido clínico no aparezca en errores, logs, auditoría, cursores o timeline.
+
+- **E06/E14:** atención sin cita, varias por cita, motivo en palabras del paciente y `serviceId` aún obligatorio al reservar; última visita solo desde atenciones válidas, con corrección/anulación/empates y sin efectos automáticos de citas/notas/ficha.
+- **E07:** nota independiente/vinculada, autor/fecha/versiones, edición sin motivo y ausencia de diagnóstico/condición automática o cambio de última visita.
+- **E08/E09:** dos pesajes válidos y corrección 700→70; la versión anterior queda en historia, no como punto vigente.
+- **E10/E11:** hecho, captura local y aceptación separados; carga histórica no desplaza toma reciente; respuesta perdida no repite efecto.
+- **E12:** presión con un componente desconocido, sin cero inventado ni mezcla de tomas.
+- **E13:** vacuna antigua con fuente/precisión y detalles opcionales; declaración no prueba administración actual ni genera recomendación/alergia.
+- **Antecedentes:** personales/familiares/otros, persona relacionada obligatoria en familia, incertidumbre y ninguna condición derivada.
+- **E22/E23:** versiones antiguas, duplicados concurrentes, respuesta perdida, permiso retirado y objeto ajeno en lecturas, resultados, errores, capturas y deltas.
+- **E24:** hechos anteriores a la ventana de citas; grupos invisibles, cambio de época, cursor/recibo vencido y retención técnica sin borrado funcional.
+- **Integridad:** FK de cuenta/paciente/cita/atención, historias inmutables, timeline coincidente/reconstruible, backfill idempotente y rollback de efecto/historia/timeline/recibo/auditoría/grupo.
+
+Dominio/aplicación no usan red. Integridad, migraciones, idempotencia concurrente y carreras usan PostgreSQL Test 18.3 y Keycloak Test aislados, con bases aleatorias eliminadas al terminar. SQLite no acredita esas reglas. No se declara integración Rust/Hub, operación con datos reales ni producción.

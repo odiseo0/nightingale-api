@@ -1,8 +1,8 @@
 # P-20261024-01-desktop-shared-api: API compartida para escritorio
 
-**Checkpoint actual:** C11 listo para revisión expresa; T31 → T32 → T33 comprobadas, una tarea a la vez y sin delegación. C10 aceptado por el usuario el 2026-10-28: «Aprobado, puedes continuar con el plan». Trabajo detenido en C11, sin aceptar ese checkpoint ni cerrar el plan. C07/C08 conservan autorización de paso sin aceptaciones separadas. Se conservan los 16 diagnósticos estáticos previos y los límites externos. Evidencia y desglose en todo.md.
+**Checkpoint actual:** C11 aceptado por el usuario el 2026-11-16 junto con las demás revisiones pendientes de trabajo ya comprobado. T01–T33 están Done y el plan queda Completed. C07/C08 conservan autorización de paso sin aceptaciones separadas. Se conservan los diagnósticos estáticos documentados y los límites externos. Evidencia y desglose en todo.md.
 
-**Estado:** In progress. **Creado:** 2026-10-24. **Actualizado:** 2026-10-28. **Lista:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-10-24. **Actualizado:** 2026-11-16. **Lista:** [todo.md](todo.md).
 
 **Revisión C10, 2026-10-28:** revisión secuencial de T28–T30, normas y contrato sobre HEAD 52cabb8, sin fallos de producto encontrados. Se amplía el probe de descarga para comprobar falta de clave, historia de una versión anterior y revocación antes de leer captura/página/delta. Probe real, cinco pruebas de descarga y 40 controles de estructura correctos; evidencia y límites en todo.md. C10 sigue pendiente de aceptación expresa. T31 no se inicia.
 

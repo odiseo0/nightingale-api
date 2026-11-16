@@ -1,6 +1,6 @@
 # Estado y evidencia: P-20261115-01-clinical-spec
 
-**Estado:** In progress. **Fecha:** 2026-11-15. **Plan:** [plan.md](plan.md).
+**Estado:** Completed. **Fecha:** 2026-11-15. **Plan:** [plan.md](plan.md).
 
 | Tarea | Estado | Evidencia |
 |---|---|---|
@@ -8,13 +8,13 @@
 | T02 | Done | Especificación 0.1 redactada: 15 acuerdos, 25 requisitos, 24 casos, 15 pendientes y 19 referencias oficiales. D12 y enlaces desde README, especificación API e índice de tareas; sin segundo esquema ni rutas nuevas |
 | T03 | Done | Revisión: 30 Markdown, 243 enlaces locales y 57 anclas; cero destinos ausentes nuevos y cero anclas rotas. Identificadores únicos/completos, formato de nuevos archivos y git diff --check correctos. Fuentes y límites revisados |
 
-- [ ] C01: revisión y aceptación expresa del usuario.
+- [x] C01: aceptación expresa del usuario el 2026-11-16; plan Completed.
 
 Este encargo no acredita implementación clínica ni acepta checkpoints de otros planes.
 
-## Entrega C01 para revisión
+## Aceptación de C01
 
-T01–T03 se completaron en secuencia, sin delegación. La especificación y su redacción completa quedan para revisión; no se marca aceptación ni se inicia implementación. El plan conserva In progress por esa revisión pendiente.
+C01 quedó aceptado por el usuario el 2026-11-16. T01–T03 se completaron en secuencia, sin delegación, y el plan queda Completed.
 
 Archivos de este encargo: docs/patient-clinical-record.md, docs/decisions.md, docs/nightingale-api.md, README.md, tasks/README.md y los dos archivos de esta carpeta. Todos son Markdown. Se conservan los cambios previos de los 16 archivos ya modificados y los dos documentos nuevos del Hub; este encargo amplía solo cuatro de aquellos archivos y añade tres nuevos.
 

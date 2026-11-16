@@ -1,6 +1,6 @@
 # P-20261115-01-clinical-spec: especificación clínica del paciente
 
-**Estado:** In progress. **Fecha:** 2026-11-15. **Lista y evidencia:** [todo.md](todo.md).
+**Estado:** Completed. **Fecha:** 2026-11-15. **Lista y evidencia:** [todo.md](todo.md).
 
 ## Encargo y resultado
 
