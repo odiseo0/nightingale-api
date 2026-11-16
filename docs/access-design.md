@@ -1,20 +1,45 @@
 # T04 · Identidad, permisos y alcance del Hub
 
+**Revisión documental del 2026-11-14:** [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) fija la interfaz web en Patient Hub y todas sus funciones de servidor en Nightingale API. Sustituye la propuesta entre dos servidores conservada al final. El acceso del personal no cambia; los accesos del futuro Hub aún no están implementados.
+
 **Estado al 2026-10-26:** C05 aceptado; T16–T18 comprobadas para revisión C06, sin aceptar. El [contrato v1](api-v1.md) conserva Keycloak para emitir token opaco sin vencimiento, revocable en API y sin sesiones/renovación propias. Miembros activos con instalación habilitada gestionan pacientes/contactos y reglas semanales de su cuenta. Solo profesional propietario modifica catálogo/ofertas; miembros leen solo ofertas de su cuenta. Resultados de servicios vuelven a comprobar el vínculo profesional vigente. Solo propietario consulta auditoría. No se registra instalación al aceptar invitación ni se restaura desde el dispositivo revocado. Hub y consumidores siguen pendientes.
 
 ## Acuerdo vigente de la primera etapa
 
 Alta de consulta mediante un script pequeño en scripts/create_practice.py con issuer/subject exactos del propietario y conexión administrativa separada; [uso local](../test-support/README.md#alta-administrativa). No hay sistema de comandos ni dependencia de arranque del servidor. authorization posee identidad, credenciales y dispositivos globales; accounts posee cuenta, pertenencias, perfil profesional y autorizaciones por cuenta. Autenticarse por OIDC puede registrar identidad sin conceder cuenta. Rol propietario derivado de propiedad; resto del equipo activo, asistentes. Solo propietario invita y gestiona pertenencias, políticas y acceso de dispositivos en su cuenta. Una invitación tiene destinatario autenticado concreto, dura 72 horas y se consume una vez, sin correo automático.
 
-API valida el access token OIDC únicamente al emitir credencial; no ID token ni contraseñas. Guarda huella de secreto aleatorio de 256 bits y lo entrega una sola vez. Toda entrada normal exige token API vigente, usuario/dispositivo activos, pertenencia y autorización de cuenta/objeto/acción. Revocar instalación propia afecta sus tokens globales; propietario de una cuenta solo puede revocar acceso de esa instalación en su ámbito. Cambiar reloj o campos del cliente no modifica esa autoridad.
+API valida el access token OIDC únicamente al emitir credencial; no ID token ni contraseñas. Guarda huella de secreto aleatorio de 256 bits y lo entrega una sola vez. Las entradas privadas del personal exigen token API vigente, usuario/dispositivo activos, pertenencia y autorización de cuenta/objeto/acción. Revocar instalación propia afecta sus tokens globales; propietario de una cuenta solo puede revocar acceso de esa instalación en su ámbito. Cambiar reloj o campos del cliente no modifica esa autoridad.
 
 El token no vence. Logout o desactivación en Keycloak no revocan por sí solos un token ya emitido; la operación administrativa de API debe revocarlo o desactivar la identidad. No se implementan introspección por petición, sesiones API, renovación ni logout distribuido. Una credencial perdida exige nueva autenticación y revocación del dispositivo anterior, sin recuperar secretos guardados.
 
 Aceptación y revocación se coordinan en PostgreSQL con el orden y relecturas de api-v1.md. Si revocación confirma primero no hay efecto posterior con acceso viejo; aceptación válida anterior conserva su hecho. La intención rechazada sigue en escritorio y una persona con permiso puede revisarla y crear una operación nueva con actor real, nunca reenviar como otra persona. Lecturas y resultados previos también se reautorizan; SSE revisa acceso al emitir y en heartbeat, sin transacción larga por conexión.
 
-La definición física está solo en database-schema.md. El historial restante de T04 se conserva abajo; sus alternativas de sesiones/proveedor quedan sustituidas en este ámbito. O02 y toda autorización del Hub siguen fuera, sin cierre por deducción.
+La definición física está solo en database-schema.md. El historial de T04 se conserva abajo; sus alternativas de sesiones/proveedor quedan sustituidas en este ámbito. D11 resuelve el alcance y la propiedad del servidor del Hub; O02 conserva el mecanismo de acceso limitado a citas pendiente de diseño.
 
-## Antecedente T04 y alcance posterior del Hub
+## Permisos clínicos de etapa 1 · diseño para C01
+
+El plan [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) añade tres niveles independientes por pertenencia: perfil clínico, condiciones y alergias/intolerancias. Cada nivel vale `none`, `read` o `read_write`; asistentes existentes/nuevos empiezan con `read_write`. El propietario conserva acceso completo y solo él configura asistentes, online y con versión de pertenencia. Estos niveles no crean roles globales ni cambian los permisos administrativos sobre nacimiento.
+
+`none` excluye estado, resúmenes, historias, resultados y descargas; `read` permite consultas; `read_write` permite acciones y recuperar resultados de escritura. API vuelve a autorizar antes de duplicados, resultados, listas, detalles, historias y capturas. Cambiar niveles incrementa pertenencia y época en la misma aceptación, invalida capturas/cursores y provoca cierre del SSE anterior. Desactivar/reactivar conserva la configuración.
+
+La captura clínica es opcional y registra las secciones permitidas. Sus proyecciones usarán audiencias cerradas por sección, filtradas antes de construir la respuesta; no incluirán historias. T04–T06 implementan niveles, configuración por propietario, acceso propio y filtrado cerrado, comprobados con datos ficticios para revisión C02. Las lecturas clínicas correctas deberán dejar evidencia sin nombres clínicos, sustancias, reacciones, filtros, cuerpos o cursores; un fallo al persistirla impedirá entregar datos. No se promete borrado de copias locales ya descargadas. C02 espera revisión del usuario y no habilita datos clínicos.
+
+## Acceso futuro del Hub acordado por D11
+
+| Recorrido | Regla vigente de alcance | Diseño pendiente |
+|---|---|---|
+| Lectura del micrositio | Pública, sin cuenta de paciente, inicio de sesión ni permisos del personal. Solo información destinada a publicación mediante endpoints públicos de API | Proyecciones y formas HTTP de las plantillas de médico independiente y clínica/centro |
+| Gestión de una cita existente | Acceso limitado verificado por API para esa cita, acción e información necesaria, sin credenciales del personal | Mecanismo y ciclo del enlace/acceso, vigencia, revocación, proyecciones, formas HTTP y recuperación del resultado |
+
+La lectura pública no abre rutas internas ni publica fichas de pacientes, listados de citas, notas internas u otros datos privados. Las plantillas no son un editor libre ni permiten gestión de pacientes. Publicar clínicas no habilita toda su gestión interna, varias sedes o cambios generales del escritorio.
+
+El acceso a la cita permitirá consultar información permitida, confirmar asistencia, cancelar según las reglas, solicitar reprogramación y consultar resultado. No permitirá crear o reservar citas, explorar disponibilidad para elegir otro horario ni marcar ausencias; el personal conserva ese registro. La solicitud conserva estado, horario y confirmación y no reserva otro intervalo. El personal decide el cambio y API lo aplica con las reglas comunes. Las rutas actuales del personal no conceden estas capacidades al paciente.
+
+API tendrá la lógica de enlaces, acceso, reglas y solicitudes que el Hub necesite. No se eligen cuentas de paciente, sesiones ni un segundo servidor como solución. Un identificador declarado de cuenta, cita, actor o resultado no prueba acceso. Quedan por diseñar el tratamiento de revocación y versión antigua frente a una acción en curso y la consulta de resultados tras respuesta perdida.
+
+## Antecedente T04 sustituido en los puntos indicados
+
+Las secciones siguientes conservan la propuesta inicial y sus pruebas futuras. D09/D10 sustituyen las alternativas del personal; D11 sustituye la propiedad y autorización entre servidores del Hub. No son otra lista vigente de tareas o requisitos de implementación.
 
 ## Identidad del personal
 
@@ -52,7 +77,9 @@ Los tiempos del servidor y las versiones aportan evidencia; la hora del cliente 
 
 El escritorio conserva los últimos permisos válidos sin red. API no puede revocar de inmediato esa copia ni retirar datos ya descifrados. Al reconectar, devuelve el rechazo o la necesidad de revisión, sin ordenar un borrado silencioso de intenciones. También reautoriza consultas de resultados idempotentes y páginas; conocer un ID anterior no permite recuperar datos tras revocación.
 
-## Propuesta de autorización del Hub
+## Antecedente sustituido: autorización entre servidores
+
+**Sustituido por D11 el 2026-11-14.** La comparación siguiente suponía backend y almacenamiento propios del Hub. No exige identidad de servicio, concesión entre servidores ni consulta a otro backend para el diseño actual. La necesidad de limitar cada acceso a cita/acción permanece; el mecanismo concreto no está elegido.
 
 Una credencial de servicio prueba que llama el backend del Hub, no que pueda operar cualquier cita. Comparación:
 
@@ -70,7 +97,9 @@ Hub debe revocar su acceso local y comunicar a API la invalidación de la conces
 
 No se amplían las acciones del paciente: consultar su cita, confirmar, cancelar si Hub lo permite y solicitar cambio en Hub. Pedir cambio no modifica ni reserva horario. Las llamadas de proveedor o introspección ocurren fuera de las transacciones PostgreSQL; el alcance local se revalida con la escritura.
 
-## Matriz de amenazas y pruebas futuras
+## Matriz histórica de amenazas y pruebas propuestas
+
+Los casos de alcance ajeno, revocación, versión antigua y respuesta perdida siguen siendo criterios para el futuro contrato; la concesión de servicio era el mecanismo propuesto, ahora sustituido. Las referencias Txx pertenecen al plan anterior.
 
 | Entrada o carrera | Resultado exigido / propuesta a comprobar | Tarea |
 |---|---|---|
@@ -84,11 +113,11 @@ No se amplían las acciones del paciente: consultar su cita, confirmar, cancelar
 | Respuesta de aceptación/revocación perdida | Recuperar resultado autorizado con la misma identidad; no repetir efecto | T14, T15 |
 | Proveedor OIDC, claves o canal de revocación no disponibles | Fallo controlado según política aprobada; no permitir por error ni confundir indisponibilidad con rechazo definitivo | T08, T23 |
 
-## Antes de cerrar T04
+## Condiciones históricas antes de cerrar T04
 
 - Precisar el recorrido de revisión y nueva operación bajo la política de permisos vigentes ya confirmada.
 - Aprobar o cambiar la opción del Hub y su comportamiento durante una revocación pendiente.
 - Seleccionar proveedor OIDC y su contrato de access tokens, renovación, logout/revocación y disponibilidad; no hace falta contratarlo durante esta etapa.
 - Precisar alta administrativa/invitaciones, vínculo dispositivo/sesión, recuperación y matriz mínima de permisos. Duraciones y límites requieren una decisión explícita antes de implementar acceso.
 
-T04 sigue en curso. OIDC y permisos vigentes están confirmados, pero O01/O02 no están cerrados. El documento separa esos acuerdos de las propuestas restantes; no hay pruebas de seguridad ejecutadas. [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) respalda comprobar cada solicitud y denegar por defecto; no sustituye estas decisiones.
+En aquel cierre T04 seguía en curso: OIDC y permisos vigentes estaban confirmados, O01/O02 abiertos y aún no había pruebas de seguridad ejecutadas. Es un registro histórico; el contrato del personal y su evidencia actual se consultan arriba y en el plan de escritorio. D11 sustituye las condiciones ligadas al segundo servidor del Hub. [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) respalda comprobar cada solicitud y denegar por defecto; no sustituye estas decisiones.

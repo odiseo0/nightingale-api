@@ -1,12 +1,16 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.1. **Fecha:** 2026-10-28. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 en el [plan aprobado](../tasks/P-20261024-01-desktop-shared-api/plan.md). C07/C08 conservaron autorización de paso sin aceptaciones separadas. SSE, snapshot, descarga y recuperación comprobados en entorno aislado con dos procesos API. [Contratos generados](../contracts/README.md): 46 rutas/47 operaciones HTTP, 70 esquemas y 42 acciones por lote. C11, consumidores y producción conservan sus límites.
+**Versión de diseño:** 1.2. **Fecha:** 2026-11-15. **Estado:** C09/C10 aceptados; T31–T33 para revisión C11 del núcleo. La etapa clínica [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) está aprobada para T01–T03; §10 es diseño futuro para revisión C01, sin rutas o acciones clínicas implementadas. Los contratos generados existentes conservan 46 rutas/47 operaciones HTTP, 70 esquemas y 42 acciones por lote; no se regeneran en este bloque. C11 del núcleo, C01 clínico, consumidores y producción conservan sus límites.
 
 Este documento conserva explicación de transporte, permisos y recuperación. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas. Los esquemas Pydantic de domain, derivados del BaseModel del proyecto, son la fuente de OpenAPI/JSON Schema exportados por scripts/export_contracts.py. Los generados identifican origen/versión/huella y no se editan a mano. La [guía Rust](rust-api-guide.md) explica su uso y enlaza ejemplos comprobados. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
 ## 1. Alcance y autenticación
 
 Solo consultas independientes, un profesional y asistentes. Sin modificación de Rust, Hub, clínicas, comunicaciones, espera, analítica, datos reales o producción. No se exponen CRUD global de usuarios, contraseñas, concesiones Hub, búsqueda/fusión/corrección global de pacientes, verificación de identidad/representación o reapertura/cambio de referencias de citas.
+
+**Aclaración documental del 2026-11-14:** [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) acuerda el futuro Hub: interfaz web en su repositorio y todo su servidor en API. Este contrato actual no incluye endpoints públicos de micrositios ni acciones del paciente. Las lecturas públicas actuales de salud, capacidades y configuración OIDC no sirven como contrato de publicación de cuentas, profesionales o servicios. Las rutas internas y operaciones de citas conservan el acceso del personal.
+
+El futuro micrositio tendrá plantillas para médico independiente y clínica/centro, sin cuentas de paciente, inicio de sesión o permisos del personal para leer información destinada a publicación. La gestión privada de una cita usará acceso limitado sin credenciales del personal: consulta permitida, confirmación, cancelación según reglas, solicitud de reprogramación y consulta de resultado. No permitirá crear o reservar citas, explorar disponibilidad para elegir otro horario ni marcar ausencias. Pedir reprogramación conserva estado, horario y confirmación, sin reservar otro intervalo; el personal decide y API aplica el cambio. La presentación pública de clínicas no amplía la gestión interna, las sedes o el escritorio de v1. Mecanismo del enlace, proyecciones y formas HTTP siguen pendientes en [la especificación §5](nightingale-api.md#5-integración-con-patient-hub); no se añaden a este catálogo ni a los artefactos generados.
 
 Keycloak de desarrollo autentica mediante navegador externo, Authorization Code y PKCE S256. El token OIDC solo se acepta en POST /v1/auth/device-tokens; comprobar firma RS256 con JWKS de URL configurada, issuer, audiencia, exp/nbf y azp del cliente público permitido. No aceptar ID token, algoritmos del cliente ni URL de claves del JWT. El proveedor y JWKS se consultan fuera de transacciones; HTTPX asíncrono, caché de claves 5 minutos, recarga única ante kid desconocido; sin clave válida por fallo de red: 503, sin permitir por error. En producción todo externo exige TLS; HTTP se permite solo en el entorno local de desarrollo/prueba y direcciones configuradas.
 
@@ -50,6 +54,7 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 | GET | `A` | miembro activo | AccountResponse | propietario conserva acceso administrativo mínimo para reactivar cuenta inactiva |
 | GET | `A/access` | miembro | AccessResponse | rol, acciones efectivas, estado y permissionEpoch; funciona antes de registrar instalación en la cuenta |
 | GET | `A/members` | propietario | PaginatedResponse<MemberResponse> | userId, displayName, rol derivado y estado; sin claims OIDC |
+| GET | `A/members/{user_id}/clinical-permissions` | propietario | MemberClinicalPermissionsResponse | niveles clínicos configurados y versión de pertenencia |
 | GET | `A/invitations` | propietario | PaginatedResponse<InvitationResponse> | filtro status; destinatario solo por userId |
 | GET | `A/devices` | propietario | PaginatedResponse<AccountDeviceResponse> | solo autorizaciones de la cuenta, sin otras cuentas ni tokens |
 | GET | `A/audit-events` | propietario | PaginatedResponse<AuditEventResponse> | from, until, action, objectType, objectId; orden (occurredAt,id) |
@@ -60,6 +65,19 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 | GET | `A/patients` | miembro | PaginatedResponse<PatientProfileResponse> | q, status, completionStatus; búsqueda por nombre o documento registrado de sus fichas |
 | GET | `A/patients/{patient_id}` | miembro | PatientProfileResponse | solo ficha de esta cuenta |
 | GET | `A/patients/{patient_id}/identifiers` | miembro | PaginatedResponse<PatientIdentifierResponse> | documentos de identidad vinculada a esa ficha; sin búsqueda global ni verificador de otra cuenta |
+| GET | `A/patients/{patient_id}/clinical-profile` | perfil `read`/`read_write` | ClinicalProfileResponse | versión 0 sin fila, sin escritura |
+| GET | `A/patients/{patient_id}/clinical-profile/history` | perfil `read`/`read_write` | PaginatedResponse<ClinicalProfileHistoryResponse> | versión ascendente, afterVersion opcional |
+| GET | `A/patients/{patient_id}/birth-date-changes` | miembro | PaginatedResponse<PatientBirthDateChangeResponse> | solo cambios desde esta entrega |
+| GET | `A/patients/{patient_id}/conditions` | condiciones `read`/`read_write` | PaginatedResponse<PatientConditionResponse> | filtros y orden id |
+| GET | `A/patients/{patient_id}/conditions/{condition_id}` | condiciones `read`/`read_write` | PatientConditionResponse | solo esa cuenta/ficha |
+| GET | `A/patients/{patient_id}/conditions/{condition_id}/history` | condiciones `read`/`read_write` | PaginatedResponse<PatientConditionHistoryResponse> | versión ascendente |
+| GET | `A/patients/{patient_id}/clinical-sections/conditions` | condiciones `read`/`read_write` | ClinicalSectionReviewResponse | revisión actual |
+| GET | `A/patients/{patient_id}/clinical-sections/conditions/history` | condiciones `read`/`read_write` | PaginatedResponse<ClinicalSectionReviewHistoryResponse> | versión ascendente |
+| GET | `A/patients/{patient_id}/allergy-intolerances` | alergias `read`/`read_write` | PaginatedResponse<PatientAllergyIntoleranceResponse> | filtros y orden id |
+| GET | `A/patients/{patient_id}/allergy-intolerances/{allergy_id}` | alergias `read`/`read_write` | PatientAllergyIntoleranceResponse | solo esa cuenta/ficha |
+| GET | `A/patients/{patient_id}/allergy-intolerances/{allergy_id}/history` | alergias `read`/`read_write` | PaginatedResponse<PatientAllergyIntoleranceHistoryResponse> | versión ascendente |
+| GET | `A/patients/{patient_id}/clinical-sections/allergies` | alergias `read`/`read_write` | ClinicalSectionReviewResponse | revisión actual |
+| GET | `A/patients/{patient_id}/clinical-sections/allergies/history` | alergias `read`/`read_write` | PaginatedResponse<ClinicalSectionReviewHistoryResponse> | versión ascendente |
 | GET | `A/patients/{patient_id}/contacts` | miembro | PaginatedResponse<PatientContactResponse> | vínculos de esta ficha; status |
 | GET | `A/contacts` | miembro | PaginatedResponse<ContactResponse> | q y status; sin buscar contactos globales |
 | GET | `A/contacts/{contact_id}` | miembro | ContactResponse | contacto de la misma cuenta |
@@ -99,7 +117,8 @@ GET /openapi.json, GET /docs y GET /redoc se habilitan solo en desarrollo/prueba
 | AuthConfigResponse | issuer,publicClientId,audience,authorizationFlow=authorization_code,pkceMethod=S256. Sin clientSecret. |
 | CapabilitiesResponse | contractVersion=1,modelRevision,operationCatalog,onlineOnlyActions,maxBatchOperations,maxBodyBytes,maxOperationBytes,maxPageSize,syncRetentionDays=90,snapshotTtlSeconds=900,recoveryRequiredCodes,defaultAppointmentWindow. Solo capacidades implementadas al publicar versión. |
 | MeResponse | userId,displayName,status,oidcIssuer,oidcSubject propios y resumen de pertenencias; nunca token o credenciales. |
-| AccessResponse | accountId,userId,deviceId,role owner/assistant,status,permissionEpoch,allowedActions; origen remoto, no editable offline. |
+| AccessResponse | accountId,userId,deviceId,role owner/assistant,status,permissionEpoch,allowedActions,clinicalPermissions; origen remoto, no editable offline. |
+| MemberClinicalPermissionsResponse | userId,clinicalPermissions{clinicalProfile,conditions,allergies},membershipVersion. |
 | LiveResponse / ReadyResponse | status; ready incorpora estado general de database/schema/listener, sin URI ni mensajes internos. |
 | PaginatedResponse<T> | items y total (entero no negativo); esquema común existente. No incluye nextCursor ni hasMore. SnapshotPage usa la misma forma con SyncItem. |
 
@@ -151,12 +170,21 @@ Actor/dispositivo no se aceptan en payload. UUID de nuevas entidades procede del
 | CreateInvitation | invitationId nuevo | inviteeUserId requerido; rol assistant implícito. | propietario; online | Destinatario ya identificado por OIDC; vence 72 h después del instante del servidor; no correo. |
 | RevokeInvitation | invitationId | Objeto vacío. | propietario; online | Solo pending no vencida; aceptación/revocación coordinadas; conserva evidencia. |
 | SetMembershipStatus | userId destinatario | status active / inactive. | propietario; online | Solo asistentes ya vinculados; no transfiere propiedad ni desactiva usuario global. |
+| SetMemberClinicalPermissions | userId destinatario | clinicalPermissions con clinicalProfile, conditions y allergies; cada nivel none/read/read_write. | propietario; online | Solo asistentes; versión/época/recibo/auditoría/journal juntos; conserva estado y demás datos de pertenencia. |
 | RegisterAccountDevice | deviceId autenticado | Objeto vacío. | miembro activo; online | expectedVersion=0; registra instalación propia. Tras revocación no permite autorrestauración. |
 | RevokeAccountDevice | deviceId | Objeto vacío. | propietario; online | Revoca solo en esta cuenta; no credencial ni otras cuentas. |
 | RestoreAccountDevice | deviceId | Objeto vacío. | propietario; online | Exige dispositivo/usuario globales activos y pertenencia activa; no revive token global revocado. |
 | UpdateProfessionalProfile | professionalId | publicName requerido. | propietario profesional | Solo perfil ligado al actor; no cambia userId; no refresca snapshots de citas. |
 | RegisterPatient | patientId nuevo | fullName?, birthDate?, phoneCode?, phone?, identificationBasis?; identifiers? como lista de {id,issuingCountry,documentType,documentNumber}. | miembro | Crea patients y account_patients draft; solo identidad nueva, nunca adjunta una identidad global arbitraria. |
 | UpdatePatientProfile | patientId | Patch de fullName, birthDate, phoneCode, phone, identificationBasis. | miembro | No cambia cuenta/identidad/completitud en silencio; antes de quitar requisito volver explícitamente a draft. |
+| SetPatientSexAtBirth | patientId | sexAtBirth requerido y anulable, sourceType=unknown; versión de perfil, 0 inicial. | perfil read_write | Primera exige valor no nulo; posterior admite nulo. Conserva historia y calcula edad desde nacimiento. |
+| CreatePatientCondition | conditionId nuevo | patientId, name, clinicalStatus=active, verificationStatus=unconfirmed, onsetDate?, abatementDate?, sourceType=unknown. | condiciones read_write | Crea versión 1 y deriva has_entries en la misma aceptación. |
+| UpdatePatientCondition | conditionId | Patch de name, estados, fechas, fuente y correctionReason opcional; versión actual. | condiciones read_write | No cambia ficha ni permite entered-in-error; valida estado combinado. |
+| InvalidatePatientCondition | conditionId | correctionReason opcional; versión actual. | condiciones read_write | Anulación terminal entered-in-error, sin reactivación. |
+| SetPatientClinicalSectionReview | patientId | section=conditions, informationStatus, sourceType=unknown; versión de revisión, 0 inicial. | condiciones read_write | not_asked/unknown/none_known sin pertinentes o has_entries con pertinentes. |
+| CreatePatientAllergyIntolerance | allergyId nuevo | patientId, substance, type=unknown, reactionDescription?, clinicalStatus=active, verificationStatus=unconfirmed, onsetDate?, lastOccurrenceDate?, sourceType=unknown. | alergias read_write | Crea versión 1 y deriva has_entries. |
+| UpdatePatientAllergyIntolerance | allergyId | Patch de substance, type, reacción, estados, fechas, fuente y correctionReason; versión actual. | alergias read_write | No cambia ficha ni permite entered-in-error. |
+| InvalidatePatientAllergyIntolerance | allergyId | correctionReason opcional; versión actual. | alergias read_write | Anulación terminal entered-in-error; conserva historia. |
 | SetPatientCompletion | patientId | completionStatus draft / complete. | miembro | Valida existencia y estado de documentos/contactos; no concede permiso para citar. |
 | SetPatientProfileStatus | patientId | status active / inactive. | miembro | Solo ficha de la cuenta; no estado global ni cancelación automática de citas. |
 | AddPatientIdentifier | identifierId nuevo | patientId, issuingCountry=VE, documentType national_id / passport, documentNumber. | miembro | Solo identidad ya vinculada a la ficha; estado declared; sin vincular/editar/inutilizar documentos de otras identidades. |
@@ -239,7 +267,7 @@ Orden de aceptación: controles de usuario/credencial, profesionales, pacientes 
 
 Audiencia de change_log: members para datos operativos visibles a ambos roles; owner para catálogo privado no ofrecido y equipo/auditoría administrativa si corresponde. Snapshots y páginas aplican la misma audiencia. Ofertar un servicio publica la proyección mínima para miembros, nunca acceso al resto del catálogo. La época de acceso cambia al cambiar pertenencias o autorizaciones, invalidando capturas/cursores de ámbito antiguo; respuesta permite recuperar desde nueva vista sin filtrar datos.
 
-SnapshotRequest = {appointmentsFrom?:date,appointmentsUntil?:date}. Valores por defecto: hoy local menos 30 días y hoy más 181 días como límite exclusivo, incluyendo el día hoy+180. Ventana máxima 366 días. SnapshotResponse = {snapshotId,accountId,contractVersion,modelRevision,window,baseCursor,expiresAt,itemCount}. SnapshotPage = PaginatedResponse<SyncItem> = {items:[SyncItem],total}. SyncItem identifica entityType,entityKey,entityVersion y state tipado. El total y itemCount solo cuentan elementos permitidos de esa captura.
+SnapshotRequest = {appointmentsFrom?:date,appointmentsUntil?:date,includeClinical=false}. Valores por defecto: hoy local menos 30 días y hoy más 181 días como límite exclusivo, incluyendo el día hoy+180. Ventana máxima 366 días. SnapshotResponse = {snapshotId,accountId,contractVersion,modelRevision,window,baseCursor,expiresAt,itemCount,clinicalSections=[]}. SnapshotPage = PaginatedResponse<SyncItem> = {items:[SyncItem],total}. SyncItem identifica entityType,entityKey,entityVersion y state tipado. El total y itemCount solo cuentan elementos permitidos de esa captura.
 
 Capturar bajo REPEATABLE READ en una sola lectura/materialización, sin red dentro, datos y baseCursor de esa vista. No mantener transacción entre peticiones; almacenar temporal con vencimiento de 15 minutos. Cualquier cambio de acceso invalida la captura; solo creador/dispositivo autorizado la descarga. Sus elementos se ordenan por la posición materializada única; page/shows aplica LIMIT/OFFSET a ese conjunto inmutable. Repetir snapshot, page y shows devuelve los mismos elementos mientras siga vigente y autorizado. DELETE solo libera derivado temporal; no borra pendientes locales ni crea cambio de negocio.
 
@@ -287,3 +315,75 @@ Matriz futura: OIDC emisor/audiencia/ID token; token/dispositivo/miembro revocad
 
 Fuentes de API ya contrastadas durante planificación: [lifespan](https://fastapi.tiangolo.com/advanced/events/), [SSE](https://fastapi.tiangolo.com/tutorial/server-sent-events/), [HTTPX y lifespan en pruebas](https://fastapi.tiangolo.com/advanced/async-tests/), [SQLAlchemy 2.1 async](https://docs.sqlalchemy.org/en/21/orm/extensions/asyncio.html), [NOTIFY](https://www.postgresql.org/docs/18/sql-notify.html), [LISTEN](https://www.postgresql.org/docs/18/sql-listen.html), [Keycloak OIDC](https://www.keycloak.org/securing-apps/oidc-layers). Volver a comprobar versión y patrón antes de codear; no se instalan dependencias en este bloque.
 
+
+## 10. Diseño clínico de etapa 1 para revisión C01
+
+Perfil, cambios de nacimiento, condiciones y alergias/intolerancias ya están disponibles en el servidor hasta T15 para revisión C05. La descarga clínica completa se concretará en T16. Los permisos de §10.1, la acción `SetMemberClinicalPermissions` y el alcance opcional de capturas sí se implementan en T04–T06 para revisión C02; §3 y §5 contienen su catálogo actual. Los artefactos generados no se actualizan en este bloque. Se mantiene `contractVersion=1`; al cerrar la etapa se publicará `modelRevision=api-v1.2`. Los esquemas Pydantic de `clinical_records`, `accounts`, `patients` y `sync` serán la fuente ejecutable posterior; esta sección es su diseño previo y no una segunda implementación.
+
+### 10.1 Acceso clínico
+
+Tres niveles independientes por pertenencia: `clinicalProfile`, `conditions`, `allergies`, cada uno `none`, `read` o `read_write`. El propietario tiene acceso efectivo completo y no puede retirárselo mediante esta operación. Asistentes existentes/nuevos empiezan con `read_write`; solo el propietario los configura, online y con la versión de pertenencia. Desactivar/reactivar no reinicia niveles.
+
+- `none`: sin datos, resúmenes, historias, resultados o descargas de esa sección.
+- `read`: consulta actual/historia y recuperación del estado vigente; no escrituras ni reintentos de escritura.
+- `read_write`: lectura y acciones de esa sección.
+- La recuperación de un resultado de escritura exige `read_write` vigente en su sección. Configurar permisos exige propietario vigente.
+- Nacimiento conserva los permisos administrativos existentes; el nivel de perfil controla sexo al nacer y su historia. La autorización precede a duplicados, resultados, conteos y cuerpos. Un objeto de otra cuenta devuelve 404 como uno inexistente.
+
+`AccessResponse` añade `clinicalPermissions` con los tres niveles efectivos propios. La configuración de otro asistente solo se consulta con la ruta de propietario. Cambiar niveles incrementa versión de pertenencia y `permissionEpoch`, invalida capturas/cursores y cierra SSE mediante la revalidación vigente.
+
+### 10.2 Rutas nuevas
+
+A equivale a `/v1/accounts/{account_id}` y todas exigen token, dispositivo y nivel aplicable. `section` admite `conditions` o `allergies`.
+
+| Método | Ruta | Acceso | Modelo de respuesta / comportamiento |
+|---|---|---|---|
+
+Todas usan `page`/`shows`, `items`/`total`, autorización y filtros antes de contar/paginar. Historial acepta `afterVersion`. Condiciones filtra `clinicalStatus`, `verificationStatus` e `includeEnteredInError`; alergias añade `type`. Por defecto incluye estados vigentes, resueltos y refutados, pero excluye `entered-in-error`; un filtro explícito por ese estado o `includeEnteredInError=true` lo incluye. Las listas no tienen búsqueda global ni orden por texto clínico.
+
+### 10.3 Modelos públicos
+
+Campos comunes:
+
+- Fechas clínicas `ClinicalDate`: cadena `YYYY`, `YYYY-MM`, `YYYY-MM-DD` o nulo en entradas que lo admitan. Conserva precisión y valida calendario/bisiestos. No se serializa como fecha completa ficticia.
+- `ClinicalSourceType`: `patient`, `related_person`, `professional`, `external_document`, `unknown`; inicial `unknown`.
+- Las respuestas actuales incluyen `createdAt`,`updatedAt`,`version`; historias incluyen contenido resultante, `action`,`actorUserId`,`operationId`,`changedAt`. No devuelven ORM, `accountId` redundante de ruta ni datos de otra cuenta.
+- Los parches tienen al menos un campo, ausencia conserva y nulo borra solo campos anulables. Un cambio sin diferencia devuelve `NO_CHANGES` sin versión/historia.
+
+| Modelo | Campos |
+|---|---|
+| `MemberClinicalPermissionsResponse` | `userId`, `clinicalPermissions{clinicalProfile,conditions,allergies}`, `membershipVersion` |
+| `ClinicalProfileResponse` | `patientId`, `sexAtBirth`, `sourceType`, `version`, `birthDate`, `patientVersion`, `ageYears`, `ageAsOf`, `createdAt?`, `updatedAt?` |
+| `PatientConditionResponse` | `conditionId`, `patientId`, `name`, `clinicalStatus`, `verificationStatus`, `onsetDate`, `abatementDate`, `sourceType`, `correctionReason`, `createdAt`, `updatedAt`, `version` |
+| `PatientAllergyIntoleranceResponse` | `allergyId`, `patientId`, `substance`, `type`, `reactionDescription`, `clinicalStatus`, `verificationStatus`, `onsetDate`, `lastOccurrenceDate`, `sourceType`, `correctionReason`, `createdAt`, `updatedAt`, `version` |
+| `ClinicalSectionReviewResponse` | `patientId`, `section`, `informationStatus`, `sourceType`, `reviewedByUserId?`, `reviewedAt?`, `activeCount`, `version`, `createdAt?`, `updatedAt?` |
+| `PatientBirthDateChangeResponse` | `changeId`, `patientId`, `previousBirthDate`, `newBirthDate`, `patientVersion`, `actorUserId`, `operationId`, `changedAt` |
+
+`sexAtBirth`: `male`,`female`,`other`,`unknown` o nulo. Perfil ausente devuelve sexo/fuente y marcas nulos, versión 0; no escribe. Edad usa años completos y `ageAsOf` fecha local del servidor en zona de cuenta; nacimiento ausente produce edad nula. Cumpleaños 29 de febrero se alcanza el 1 de marzo en año no bisiesto, como la regla administrativa vigente.
+
+Estados de condición: clínico `active`,`recurrence`,`relapse`,`inactive`,`remission`,`resolved`,`unknown`; verificación `unconfirmed`,`provisional`,`differential`,`confirmed`,`refuted`,`entered-in-error`. Alergia: tipo `allergy`,`intolerance`,`unknown`; clínico `active`,`inactive`,`resolved`; verificación `unconfirmed`,`presumed`,`confirmed`,`refuted`,`entered-in-error`.
+
+`informationStatus`: `not_recorded`,`not_asked`,`unknown`,`none_known`,`has_entries`. Pertinente significa no `refuted` ni `entered-in-error`, incluso resuelto. `activeCount` cuenta condiciones `active`,`recurrence`,`relapse` o alergias `active` dentro de pertinentes. Las listas de resumen no prueban diagnóstico, gravedad ni ausencia clínica.
+
+### 10.4 Acciones por lote
+
+Las acciones de etapa 1 ya figuran en §5; la descarga clínica completa se concretará en T16. Conservan envoltura, huella, `expectedVersion`, idempotencia, resultados y límites existentes. No aceptan actor, cuenta, autor o instante técnico del cliente. Los UUID nuevos proceden del cliente para trabajo offline.
+
+| Acción | `entityKey` | Payload / versión | Permiso y regla |
+|---|---|---|---|
+
+Crear el primer registro pertinente cambia revisión a `has_entries`; añadir más no crea otra revisión si ya tiene ese estado. Anular/refutar el último cambia a `unknown`. Confirmar `has_entries` sin diferencias devuelve `NO_CHANGES`; para dejar constancia de una nueva revisión se requiere un cambio de fuente u otro dato permitido, sin fabricar versiones repetidas. Altas, anulaciones y revisiones se coordinan por ficha para impedir ausencia conocida concurrente con un alta.
+
+Una fecha de inicio completamente posterior al día local se rechaza. Un fin inequívocamente anterior al inicio se rechaza; si la precisión no decide el orden se conserva. La fecha de aceptación no sustituye fechas clínicas. `refuted` excluye del resumen vigente pero no es anulación por error; `entered-in-error` solo se asigna por la acción terminal.
+
+### 10.5 Descarga, aceptación y auditoría
+
+`SnapshotRequest` añade `includeClinical=false`. Cuando es verdadero, la captura materializa solo secciones legibles y registra `clinicalSections` subconjunto de `profile`,`conditions`,`allergies`; vacío conserva la forma y contenido anteriores. `SnapshotResponse` expone ese conjunto y el cursor firmado lo conserva. Cursores anteriores equivalen a `includeClinical=false`.
+
+Nuevas proyecciones `patient_clinical_profile`, `patient_condition`, `patient_allergy_intolerance`, `patient_clinical_section_review`: último estado, incluidos resueltos, refutados y anulados; no tablas de historial. Ficha/nacimiento y demás referencias administrativas necesarias siguen las reglas existentes. Condiciones/alergias no se filtran por ventana de citas. Audiencias cerradas `clinical_profile`,`clinical_conditions`,`clinical_allergies` se comprueban antes de validar/entregar proyecciones; un consumidor que no solicita clínica nunca las recibe. Los grupos invisibles permiten avanzar sin cuerpos.
+
+Cambio de niveles o época exige otra captura; SSE cierra el alcance anterior. Esto no promete borrado remoto de datos ya descargados. No se habilita consumo clínico mientras procesos antiguos sigan activos.
+
+Cada operación conserva efecto, historias/revisión derivada, auditoría, recibo y grupo en una transacción. Lecturas clínicas correctas, capturas y páginas con clínica registran actor, dispositivo, cuenta, paciente/objeto o sección, acción, resultado, correlación e instante. No registran nombres, sustancias, reacciones, filtros clínicos, cuerpos o cursores. Si falla esa evidencia, la lectura no entrega datos y devuelve el fallo temporal común; SSE no audita heartbeats.
+
+Las fechas parciales usan biblioteca estándar y validadores del proyecto. Las rutas declaran `response_model` y retorno real; proyecciones se validan antes de commit. Fuentes oficiales: [FastAPI response models](https://fastapi.tiangolo.com/tutorial/response-model/), [Pydantic 2.14.1 validators](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/validators.md), [PostgreSQL 18 constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [SQLAlchemy 2.1 transactions](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html) y FHIR R5 enlazado en el plan.

@@ -4,6 +4,8 @@
 
 ## Tres proyectos
 
+Reparto futuro del Hub confirmado el 2026-11-14 por [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api). El diagrama incluye capacidades futuras; no acredita su implementación. El contrato actual para escritorio sigue en [api-v1.md](api-v1.md).
+
 ```mermaid
 flowchart LR
     subgraph D["Nightingale · escritorio"]
@@ -11,8 +13,7 @@ flowchart LR
         R <--> L["SQLite · datos locales e intenciones pendientes"]
     end
     subgraph H["Nightingale Patient Hub"]
-        W["Web del paciente"] --> HAPI["Backend · accesos, reglas y solicitudes"]
-        HAPI <--> HS["Almacén privado del Hub · por definir"]
+        W["Interfaz web · micrositios y gestión limitada de cita"]
     end
     subgraph A["Nightingale API"]
         HTTP["FastAPI · entradas limitadas"] --> APP["Aplicación · autorización y aceptación"]
@@ -22,14 +23,14 @@ flowchart LR
         WORK --> PG
     end
     R <-->|"HTTPS · operaciones y páginas de cambios"| HTTP
-    R <-->|"HTTPS · capacidades del Hub"| HAPI
-    HAPI <-->|"HTTPS · citas y acciones con alcance verificable"| HTTP
+    W <-->|"HTTPS · lectura pública de información para publicación"| HTTP
+    W <-->|"HTTPS · cita existente con acceso limitado"| HTTP
     WORK <-->|"API interna autenticada"| N["n8n · herramienta externa"]
     WORK <-->|"API / webhooks"| P["Proveedor de WhatsApp · pendiente"]
     WORK --> AN["PostgreSQL analítico separado"]
 ```
 
-Solo API y sus procesos autorizados acceden al PostgreSQL operativo. La flecha de workers permite escribir datos de su módulo; cambiar una cita exige el mismo caso de aceptación. Los trabajos nacen con el commit, pero se ejecutan después. El diagrama no representa una transacción entre proyectos.
+Solo API y sus procesos autorizados acceden al PostgreSQL operativo. El repositorio del Hub contendrá la interfaz web; todas sus funciones de servidor pertenecerán a API. D11 sustituye el backend y el almacén privado del Hub del diagrama anterior. La flecha de workers permite escribir datos de su módulo; cambiar una cita exige el mismo caso de aceptación. Los trabajos nacen con el commit, pero se ejecutan después. El diagrama no representa una transacción entre proyectos.
 
 ## Organización interna
 
@@ -62,13 +63,14 @@ Los errores HTTP y la correlación se resuelven en soporte común; no añadir Re
 |---|---|---|
 | `authorization` | Identidad autenticada, credenciales y dispositivos globales | Soporte OIDC y credenciales de core/services; expone casos de uso y tipos de identidad |
 | `accounts` | Cuentas, pertenencias, perfil profesional y autorización de dispositivos por cuenta | Casos de uso y tipos de authorization y sync; expone contexto y permisos por cuenta |
-| `patients` | Datos administrativos mínimos, contacto, actividad y versiones de pacientes | Casos de autorización de accounts |
+| `patients` | Datos administrativos mínimos, contacto, actividad, versiones de pacientes e historial de cambios de nacimiento | Casos de autorización de accounts |
+| `clinical_records` | Sexo al nacer, condiciones, alergias/intolerancias, revisiones de información y sus historias por cuenta/paciente | Casos de autorización de accounts y referencias de patients; sync y auditoría en la misma aceptación |
 | `services` | Catálogo propio del profesional, ofertas por cuenta y duración según el esquema vigente | Casos de autorización de accounts |
 | `schedule` | Horarios, excepciones, bloqueos, ausencias del profesional y zona aplicable | accounts; no mantiene otra reserva |
 | `appointments` | Intervalos ocupados, transiciones, confirmación, asistencia e historial | Casos de uso y tipos de accounts, patients, services y schedule; sync y auditoría en la misma transacción |
 | `sync` | Registro de operaciones/resultados, Change Log, avance incremental y recuperación remota | Casos de uso por composición; sus modelos y DAOs poseen el acceso a sus datos |
 | `waitlist` | Entradas, preferencias, ofertas, vencimientos y resultado de asignación | Consultas autorizadas de pacientes/servicios; pide asignación a `appointments` |
-| `communications` | Planificación de recordatorios, trabajos, intentos, entregas y recepción de webhooks; adaptación de n8n | Hechos aceptados y lecturas limitadas de Citas; Hub para accesos, sin poseerlos |
+| `communications` | Planificación de recordatorios, trabajos, intentos, entregas y recepción de webhooks; adaptación de n8n | Hechos aceptados y lecturas limitadas de Citas; futuros casos de acceso del Hub dentro de API, sin duplicarlos |
 | `analytics` | Consumo incremental, cursor ETL y proyecciones de indicadores básicos | Eventos/lecturas autorizadas; PostgreSQL analítico separado |
 | `audit` | Evidencia de acciones y consulta autorizada; política de acceso y retención | Contexto validado y hechos del caso de uso; no usa logs como sustituto |
 
@@ -82,7 +84,7 @@ El [esquema de base de datos](database-schema.md) es la única fuente vigente de
 
 ## Aceptación y transacciones
 
-1. La entrada autentica y obtiene el contexto permitido. Una operación completa identifica intención, objeto, versión y datos mínimos según [el contrato](contracts.md).
+1. La entrada privada verifica el acceso y obtiene el contexto permitido; la futura lectura pública del micrositio solo entregará información destinada a publicación. Una operación completa identifica intención, objeto, versión y datos mínimos según [el contrato](contracts.md).
 2. El caso de aplicación abre una transacción por operación. Coordina autorización vigente y sus carreras con revocaciones, clave idempotente y reglas del componente.
 3. Los DAOs de los propietarios usan esa misma transacción con commit=False: efecto y versión, historial, auditoría, resultado, Change Log e intención duradera de trabajo derivado. El soporte de core/db confirma al salir sin error o revierte ante un fallo. No añadir una capa de clases de unidad de trabajo ni un sistema de comandos.
 4. La API responde tras el commit. Un reintento vuelve a autorizar antes de devolver un resultado anterior. Si el commit tiene resultado desconocido para el proceso, consulta/reintenta la misma identidad de operación para averiguarlo.
@@ -99,7 +101,15 @@ El avance incremental de sync se conserva separado de esa paginación: D09 fija 
 
 ## Hub y trabajo posterior
 
-El Hub valida sus enlaces y reglas. API exige una prueba de alcance por cita/acción que pueda verificar, además de autenticar al servicio. Usa el caso de Citas común y devuelve un resultado consultable. Hub conserva su solicitud de reprogramación separada del estado de cita, según P05; el personal define otro horario. Pedir cambio no altera estado, horario ni confirmación. La conciliación entre ambos almacenes usa la misma operación y estados conocidos; no una transacción distribuida. El ciclo detallado de solicitud sigue abierto en O04. P06 separa interés por una oferta de su reserva, que autoriza el personal. Ambos criterios son revisables por el usuario al implementar.
+El Hub mostrará micrositios con plantillas para médico independiente y clínica o centro: presentación, servicios y ubicación; contacto del profesional y profesionales del centro según cada plantilla. No habrá editor libre ni gestión de pacientes. Esto no habilita gestión interna completa de clínicas, varias sedes ni cambios generales del escritorio.
+
+API ofrecerá lectura pública solo de información destinada a publicación, sin cuenta de paciente, inicio de sesión ni permisos del personal. Las rutas internas conservan su acceso. Fichas de pacientes, listados de citas, notas internas y otros datos privados quedan fuera de esa lectura.
+
+La gestión de una cita existente tendrá acceso limitado que API verificará por cita y acción, sin credenciales del personal: consulta permitida, confirmación, cancelación según reglas, solicitud de reprogramación y consulta del resultado. No se crea ni reserva otra cita, no se explora disponibilidad para elegir horario y el paciente no marca ausencias. El personal conserva esa acción.
+
+La solicitud sigue separada del estado de cita según P05, pero su servidor pertenecerá a API. Pedir el cambio conserva estado, horario y confirmación, sin reservar otro intervalo. El personal decide el nuevo horario y API aplica las reglas comunes con invalidación atómica de confirmación. O02/O04 conservan el diseño de acceso, proyecciones, formas HTTP y ciclo de solicitud pendientes. No se exige conciliación entre un almacén del Hub y otro de API ni autorización entre dos backends. P06 no amplía las acciones del paciente por deducción.
+
+Estas capacidades no figuran en el contrato actual. Los componentes existentes pueden aportar datos y reglas; no se añade aquí un componente, ruta o modelo para anticipar la implementación.
 
 Los workers reclaman trabajo persistente, registran intento y recuperan trabajo interrumpido según una política aprobada. Revalidan cita, versión y permiso antes de un envío. Cancelar o reprogramar invalida trabajo obsoleto, sin prometer retirar un mensaje ya enviado. Las colas llevan referencias mínimas. No se deduce entrega única externa de una clave local: ante timeout se consulta al proveedor o se deriva a revisión antes de repetir.
 

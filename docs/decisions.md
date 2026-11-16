@@ -6,7 +6,9 @@
 
 ### D01 · Tres proyectos y API transaccional
 
-**Contexto:** el escritorio puede modificarse y operar sin red. **Decisión:** conserva casos de uso Rust/SQLite y envía operaciones completas; API autoriza y acepta el estado compartido en PostgreSQL privado. Hub conserva su web, API, enlaces, reglas y solicitudes y usa API para citas. Repositorios separados.
+**Contexto:** el escritorio puede modificarse y operar sin red. **Decisión:** conserva casos de uso Rust/SQLite y envía operaciones completas; API autoriza y acepta el estado compartido en PostgreSQL privado. Repositorios separados. **Actualización del 2026-11-14, D11:** Patient Hub contiene la interfaz web; Nightingale API tendrá todas sus funciones de servidor.
+
+**Antecedente sustituido por D11:** D01 asignaba al Hub web, API, enlaces, reglas, solicitudes y almacenamiento propios, con llamadas entre su backend y API. Ese reparto ya no rige; se conserva aquí como historia.
 
 **Sustituye:** propuestas históricas de sincronización SQL directa y de un solo proyecto cloud. **Consecuencia:** ni escritorio ni Hub reciben credenciales SQL; API debe validar aun si el cliente afirma haberlo hecho. No convierte el guardado local en dependiente de la red. Fuente: encargo y especificación §§1–5; ADR del escritorio del 2026-10-21 identificado en [fuentes](sources.md).
 
@@ -36,7 +38,7 @@ La entrega inicial T01 solo documentó. El usuario autorizó T03 después y, tra
 
 **Confirmada por el usuario el 2026-10-21:** proveedor externo OIDC para el personal; Nightingale API conserva permisos y dispositivos. Al aceptar una operación pendiente se aplican los permisos vigentes. Si falta permiso, se rechaza sin efecto y el escritorio conserva la intención para revisión. No se deduce autorización de la fecha local.
 
-Proveedor, dispositivo y acceso del escritorio se concretan después en D09 y [diseño de acceso](access-design.md); el Hub sigue abierto. Las alternativas previas de sesiones quedan como antecedente. Ninguna decisión acredita implementación ni permite eludir permisos vigentes.
+Proveedor, dispositivo y acceso del escritorio se concretan después en D09 y [diseño de acceso](access-design.md). D11 fija el alcance y el propietario de servidor del Hub; su acceso limitado a citas sigue pendiente de diseño. Las alternativas previas de sesiones quedan como antecedente. Ninguna decisión acredita implementación ni permite eludir permisos vigentes.
 
 ### D07 · Bases del modelo de datos
 
@@ -76,7 +78,9 @@ Fuentes de organización: Plan Maestro 0.3, DAT 0.3 y SRS 0.5 con revisión del 
 
 **Estado:** criterio aprobado por el usuario el 2026-10-23; revisable antes o durante la implementación si el usuario lo cambia. Se conserva el ID de la propuesta. No implementado; O04 sigue abierto para los detalles restantes.
 
-La solicitud pertenece al Hub y referencia una cita y su versión. Pedir un cambio no altera el estado, horario ni confirmación de la cita. `reschedule_requested` no forma parte del estado de negocio de Citas; el escritorio muestra la solicitud como información separada. La reserva original sigue vigente hasta una operación autorizada que la cambie o cancele. Este criterio sustituye la propuesta de incluir la solicitud como estado de cita en DAT §11; no fija todavía el ciclo completo de la solicitud.
+La solicitud forma parte del alcance futuro del Hub; D11 asigna su servidor a Nightingale API. Referencia una cita y su versión. Pedir un cambio no altera el estado, horario ni confirmación de la cita ni reserva otro horario. `reschedule_requested` no forma parte del estado de negocio de Citas; el escritorio muestra la solicitud como información separada. La reserva original sigue vigente hasta una operación autorizada que la cambie o cancele. Este criterio sustituye la propuesta de incluir la solicitud como estado de cita en DAT §11; no fija todavía el ciclo completo de la solicitud.
+
+**Antecedente de diseño sustituido por D11:** la tabla y la conciliación entre almacenes siguientes describen la propuesta del 2026-10-23, cuando el Hub tenía backend propio. No fijan la propiedad actual ni obligan a crear dos servidores. Se conserva la separación entre pedir y aplicar el cambio; las formas y el ciclo siguen pendientes.
 
 | Recorrido propuesto | Efecto en la solicitud / cita |
 |---|---|
@@ -126,6 +130,36 @@ Comprobaciones futuras del acuerdo: dos personas interesadas no obtienen dos res
 
 T34–T36 se detienen en C12; T37–T39 en C13; T40–T42 en C14; T43–T45 en C15. Solo la aceptación de C15 permite retomar T09 y T07. La aprobación no acepta esos checkpoints ni C03. T08 conserva la evidencia histórica y requiere nuevas pruebas tras el traslado.
 
+### D11 · Interfaz del Hub y servidor en Nightingale API
+
+**Confirmada por el usuario el 2026-11-14.** Motivo: reunir en Nightingale API todas las funciones de servidor del Hub. El encargo autoriza solo documentación; no acredita ni autoriza implementar estas funciones.
+
+- Nightingale sigue como escritorio. Patient Hub tendrá repositorio propio para su interfaz web. Nightingale API tendrá todo el servidor que necesite el Hub. El Hub no tendrá backend/API ni almacén privado propios, ni acceso directo a PostgreSQL.
+- La primera versión del Hub incluirá micrositios con plantillas definidas para médico independiente (profesional, servicios, ubicación y contacto) y clínica o centro médico (centro, catálogo de servicios, profesionales y ubicación). Sin editor libre ni gestión de pacientes en el Hub. Esto no habilita toda la gestión interna de clínicas, varias sedes o cambios generales del escritorio.
+- La lectura del micrositio será pública, sin cuentas de paciente, inicio de sesión o permisos del personal. API ofrecerá endpoints públicos con información destinada a publicación. Las rutas internas actuales conservan su acceso; no se publicarán fichas de pacientes, listados de citas, notas internas ni otros datos privados.
+- El paciente podrá consultar la información permitida de una cita existente, confirmar asistencia, cancelar según las reglas, solicitar reprogramación y consultar el resultado. API verificará accesos limitados a esa cita, acción e información necesaria, sin exigir credenciales del personal. Esa información privada no forma parte del micrositio público.
+- El paciente no creará ni reservará citas, no explorará disponibilidad para elegir otro horario y no marcará ausencias. El personal conserva el registro de ausencias. Pedir reprogramación conserva estado, horario y confirmación y no reserva otro intervalo. El personal decide el cambio; API aplica la reprogramación con las reglas comunes, incluida la invalidación de confirmación.
+
+**Sustituye:** el reparto anterior de D01 y de las fuentes históricas que asignaba servidor, API pública, almacenamiento, enlaces y solicitudes al Hub; la propuesta entre dos servidores de T04/O02 en access-design.md y contracts.md; y la propiedad/conciliación entre almacenes de los recorridos propuestos en P05. Conserva el criterio funcional de P05. D09 sigue delimitando la implementación actual para escritorio; su exclusión de Hub y clínicas no impide documentar este alcance futuro. P06 no añade reservas ni exploración de horarios por el paciente.
+
+**Pendientes reales:** mecanismo y ciclo del enlace/acceso limitado, vigencia y revocación, proyecciones de publicación y de cita, rutas y formas HTTP, ciclo de solicitud y consulta de resultados. No se deducen cuentas de paciente, sesiones, tablas, campos o un segundo servidor. O02/O04 conservan estos detalles; ya no queda pendiente decidir qué proyecto posee el servidor. El [contrato actual](api-v1.md) no incluye endpoints de micrositio ni acciones del paciente.
+
+**Fuentes y alcance:** encargo de revisión documental del 2026-11-14 y [especificación §5](nightingale-api.md#5-integración-con-patient-hub). [Plan documental](../tasks/P-20261114-01-patient-hub-docs/plan.md). La reunión de documentos en `patient-hub-docs/` con `Master-Plan.md` queda para otra sesión en el repositorio del escritorio; aquí no se crea ni se modifica ese repositorio.
+
+### D12 · Registro clínico y seguimiento del paciente
+
+**Alcance acordado por el usuario el 2026-11-15.** Tras el descubrimiento, el usuario solicita una especificación detallada como referencia principal de los planes de tres etapas. La fuente funcional es [patient-clinical-record.md](patient-clinical-record.md), con acuerdos A01–A15, propuestas de requisitos y pendientes identificados. La redacción completa espera revisión; no se atribuye aceptación de sus detalles nuevos.
+
+El producto ampliará datos de referencia, registro habitual y funciones completas del profesional. El médico decide y el sistema registra. La información clínica mantiene ámbito cuenta/paciente; la cita conserva su función de compromiso. Se automatizan fecha/autor/unidad en la entrada habitual y se distinguen tomas nuevas y correcciones. Edad y última visita se calculan. Médico y asistente son los usuarios principales, con acceso configurable cuyo detalle debe diseñarse.
+
+La tercera etapa incluye planes de cuidados, medicación declarada y prescripción diferenciadas, informes/resultados, funciones por especialidad y analítica histórica individual, con crecimiento pediátrico y comparación con referencias OMS. Toxicidad queda fuera. FHIR R5 aporta referencias conceptuales y de unidades; no se acuerda implementar todo el estándar.
+
+**Efecto sobre acuerdos previos:** amplía el alcance futuro respecto de las exclusiones clínicas de D09 y de la especificación, sin cambiar aquella entrega, su contrato o sus checkpoints. D08 conserva database-schema.md como fuente física; D10 mantiene arquitectura y D11 los límites del Hub. El recorrido de motivo sin conocer servicio queda acordado; su traducción a la obligación actual de serviceId sigue pendiente, no se cambia la FK por deducción.
+
+**Autorización y límites iniciales:** el encargo documental [P-20261115-01-clinical-spec](../tasks/P-20261115-01-clinical-spec/plan.md) no inició código, migraciones ni cambios en escritorio/Hub. C11 del núcleo y C01 documental del Hub conservan su revisión pendiente. Los Oxx de la especificación clínica tienen ámbito propio y no renumeran los pendientes históricos de este registro.
+
+**Ejecución aprobada de etapa 1 el 2026-11-15:** el usuario aprobó [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) y autorizó T01 → T02 → T03, una tarea a la vez y sin delegación, hasta presentar C01. Aprueba las decisiones de producto de §1.1 del plan: sexo al nacer opcional; nacimiento completo opcional existente; edad calculada; texto libre para condiciones y sustancias; alergias, intolerancias y tipo desconocido; fechas clínicas históricas opcionales con precisión variable; permisos por asistente/sección con lectura/escritura inicial; descarga del estado actual e historial aparte; aislamiento por cuenta/paciente. El diseño físico y HTTP se incorpora a sus fuentes únicas para revisión C01. No se acepta C01, no se habilita T04 y no cambian los límites de C11 o de los encargos documentales anteriores.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |
@@ -154,12 +188,14 @@ La propuesta inicial no fijaba versiones. Después, el usuario añadió Python, 
 
 ## Pendientes y condición para resolverlos
 
-**Lectura vigente tras D09:** O01 se concreta para el escritorio de esta etapa en el contrato v1 (queda su prueba, no una elección de sesiones). O03 y la parte sync de O10 tienen diseño acotado de contador/snapshot/90 días y compatibilidad v1, aún sin comprobación de producto. O08 tiene selección local aprobada, no entorno ejecutado ni despliegue. O09 incorpora el objetivo local de avisos, no un SLO de producción. O04 fija duración, margen y criterio administrativo; globales y Hub siguen aplazados. La tabla siguiente conserva la trazabilidad del plan anterior; sus Txx no son la lista vigente de ejecución.
+**Lectura vigente tras D11:** D11 fija el servidor y el alcance futuro del Hub; quedan su diseño de acceso y contratos, sin implementar. O04 conserva el ciclo de solicitud separado de Citas. Las pruebas del escritorio y sus límites figuran en el plan vigente, no se deducen de una decisión.
+
+**Lectura histórica tras D09:** O01 se concreta para el escritorio de esta etapa en el contrato v1 (queda su prueba, no una elección de sesiones). O03 y la parte sync de O10 tienen diseño acotado de contador/snapshot/90 días y compatibilidad v1, aún sin comprobación de producto. O08 tiene selección local aprobada, no entorno ejecutado ni despliegue. O09 incorpora el objetivo local de avisos, no un SLO de producción. O04 fija duración, margen y criterio administrativo; globales y Hub siguen aplazados. La tabla siguiente conserva la trazabilidad del plan anterior; sus Txx no son la lista vigente de ejecución.
 
 | ID | Decisión y evidencia necesaria | Propietario de decisión / antes de |
 |---|---|---|
 | O01 | Parcialmente resuelta por D06: OIDC externo, permisos/dispositivos en API y permisos vigentes al aceptar. Faltan proveedor, sesiones, alta/vínculo de dispositivo, roles, orden de revocación y recorrido de revisión | Usuario y responsable de seguridad/API; T04, antes de T08 |
-| O02 | Cómo API verifica el alcance del Hub y su revocación; confianza, concesiones, rotación y consulta de resultados | API + Hub con revisión del usuario; T04, antes de T15 |
+| O02 | D11 resuelve servidor y lectura pública. Falta diseñar en API el acceso limitado a una cita, enlace, vigencia/revocación y consulta de resultados, sin credenciales del personal ni autorización entre dos backends | API y web Hub con revisión del usuario; antes de implementar el contrato futuro. T04/T15 solo como antecedentes |
 | O03 | Orden confirmado, snapshot/cursor, expiración, bajas, retención de idempotencia y ventana de compatibilidad | API + consumidores; prueba razonada de carreras y recuperación en T05, antes de T07/T13 |
 | O04 | D08 fija el esquema como fuente del modelo; sus §§8.3 y 8.9 distinguen acuerdos, propuestas y pendientes. La corrección de identidad global queda aplazada sin bloquear trabajo independiente. T06 concreta las reglas restantes de su alcance y el ciclo de solicitud separado según P05 | Usuario/producto, API + Hub; revisión T24 y cierre de lo necesario en T06, antes de la función afectada en T09–T12/T15 |
 | O05 | Lista de espera: prioridad, oferta/expiración, canal y prueba de respuesta y tratamiento de casos tardíos. P06 confirma interés separado y asignación por personal; quedan sus detalles | Usuario/producto y propietarios; T19 antes de T20. Mantener límite actual del Hub |

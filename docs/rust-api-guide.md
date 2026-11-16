@@ -1,10 +1,10 @@
 # Consumo de API v1 desde Rust
 
-Revisión: api-v1.1, 2026-10-28. Esta guía describe el servidor de este repositorio. No implementa ni acredita el cliente Rust, SQLite, Outbox o Hub.
+Revisión: api-v1.2, 2026-11-16. Esta guía describe el servidor de este repositorio. No implementa ni acredita el cliente Rust, SQLite, Outbox o Hub.
 
 ## Fuente y arranque
 
-Fija una versión o huella de [los contratos generados](../contracts/README.md). OpenAPI describe HTTP; `accepted-operations.schema.json` añade los payloads válidos de las 42 acciones por lote. Los modelos Pydantic y los casos de uso siguen siendo la fuente. JSON Schema no expresa todas las reglas de negocio ni concede permisos.
+Fija una versión o huella de [los contratos generados](../contracts/README.md). OpenAPI describe HTTP; `accepted-operations.schema.json` añade los payloads válidos del catálogo real por lote, sin recuento fijo. Los modelos Pydantic y los casos de uso siguen siendo la fuente. JSON Schema no expresa todas las reglas de negocio ni concede permisos.
 
 Con Python 3.15.1 o posterior compatible, usa las dependencias de `uv.lock`. El servidor conserva su app de módulo:
 
@@ -26,7 +26,7 @@ Antes de arrancar, proporciona la conexión operativa y la configuración OIDC e
 
 El token API no vence por tiempo; API puede revocarlo. Cerrar sesión en Keycloak no lo revoca por sí solo. La revocación global de dispositivo y la revocación en una sola cuenta tienen alcances distintos. Una instalación revocada no se restaura a sí misma.
 
-`GET /v1/capabilities` publica las acciones y límites implementados. `operationCatalog` contiene las 42 acciones por lote; `onlineOnlyActions` incluye también AcceptInvitation, que usa su ruta dirigida. Conserva esas acciones administrativas como flujos con conexión; no las conviertas en intenciones offline por inferencia. API reautoriza siempre con el estado vigente al recibir cada petición.
+`GET /v1/capabilities` publica las acciones y límites implementados. `operationCatalog` se deriva del catálogo real por lote; `onlineOnlyActions` incluye también AcceptInvitation, que usa su ruta dirigida. Conserva esas acciones administrativas como flujos con conexión; no las conviertas en intenciones offline por inferencia. API reautoriza siempre con el estado vigente al recibir cada petición.
 
 ## Escrituras, lotes y resultados
 
@@ -54,6 +54,14 @@ La descarga examina hasta 100 grupos completos por petición; no admite page/sho
 appointment_history acompaña a appointment y solo contiene historia hasta la versión descargada. Si una cita sale de ventana, API retira cita e historia con changeKind=remove. Esa retirada cambia la vista local; no borra la historia funcional del servidor. Ventana, zona y límites UTC quedan fijos en captura/cursor aunque se edite la zona de la cuenta. Cambiar ventana exige otra captura explícita.
 
 Las listas GET corrientes también usan page/shows, pero no ofrecen una vista única entre peticiones concurrentes. Usa captura más incremental para reconstruir una vista coherente.
+
+## Datos clínicos opcionales
+
+La captura acepta `includeClinical=false` por defecto. Con `true`, incluye solo secciones legibles: perfil, condiciones y alergias/intolerancias, con sus revisiones. No incluye historias completas. `SnapshotResponse.clinicalSections` y el cursor conservan ese alcance. Condiciones y alergias no se limitan por la ventana de citas.
+
+Cada sección tiene permisos `none`, `read` o `read_write`; el propietario configura asistentes online con `SetMemberClinicalPermissions`. Cambiar permisos incrementa la época y exige otra captura. No hay borrado remoto garantizado de copias ya descargadas. Resultados de escritura clínica exigen `read_write` vigente. Las historias se consultan aparte con conexión.
+
+Los contratos clínicos incluyen `SetPatientSexAtBirth`, acciones de condiciones/alergias y revisión de sección. Fechas históricas: `YYYY`, `YYYY-MM` o `YYYY-MM-DD`, siempre opcionales y sin completar días ficticios. Perfil ausente devuelve versión 0 sin escribir. La edad se calcula desde nacimiento.
 
 ## SSE como aviso
 

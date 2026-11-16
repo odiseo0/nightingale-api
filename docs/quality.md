@@ -6,7 +6,7 @@
 
 | ID / estado | Condición de aceptación | Comprobación futura y evidencia |
 |---|---|---|
-| Q01 · R | Cada entrada comprueba cuenta, objeto, acción y acceso vigente; no revela datos ajenos en éxito, error, resultado previo o página | A/B con IDs cruzados en HTTP, repositorios, workers, n8n, snapshots e indicadores; verificar respuesta y estado persistido |
+| Q01 · R | Cada entrada privada comprueba cuenta, objeto, acción y acceso vigente; no revela datos ajenos en éxito, error, resultado previo o página. La futura lectura pública de D11 solo devuelve información destinada a publicación, sin permisos del personal | A/B con IDs cruzados en HTTP, repositorios, workers, n8n, snapshots e indicadores; verificar respuesta y estado persistido. Para el futuro Hub, probar por separado lectura pública y acceso limitado a citas |
 | Q02 · R | Solo se acepta identidad/contexto comprobado; la revocación no se elude con permisos o reloj del cliente | Operaciones manipuladas, credenciales vencidas/revocadas, rol cambiado y carrera revocación/escritura. O01 debe fijar el resultado según el orden autorizado |
 | Q03 · R | HTTPS validado, secretos fuera de código/logs y PostgreSQL operativo privado con identidades mínimas separadas | Pruebas de permisos SQL de ejecución/worker/migración; revisión de red y certificados en entorno de prueba; intento de acceso desde clientes sin credenciales |
 | Q04 · R | Efecto, versión, historial, auditoría, resultado, cambios y trabajo derivado se confirman juntos o no aparecen | Fallos inyectados entre escrituras y antes del commit; comprobar todas las filas relacionadas. Repositorios sin commits parciales |
@@ -38,7 +38,7 @@ No se promete revocación instantánea sin red ni borrado seguro de datos ya des
 
 | Escenario | Resultado a demostrar | Tareas |
 |---|---|---|
-| Cuenta A envía un objeto de B o Hub usa concesión de otra cita | Sin lectura, escritura ni filtración del resultado | T08, T14, T15 |
+| Cuenta A envía un objeto de B o el acceso limitado del Hub apunta a otra cita | Sin lectura, escritura ni filtración del resultado; D11 no elige un mecanismo de concesión | T08, T14, T15 históricas; futuro contrato Hub pendiente |
 | Ejecutable modificado omite validación Rust | API rechaza transición, referencia o permiso inválido | T12, T14 |
 | Dos conexiones reservan o modifican agenda/cita | Solo un estado compatible; conflicto explícito y sin pérdida de historial | T11, T12, T14 |
 | Duplicados, distinta carga y respuesta perdida | Mismo resultado permitido y un efecto; conflicto para distinto contenido | T12, T14 |
@@ -48,3 +48,28 @@ No se promete revocación instantánea sin red ni borrado seguro de datos ya des
 | Worker cae y proveedor recibió un envío sin responder | Trabajo recuperable y resultado desconocido visible; sin repetición ciega | T16, T17, T18 |
 
 Los controles completos de Q01–Q16 siguen pendientes; T03 no acredita seguridad, integridad ni operación con PostgreSQL real. Las comprobaciones documentales iniciales se registran aparte en [fuentes y revisión](sources.md).
+
+## Criterios clínicos de etapa 1 · diseño para C01
+
+Los casos siguientes pertenecen a [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md); no constan ejecutados por incorporar el diseño:
+
+- Sexo al nacer ausente/desconocido, nacimiento opcional, edad y 29 de febrero; condiciones/sustancias vacías, texto libre repetido sin fusión y estados/certeza independientes.
+- Fechas completas/parciales, bisiestos, inicio futuro y orden indeterminado; ausencia frente a null, patch vacío y `NO_CHANGES` sin versión.
+- Historia completa e inmutable desde versión 1, anulación terminal y cambios de nacimiento sin continuidad artificial ni historia previa inventada.
+- Listas `not_recorded`,`not_asked`,`unknown`,`none_known`,`has_entries`; alta y retirada del último pertinente; carrera entre alta y ausencia conocida.
+- Propietario y asistente con `none`,`read`,`read_write` combinados por sección; miembro/cuenta inactiva, dispositivo revocado y resultado previo tras revocación.
+- Paciente/registro ajeno en detalle, búsqueda, total, historia, error, resultado y captura; ninguna fuga de nombres, sustancias, reacciones o secretos en auditoría/logs.
+- Duplicados, contenido distinto, respuesta perdida, versiones antiguas, rollback inmediato/diferido y recuperación con nueva instalación autorizada.
+- Captura anterior sin clínica, captura clínica por subconjunto, datos fuera de ventana de citas, grupos invisibles, cambio de época y SSE abierto. Descarga del estado actual sin historias completas.
+
+Dominio y aplicación se prueban sin red; integridad, historia, permisos y carreras exigen PostgreSQL real aislado. Contratos y ejemplos se validarán contra el código real en T17/T18; consumidor Rust y operación con datos reales quedan fuera de esa evidencia.
+
+## Criterios futuros del Hub · D11
+
+Estos criterios derivan del [alcance acordado](nightingale-api.md#5-integración-con-patient-hub); no son pruebas ejecutadas ni funciones disponibles. Las referencias Txx de las tablas anteriores son del plan histórico, no autorizan implementar Hub.
+
+- Leer sin cuenta ni inicio de sesión ambas plantillas: médico independiente y clínica/centro. Exponer solo información destinada a publicación; no filtrar pacientes, citas o notas privadas ni abrir rutas internas.
+- Gestionar una cita existente con acceso limitado y sin credenciales del personal: consulta permitida, confirmar, cancelar según reglas, pedir reprogramación y consultar resultado. Rechazar cruce de cita, acción o información y revalidar el acceso al resultado.
+- Impedir creación/reserva de citas, exploración de disponibilidad para elegir otro horario y registro de ausencia por el paciente. El personal conserva las ausencias bajo las reglas actuales.
+- Comprobar que una solicitud conserva estado, horario y confirmación y no reserva otro intervalo. Solo el personal decide el cambio; API aplica versiones, restricciones e invalidación de confirmación al reprogramar.
+- Probar revocación, acción concurrente y respuesta perdida cuando exista el contrato de acceso. No exigir un segundo backend ni un almacén propio del Hub. No deducir gestión interna completa de clínicas, varias sedes o cambios generales del escritorio de su micrositio público.

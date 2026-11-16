@@ -1,8 +1,8 @@
 # Esquema de base de datos de Nightingale
 
-**Versión:** 1.1; conserva la ampliación 1.0 aceptada en C01 y añade el soporte de T31.\
-**Fecha:** 2026-10-28.\
-**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09/C10 aceptados. T31 añade soporte SSE: migración 20261028_01, 28 tablas y btree_gist, probada en bases ficticias aisladas. T31–T33 para revisión C11. C07/C08 conservaron autorización de paso sin aceptaciones separadas. Consumidores y producción siguen pendientes.\
+**Versión:** 1.2; conserva la ampliación 1.0 aceptada en C01, el soporte de T31 y añade el diseño clínico de etapa 1 para revisión C01.\
+**Fecha:** 2026-11-15.\
+**Estado:** base 0.3 y revisión 0.9 conservan sus aceptaciones históricas; ampliación 1.0 aceptada en T03/C01. C09/C10 aceptados. T31–T33 para revisión C11 del núcleo. El diseño clínico de §10 pertenece a P-20261115-02-patient-clinical-data, aprobado para T01–T03; no está implementado ni aceptado en su C01. Consumidores y producción siguen pendientes.\
 **Motor del diseño:** PostgreSQL. Referencia técnica: documentación oficial de PostgreSQL 18; no fija la versión de un despliegue.  
 **Propietario de los datos operativos:** Nightingale API.  
 **Fuente del diseño:** este documento, por instrucción expresa del usuario.
@@ -17,7 +17,9 @@ Este documento describe el esquema físico propuesto: tablas, columnas, tipos de
 
 La entrega cubre cuentas, usuarios, profesionales, pacientes, contactos responsables, servicios, agenda, citas e historial funcional de citas. Los nombres y detalles físicos son propuestas revisables; no acreditan tablas existentes ni funciones implementadas.
 
-El núcleo original no cubre SQLite, sincronización, auditoría técnica, comunicaciones, lista de espera, APIs, migraciones o código de aplicación. La ampliación documental de §9 añade solo soporte físico de acceso, sincronización y auditoría de esta etapa; el transporte sigue en api-v1.md. No define datos clínicos, inventario, facturación o archivos médicos ni campos genéricos anticipados.
+El núcleo original no cubre SQLite, sincronización, auditoría técnica, comunicaciones, lista de espera, APIs, migraciones o código de aplicación. La ampliación documental de §9 añade soporte físico de acceso, sincronización y auditoría de esa etapa; el transporte sigue en api-v1.md. La revisión 1.2 incorpora en §10 los datos clínicos de referencia aprobados para diseño, sin consultas, notas, mediciones, medicación, archivos médicos, inventario, facturación ni campos genéricos anticipados. Ninguna sección documental acredita por sí sola tablas o funciones implementadas.
+
+**Aclaración de alcance del 2026-11-14, [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api):** Patient Hub tendrá la interfaz web y API todas sus funciones de servidor; no habrá almacén privado del Hub ni acceso SQL desde la web. Cuentas, profesionales y servicios pueden aportar datos al futuro micrositio de médico o clínica, pero sus tablas no constituyen una proyección pública. El contrato actual no ofrece esa publicación ni las acciones limitadas del paciente. El diseño de accesos, contenido público y solicitudes queda pendiente en API; no se añaden aquí campos, tablas, relaciones ni restricciones. La presentación pública de clínicas no habilita toda su gestión interna o varias sedes. Solicitar reprogramación conserva estado, horario y confirmación y no reserva otro intervalo; el personal decide y API aplica el cambio. El paciente no registra ausencias.
 
 ### 1.1 Estado de las decisiones
 
@@ -1669,6 +1671,175 @@ erDiagram
 
 Relaciones opcionales de actor global y recibo se definen en §9.4; el diagrama resume semántica y no sustituye claves compuestas. El detalle de modelos no implica que todos deban migrarse juntos: cada tabla se implementa cuando existe el caso de uso aprobado de su componente.
 
+
+## 10. Datos clínicos de referencia · revisión 1.2
+
+**Estado:** C01 aceptado por el usuario. La revisión `20261115_01` implementa los niveles de pertenencia y el alcance de capturas, comprobada en PostgreSQL Test aislado para C02. La revisión `20261115_02` añade perfil/historia y cambios de nacimiento para revisión C03. La revisión `20261115_03` añade condiciones y revisiones de sección para revisión C04. La revisión `20261115_04` añade alergias/intolerancias e historia para revisión C05. Las nueve tablas clínicas ya están diseñadas e implementadas por bloques; la descarga completa queda para T16.
+
+### 10.1 Cambios a tablas existentes y convenciones
+
+`account_memberships` añade tres columnas `text` obligatorias con valor inicial `read_write` y CHECK `none`/`read`/`read_write`: `clinical_profile_access`, `conditions_access` y `allergies_access`. Inicializan igual a asistentes existentes y nuevos. El propietario conserva acceso efectivo completo por su condición, no por otro valor almacenado. Cambiar niveles incrementa `version` y la época de acceso; desactivar/reactivar conserva los niveles.
+
+`sync_snapshots` añade `clinical_sections` `jsonb` obligatorio con valor inicial `[]`: conjunto cerrado y sin duplicados de `profile`, `conditions`, `allergies`, materializado al crear. Vacío equivale a captura anterior sin clínica. `change_log.audience` amplía su CHECK a `members`, `owner`, `clinical_profile`, `clinical_conditions`, `clinical_allergies`; las tres últimas solo se entregan a quien conserve lectura de esa sección. No se guardan niveles clínicos en `change_log` ni historiales completos en capturas.
+
+Convenciones clínicas:
+
+- Toda fila funcional contiene `account_id`/`patient_id` y una FK compuesta a `account_patients`. Identidad, cuenta y paciente son estables; no hay reasignación ni borrado en cascada.
+- Los IDs propios de condiciones, alergias e historiales de nacimiento son UUIDv7. Perfil y revisiones usan su clave compuesta. Versiones enteras positivas comienzan en 1; la ausencia de perfil/revisión se proyecta como versión 0 sin insertar una fila.
+- `source_type` es `text` obligatorio, inicial `unknown`, con CHECK `patient`, `related_person`, `professional`, `external_document`, `unknown`. Autor, operación e instante proceden del servidor y de la aceptación, no de esa fuente declarada.
+- Las fechas clínicas históricas son `text` nulo o cadena `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, con CHECK de forma y validación de calendario. No se convierten a `date` ni se completa un día ficticio. La aplicación valida bisiestos, inicio completamente futuro en el día local de cuenta y orden solo cuando la precisión lo determina; una restricción de fila protege la forma, no el paso del tiempo.
+- Los textos obligatorios no son vacíos tras quitar espacios exteriores. No hay unicidad ni índice global por nombre/sustancia.
+- Cada historial conserva el contenido completo resultante, acción, actor, operación e instante. La FK de versión actual es diferida al cierre; un control diferido comprueba secuencia desde 1, ausencia de huecos, máximo igual a la versión actual e igualdad de contenido. Historias y cambios de nacimiento son append-only: el rol operativo recibe SELECT/INSERT, sin UPDATE/DELETE/TRUNCATE.
+- Altas y retiradas del último registro pertinente coordinan la revisión de su sección sobre la fila `account_patients`, tras autorización y antes del estado/revisión. Efecto, revisión derivada, historias, recibo, auditoría y grupo comparten commit. Los bloqueos y relecturas conservan §9.5.
+
+### 10.2 `patient_clinical_profiles`
+
+**Propietario:** `clinical_records`. Una fila por ficha de cuenta, solo cuando existe una afirmación o corrección de sexo al nacer que conservar.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `account_id` | `uuid` | Sí | Sin valor | PK/FK compuesta | Cuenta de la ficha. |
+| `patient_id` | `uuid` | Sí | Sin valor | PK/FK compuesta | Paciente de esa cuenta. |
+| `sex_at_birth` | `text` | No | Nulo | CHECK `male`,`female`,`other`,`unknown` | Nulo: sin dato vigente; `unknown`: desconocimiento registrado. |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Origen declarado, no autor. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor del primer registro. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor del cambio vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+PK `(account_id,patient_id)`. F57 a `account_patients`; F58/F59 de `(account_id,created_by_user_id)` y `(account_id,updated_by_user_id)` a `account_memberships`. F60 diferida `(account_id,patient_id,version)` a su historia. No se crea una fila al migrar o leer. La primera acción exige un valor no nulo; una corrección posterior puede dejarlo nulo conservando historia.
+
+### 10.3 `patient_clinical_profile_histories`
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `account_id` | `uuid` | Sí | Sin valor | PK/FK compuesta |
+| `patient_id` | `uuid` | Sí | Sin valor | PK/FK compuesta |
+| `version` | `integer` | Sí | Sin valor | PK; CHECK positivo |
+| `sex_at_birth` | `text` | No | Nulo | Mismo CHECK del perfil |
+| `source_type` | `text` | Sí | Sin valor | CHECK de fuente |
+| `action` | `text` | Sí | Sin valor | CHECK `set` |
+| `actor_user_id` | `uuid` | Sí | Sin valor | Parte de FK a recibo |
+| `operation_id` | `uuid` | Sí | Sin valor | Parte de FK a recibo; CHECK UUIDv7 |
+| `changed_at` | `timestamptz` | Sí | Sin valor | CHECK finito |
+
+PK `(account_id,patient_id,version)`. F61 a perfil; F62 `(account_id,actor_user_id,operation_id)` a `operation_receipts`. Índice de FK a recibo. Cada versión coincide con sexo, fuente y marcas del perfil resultante.
+
+### 10.4 `patient_conditions`
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 | Identidad estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK compuesta | Cuenta propietaria. |
+| `patient_id` | `uuid` | Sí | Sin valor | FK compuesta | Ficha propietaria. |
+| `name` | `text` | Sí | Sin valor | Texto no vacío | Nombre libre, sin catálogo. |
+| `clinical_status` | `text` | Sí | `active` | CHECK | `active`,`recurrence`,`relapse`,`inactive`,`remission`,`resolved`,`unknown`. |
+| `verification_status` | `text` | Sí | `unconfirmed` | CHECK | `unconfirmed`,`provisional`,`differential`,`confirmed`,`refuted`,`entered-in-error`. |
+| `onset_date` | `text` | No | Nulo | Fecha parcial válida | Inicio conocido con su precisión. |
+| `abatement_date` | `text` | No | Nulo | Fecha parcial válida | Fin conocido; no equivale a corrección. |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Origen declarado. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional del cambio vigente. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor de alta. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Alta aceptada. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Cambio vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+PK `id`; UQ `(account_id,id)`; F63 `(account_id,patient_id)` a ficha; F64/F65 autores a pertenencias; F66 diferida `(account_id,id,version)` a historia. Índices `(account_id,patient_id,id)`, `(account_id,created_by_user_id)` y `(account_id,updated_by_user_id)`. `entered-in-error` solo se alcanza por anulación y es terminal. Los registros no `refuted` ni `entered-in-error` son pertinentes para `has_entries`; activos para resumen son `active`,`recurrence`,`relapse` con certeza distinta de esos dos valores.
+
+### 10.5 `patient_condition_histories`
+
+Conserva las quince columnas siguientes con los mismos tipos, nulabilidad y conjuntos del estado resultante: `account_id`, `id`, `version`, `name`, `clinical_status`, `verification_status`, `onset_date`, `abatement_date`, `source_type`, `correction_reason`, `action`, `actor_user_id`, `operation_id`, `changed_at`, `patient_id`.
+
+PK `(account_id,id,version)`. `account_id`, `id`, `patient_id`, `action`, `actor_user_id`, `operation_id` y `changed_at` son obligatorios; `version` es positivo; `action` admite `created`,`updated`,`invalidated`. Los demás campos clínicos conservan la nulabilidad y defaults conceptuales de §10.4, pero la historia exige valores explícitos y no tiene defaults de inserción. F67 a `patient_conditions.(account_id,id)`; F68 a recibo. Índices PK/UQ de padre y recibo. `created_at`/`updated_at` se derivan de la primera/última entrada y no se duplican.
+
+### 10.6 `patient_allergy_intolerances`
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 | Identidad estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK compuesta | Cuenta propietaria. |
+| `patient_id` | `uuid` | Sí | Sin valor | FK compuesta | Ficha propietaria. |
+| `substance` | `text` | Sí | Sin valor | Texto no vacío | Sustancia o producto descrito. |
+| `type` | `text` | Sí | `unknown` | CHECK | `allergy`,`intolerance`,`unknown`. |
+| `reaction_description` | `text` | No | Nulo | Texto no vacío si presente | Descripción única en esta etapa, no episodios. |
+| `clinical_status` | `text` | Sí | `active` | CHECK | `active`,`inactive`,`resolved`. |
+| `verification_status` | `text` | Sí | `unconfirmed` | CHECK | `unconfirmed`,`presumed`,`confirmed`,`refuted`,`entered-in-error`. |
+| `onset_date` | `text` | No | Nulo | Fecha parcial válida | Identificación/inicio conocido. |
+| `last_occurrence_date` | `text` | No | Nulo | Fecha parcial válida | Última reacción conocida. |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Origen declarado. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional del cambio vigente. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor de alta. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Alta aceptada. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Cambio vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+PK `id`; UQ `(account_id,id)`; F69 a ficha; F70/F71 autores; F72 diferida a historia. Índices equivalentes a condiciones. F73, en §10.7, vincula historia con estado actual; F74, con recibo. Anulación terminal por `entered-in-error`. Registros pertinentes y activos para resumen siguen las exclusiones de §10.4, pero estados clínicos activos solo `active`.
+
+### 10.7 `patient_allergy_intolerance_histories`
+
+Conserva diecisiete columnas: los datos y claves de §10.6, sustituyendo autores/marcas duplicadas por `action`, `actor_user_id`, `operation_id` y `changed_at` de cada versión. En total: `account_id`, `id`, `patient_id`, `version`, `substance`, `type`, `reaction_description`, `clinical_status`, `verification_status`, `onset_date`, `last_occurrence_date`, `source_type`, `correction_reason`, `action`, `actor_user_id`, `operation_id`, `changed_at`.
+
+PK `(account_id,id,version)`; F73 a estado actual y F74 a recibo. `action` admite `created`,`updated`,`invalidated`; campos técnicos obligatorios; contenido con tipos/nulabilidad de §10.6 y valores explícitos. Índices PK y recibo. El texto anterior queda disponible en la versión correspondiente.
+
+### 10.8 `patient_clinical_section_reviews`
+
+Una fila por sección revisada o derivada de una ficha; `section` vale `conditions` o `allergies`.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `account_id` | `uuid` | Sí | Sin valor | PK/FK compuesta | Cuenta. |
+| `patient_id` | `uuid` | Sí | Sin valor | PK/FK compuesta | Ficha. |
+| `section` | `text` | Sí | Sin valor | PK; CHECK de sección | Sección independiente. |
+| `information_status` | `text` | Sí | Sin valor | CHECK | `not_asked`,`unknown`,`none_known`,`has_entries`; ausencia de fila significa `not_recorded`. |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Origen declarado. |
+| `reviewed_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor de revisión o derivación. |
+| `reviewed_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Aceptación vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera revisión. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Cambio vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+PK `(account_id,patient_id,section)`; F75 a ficha; F76 a pertenencia; F77 diferida a historia. No se permite persistir `not_recorded`: se representa sin fila. Un control diferido exige `has_entries` si existe al menos un registro pertinente y lo prohíbe si no existe; `none_known`,`not_asked` solo sin pertinentes. Al retirar el último se deriva `unknown`, nunca `none_known`.
+
+### 10.9 `patient_clinical_section_review_histories`
+
+Columnas: `account_id`, `patient_id`, `section`, `version`, `information_status`, `source_type`, `action`, `actor_user_id`, `operation_id`, `changed_at`. PK `(account_id,patient_id,section,version)`; F78 a revisión actual y F79 a recibo. Tipos/nulabilidad de §10.8; `version` positivo; `action` `set` o `derived`; campos técnicos obligatorios; `changed_at` finito. Índices PK y recibo. La revisión actual coincide con su última entrada.
+
+### 10.10 `patient_birth_date_changes`
+
+**Propietario:** `patients`. Historial solo de cambios aceptados desde esta entrega; no reconstruye valores anteriores.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 | Identidad del cambio. |
+| `account_id` | `uuid` | Sí | Sin valor | FK compuesta | Cuenta de la ficha. |
+| `patient_id` | `uuid` | Sí | Sin valor | FK compuesta | Paciente de la ficha. |
+| `previous_birth_date` | `date` | No | Nulo | CHECK finito | Valor anterior. |
+| `new_birth_date` | `date` | No | Nulo | CHECK finito | Valor resultante distinto. |
+| `patient_version` | `integer` | Sí | Sin valor | CHECK positivo | Versión resultante de `account_patients`; admite huecos por otras ediciones. |
+| `actor_user_id` | `uuid` | Sí | Sin valor | Parte de FK a recibo | Autor autenticado. |
+| `operation_id` | `uuid` | Sí | Sin valor | Parte de FK a recibo; CHECK UUIDv7 | Operación de origen. |
+| `changed_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Aceptación. |
+
+F80 `(account_id,patient_id)` a ficha y F81 a recibo. Índice `(account_id,patient_id,id)` y recibo. Append-only; `patient_version` no exige continuidad ni unicidad propia, pero la operación y versión actual de la ficha se conservan en la misma aceptación. Nacimiento mantiene permisos administrativos y no forma parte de la descarga clínica adicional: ya pertenece a la ficha existente.
+
+### 10.11 Integridad, referencias e inventario
+
+F57–F81 continúan F01–F56. Las referencias de autor usan `(account_id,user_id)` a `account_memberships`; las de operación usan `(account_id,actor_user_id,operation_id)` a `operation_receipts`; todas RESTRICT salvo las FK de versión actual, `NO ACTION` diferidas al cierre. Las FK historia→estado actual son RESTRICT y no permiten borrar el padre.
+
+| Grupo | Tablas | Columnas nuevas | FK nuevas |
+|---|---:|---:|---:|
+| Perfil actual/historia | 2 | 18 | F57–F62 |
+| Condición actual/historia | 2 | 30 | F63–F68 |
+| Alergia/intolerancia actual/historia | 2 | 34 | F69–F74 |
+| Revisión actual/historia | 2 | 20 | F75–F79 |
+| Cambios de nacimiento | 1 | 9 | F80–F81 |
+| Cambios a pertenencia/captura | 0 | 4 | 0 |
+| **Total de la ampliación** | **9** | **115** | **25** |
+
+El inventario documental objetivo queda en **37 tablas, 420 columnas y 81 FK**. Las cifras anteriores de §9.7 conservan su historia. No se añaden historiales a snapshot; las cuatro proyecciones actuales usan audiencias por sección. Permisos SQL, restricciones diferidas, calendario, carreras y reversión se comprobarán en PostgreSQL aislado durante sus tareas, no en esta revisión documental.
 
 ## Fuentes técnicas consultadas
 

@@ -1,27 +1,27 @@
 # Contratos y propiedad
 
-**Estado al 2026-10-28:** C09/C10 aceptados; T31–T33 para revisión C11. C07/C08 conservaron autorización de paso sin aceptaciones separadas. El [contrato HTTP v1](api-v1.md), revisión 1.1, conserva camelCase y page/shows. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales, con origen y huella. Los ejemplos de la [guía Rust](rust-api-guide.md) se comprueban contra PostgreSQL/Keycloak aislados. SSE y colaboración de API usan dos procesos reales en pruebas; clientes Rust/Hub y producción siguen pendientes. C11 no está aceptado.
+**Estado al 2026-11-16:** C09/C10 aceptados; C11 del núcleo sigue pendiente. El [contrato HTTP v1](api-v1.md), revisión 1.2, conserva camelCase y page/shows. La etapa 1 clínica está implementada hasta T18 para revisión C06: 60 rutas, 98 esquemas y 51 acciones generadas con origen y huellas. Consumidores y producción siguen pendientes. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales, con origen y huella. Los ejemplos de la [guía Rust](rust-api-guide.md) se comprueban contra PostgreSQL/Keycloak aislados. SSE y colaboración de API usan dos procesos reales en pruebas; clientes Rust/Hub y producción siguen pendientes. C11 no está aceptado.
 
 ## Una fuente por contrato
 
 | Artefacto | Propietario de la fuente | Consumidores y forma de compartir |
 |---|---|---|
 | Operaciones, resultados, consulta de resultado, descarga y recuperación | Nightingale API | Escritorio Rust; artefacto versionado y pruebas contra esa versión |
-| Consultas y acciones internas de citas para el Hub | Nightingale API; acuerdo revisado por Hub | Backend del Hub; misma fuente y ejemplos compartidos |
+| Futuras lecturas públicas de micrositios y acciones limitadas de citas del Hub | Nightingale API; diseño pendiente bajo D11 | Interfaz web del Hub; sin backend propio ni credenciales del personal para el paciente |
 | Eventos, trabajo interno, webhooks recibidos y API interna de n8n | Nightingale API | Workers, adaptadores, n8n y ETL autorizados |
 | Migraciones y esquema PostgreSQL operativo/analítico | Nightingale API | Procesos autorizados; no contrato SQL público |
-| API pública del Hub, enlaces, sesiones, política del paciente y solicitudes | Patient Hub | Web del paciente y escritorio; API consume solo las capacidades necesarias |
+| Interfaz web del Hub y plantillas de micrositios | Patient Hub, en su propio repositorio | Visitantes y pacientes; consume contratos de API. API poseerá accesos, reglas y solicitudes; no se acuerdan sesiones ni cuentas de paciente |
 | Comandos Tauri, SQLite, Outbox, aplicación de páginas y estados visibles | Escritorio | React y Rust; no son fuente de esquemas remotos |
 
 Selección aprobada para v1: esquemas Pydantic de domain derivados del BaseModel del proyecto como origen de OpenAPI y JSON Schema, con tipos comunes en core/schema. La base conserva alias camelCase y los atributos Python siguen en snake_case. Los proveedores externos conservan sus nombres propios de protocolo. Hasta implementarlos, api-v1.md posee el diseño; después conserva explicación y ejemplos, no una segunda definición editable del esquema generado. El generado identifica origen/versión y las pruebas verifican correspondencia; no se editan ambos. Consumidores fijan una versión o huella. La base de datos no genera un contrato público por defecto.
 
 Para el modelo de datos operativo cubierto, [database-schema.md](database-schema.md) es la única fuente de diseño por instrucción del usuario del 2026-10-24. Sus acuerdos sustituyen las reglas previas incompatibles de D07; las propuestas pendientes se distinguen en el propio esquema. El borrador lógico anterior queda retirado. La revisión 1.0 añade soporte físico de acceso/sync/auditoría en §9, sin convertirlo en contrato HTTP; el comportamiento y las proyecciones públicas viven en api-v1.md. Analítica, Hub y módulos excluidos conservan sus fuentes y tareas posteriores.
 
-La precedencia depende del tema: SRS y decisiones funcionales confirmadas fijan requisitos del producto; API posee la aceptación remota y sus contratos; Hub posee su API pública, accesos y solicitudes; escritorio posee comandos, SQLite y operación local. Una decisión posterior confirmada identifica qué sustituye. La copia del escritorio ya trasladada es antecedente; las fuentes originales y sus versiones figuran en [sources.md](sources.md). Las propuestas no sustituyen acuerdos confirmados.
+La precedencia depende del tema: SRS y decisiones funcionales confirmadas fijan requisitos del producto; API posee la aceptación remota y todos los contratos y funciones de servidor del Hub; Hub posee su interfaz web; escritorio posee comandos, SQLite y operación local. [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) sustituye el reparto previo de API pública, accesos, reglas y solicitudes en un servidor del Hub. La copia del escritorio ya trasladada es antecedente; las fuentes originales y sus versiones figuran en [sources.md](sources.md). Las propuestas no sustituyen acuerdos confirmados.
 
 ## Operaciones y resultados
 
-Los criterios siguientes conservan su fundamento; en el ámbito de escritorio v1, sus elecciones están concretadas en api-v1.md y D09. Las referencias a T04/T05 históricas corresponden al plan sustituido; ejecutar las tareas del sucesor. Hub conserva sus acuerdos pendientes y queda fuera de la entrega.
+Los criterios siguientes conservan su fundamento; en el ámbito de escritorio v1, sus elecciones están concretadas en api-v1.md y D09. Las referencias a T04/T05 históricas corresponden al plan sustituido; ejecutar las tareas del sucesor. El alcance futuro del Hub está acordado por D11; su diseño e implementación quedan fuera del contrato actual.
 
 El acuerdo previo a código debe fijar:
 
@@ -43,15 +43,22 @@ Si cambia la autorización, API impide nuevas lecturas fuera de alcance y exige 
 
 ## Hub
 
-La identidad técnica acredita al backend del Hub, pero no su derecho sobre una cita. T04 debe definir cómo API verifica cuenta, cita, acciones, versión, vencimiento y revocación de cada concesión sin apropiarse de enlaces o reglas del Hub. Comparar una concesión limitada verificable con una consulta autenticada de autorización; documentar confianza, rotación, reuso y fallos de ambas opciones. No aceptar un `practice_id` o un encabezado de actor como prueba.
+**Contrato actual:** api-v1.md sirve al escritorio y al personal autorizado. No ofrece endpoints de micrositios ni acciones del paciente. Los modelos y rutas de cuentas, servicios y citas no son por ello un contrato público del Hub.
 
-El acuerdo distinguirá confirmar/cancelar una cita de solicitar un cambio en el almacén del Hub. Definirá versiones, invalidación de confirmación al reprogramar, rechazo/retirada de solicitudes y conciliación de fallos parciales. Un éxito remoto con respuesta perdida se recupera por la misma operación. No se compensa cambiando otra vez la cita sin un caso de uso autorizado.
+**Alcance futuro acordado por D11:** API tendrá todos los endpoints y funciones de servidor del Hub. Habrá dos accesos distintos:
 
-La reprogramación aceptada cambia el intervalo e invalida la confirmación anterior dentro de una sola transacción de API. Un aviso posterior al Hub concilia accesos y solicitudes; no decide la validez de la confirmación compartida. Su fallo no deshace la cita ni permite repetir su efecto con otra identidad.
+| Uso futuro | Información y acciones permitidas | Acceso |
+|---|---|---|
+| Micrositio con plantillas para médico independiente o clínica/centro | Presentación, servicios, ubicación; contacto del profesional o profesionales del centro según plantilla. Solo información destinada a publicación | Lectura pública, sin cuenta de paciente, inicio de sesión ni permisos del personal |
+| Gestión de una cita existente | Información permitida de esa cita; confirmar, cancelar según reglas, solicitar reprogramación y consultar resultado | Acceso limitado verificado por API para cita/acción e información necesaria, sin credenciales del personal |
 
-Este contrato no permite al paciente crear citas, listar disponibilidad general ni elegir o reservar otro horario. El recorrido de ofertas de lista de espera requiere una decisión previa y no amplía por sí solo estas acciones.
+La lectura pública no incluye fichas de pacientes, listados de citas, notas internas ni otra información privada; tampoco abre las rutas internas. No habrá editor libre ni gestión de pacientes en el Hub. Incluir clínicas en su presentación pública no habilita gestión interna completa, varias sedes o cambios generales del escritorio.
 
-[P05](decisions.md#p05--solicitud-de-reprogramación-separada) confirma la solicitud separada del estado de cita; pedir un cambio conserva estado, horario y confirmación. [P06](decisions.md#p06--ofertas-con-asignación-por-el-personal) confirma que la respuesta a una oferta expresa interés y que el personal autoriza la reserva. El usuario aprobó ambos criterios el 2026-10-23 y puede revisarlos antes o durante la implementación. Los ciclos, canales y formatos exactos siguen pendientes en O04/O05; no se añaden capacidades públicas al Hub.
+El paciente no crea ni reserva citas, no explora disponibilidad para elegir otro horario y no marca ausencias; el personal conserva ese registro. [P05](decisions.md#p05--solicitud-de-reprogramación-separada) conserva la solicitud separada del estado de cita: pedir cambio conserva estado, horario y confirmación y no reserva otro intervalo. El personal decide el cambio; API cambia el intervalo e invalida la confirmación anterior dentro de una transacción con las reglas comunes. [P06](decisions.md#p06--ofertas-con-asignación-por-el-personal) no amplía estas acciones del paciente.
+
+**Diseño pendiente:** mecanismo de enlace y acceso limitado, vigencia/revocación, proyecciones de publicación y cita, formas HTTP y ciclo de solicitudes/resultados. La consulta de resultados requerirá el mismo alcance limitado; no bastará conocer un identificador de cita, cuenta, actor u operación. Se deberá resolver una respuesta perdida sin repetir el efecto. No se fijan aquí rutas, campos, tablas ni cuentas de paciente.
+
+**Antecedente sustituido:** T04 comparaba concesión de servicio con consulta autenticada al backend del Hub, y separaba solicitudes en su almacén privado. D11 elimina ese segundo servidor y asigna estas funciones a API. La comparación histórica se conserva en [access-design.md](access-design.md#antecedente-sustituido-autorización-entre-servidores); no es un requisito vigente.
 
 ## Trabajo y compatibilidad
 

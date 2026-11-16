@@ -1,5 +1,61 @@
 # Fuentes, diferencias y revisión documental
 
+## Descarga, contratos y cierre de etapa 1 · T16–T18 · 2026-11-16
+
+T16 materializa perfil, condiciones, alergias y revisiones autorizadas sin historias, con `includeClinical=false` por defecto, filtrado por sección, delta y cambio de época. Capturas y páginas clínicas registran auditoría sin contenido clínico y fallan sin entregar datos si esa evidencia no persiste.
+
+T17 actualiza `scripts.export_contracts` a `modelRevision=api-v1.2`, destino explícito dentro del repositorio y recuentos del catálogo real. Los artefactos `contracts/api-v1` y `contracts/examples.json` se generan y validan con 60 rutas, 98 esquemas y 51 acciones. [Pydantic JSON Schema](https://docs.pydantic.dev/latest/api/json_schema/) y [FastAPI response models](https://fastapi.tiangolo.com/tutorial/response-model/) sustentan el origen, sin dependencias nuevas.
+
+T18 ejecuta suite, probes de acceso/pacientes/clínica/persistencia/descarga/retención/SSE/contratos, analizador y build offline. Los consumidores Rust/Hub, operación con datos reales y etapa 2 siguen fuera.
+
+## Implementación de alergias e intolerancias · T13–T15 · 2026-11-16
+
+Se reutilizan validación temporal, aceptación, historias y revisión por sección. La revisión `20261115_04` protege estado actual e historia y distingue alergia, intolerancia y tipo desconocido sin clasificación automática. La acción compartida de revisión selecciona su caso por `payload.section`.
+
+El probe real comprueba tipos, fechas parciales, estados, filtros, permisos independientes, idempotencia, carreras, rollback e historia inmutable. La migración se aplicó, revirtió y reaplicó. C05 espera revisión; T16 no comenzó.
+
+## Implementación de condiciones · T10–T12 · 2026-11-15
+
+Se aplicaron `minimal-code`, `fastapi` y `docs-first-framework-code`: fechas parciales con `datetime.date`/regex de la biblioteca estándar, validadores Pydantic 2.14.1, DAOs existentes y aceptación compartida. La revisión `20261115_03` protege condición/historia y coherencia entre registros pertinentes y revisión de sección.
+
+El probe real cubre fechas completas/parciales, texto libre repetido, estados independientes, anulación terminal, información de listas, permisos independientes, duplicados, rollback e historia inmutable. La carrera entre alta y ausencia conocida se coordina por ficha: solo persiste un orden coherente. La revisión se aplicó, revirtió y reaplicó en PostgreSQL Test. C04 espera revisión; alergias no comenzó.
+
+## Implementación de perfil y nacimiento · T07–T09 · 2026-11-15
+
+Se conservan las versiones y referencias previas. La revisión `20261115_02` implementa perfil/historia y cambios de nacimiento con FK diferidas y triggers de integridad. Las historias referencian recibos aceptados en la misma transacción; el rol operativo no puede reescribirlas o borrarlas. `patients` expone casos de uso para que `clinical_records` no importe sus repositorios.
+
+El probe con PostgreSQL 18.3/Keycloak Test comprueba perfil ausente sin escritura, edad y 29 de febrero, sexo nulo/desconocido, versiones, duplicados, carreras, rollback, aislamiento, cambios de nacimiento e historia inmutable. La revisión se aplicó, revirtió y reaplicó. C03 espera revisión del usuario; condiciones y descarga clínica completa siguen para tareas posteriores.
+
+## Implementación de permisos clínicos · T04–T06 · 2026-11-15
+
+Se conservan las versiones y referencias de T02. SQLAlchemy 2.1.6 coordina la sesión existente y Alembic 1.20.1 añade la revisión `20261115_01` con SQL explícito. [PostgreSQL 18 CHECK y funciones SQL](https://www.postgresql.org/docs/18/ddl-constraints.html) sustenta la validación del alcance JSONB mediante función inmutable; la primera propuesta con subconsulta directa fue rechazada por PostgreSQL y se corrigió sin relajar el conjunto cerrado.
+
+La aceptación existente conserva pertenencia, versión, época, recibo, auditoría y journal en una transacción. La revisión `20261115_01` se aplicó, revirtió y reaplicó en PostgreSQL Test 18.3; un probe específico comprobó permisos, carreras, rollback y revocación con Keycloak Test. C02 queda para revisión del usuario; no hay datos clínicos implementados ni integración con consumidores.
+
+## Fuentes técnicas de etapa 1 clínica · T02 · 2026-11-15
+
+Versiones resueltas comprobadas en pyproject.toml/uv.lock: FastAPI 0.159.1, Pydantic 2.14.1, SQLAlchemy 2.1.6, Alembic 1.20.1 y asyncpg 0.32.0. No se instalan ni actualizan dependencias.
+
+- [PostgreSQL 18: restricciones](https://www.postgresql.org/docs/18/ddl-constraints.html) y [constraint triggers](https://www.postgresql.org/docs/18/sql-createtrigger.html): FK compuestas cuenta/paciente, versión actual diferida, continuidad e inmutabilidad de historias. Un CHECK no sustituye reglas entre filas ni fechas dependientes del día actual.
+- [SQLAlchemy 2.1: transacciones](https://docs.sqlalchemy.org/en/21/orm/session_transaction.html): la aplicación delimita la sesión existente; efecto, historia, revisión, recibo, auditoría y grupo comparten commit y DAOs usan `commit=False`.
+- [Pydantic 2.14.1: validadores](https://github.com/pydantic/pydantic/blob/v2.14.1/docs/concepts/validators.md): fechas parciales y patches combinados con biblioteca estándar, sin dependencia nueva; `ValueError` para reglas de validación.
+- [FastAPI: modelos de respuesta](https://fastapi.tiangolo.com/tutorial/response-model/): proyecciones explícitas y filtrado de salida; la guía actual se contrastará con 0.159.1 al implementar, sin afirmar lectura de otro tag.
+- FHIR R5 5.0.0: [Patient](https://hl7.org/fhir/R5/patient.html) distingue sexo al nacer de género administrativo/parámetros clínicos; [Condition](https://hl7.org/fhir/R5/condition.html) separa estado clínico/verificación; [AllergyIntolerance](https://hl7.org/fhir/R5/allergyintolerance.html) distingue alergia, intolerancia e incertidumbre; [date](https://hl7.org/fhir/R5/datatypes.html#date) admite año/mes/día con precisión variable; [List Empty Reasons](https://hl7.org/fhir/R5/valueset-list-empty-reason.html) separa ausencia conocida de no preguntado/no disponible. Son referencias conceptuales, no conformidad FHIR ni importación de todo su modelo.
+
+Las páginas se consultaron durante T02. El diseño físico vive solo en database-schema.md §10 y HTTP en api-v1.md §10. No se generan contratos, migraciones o código ni se ejecutan pruebas de producto por consultar estas fuentes.
+
+## Revisión documental del Hub · 2026-11-14
+
+Fuente nueva: encargo del usuario con decisiones confirmadas sobre Patient Hub, recibido el 2026-11-14. [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) registra el alcance y las sustituciones; [la especificación §5](nightingale-api.md#5-integración-con-patient-hub) lo desarrolla. El [plan documental](../tasks/P-20261114-01-patient-hub-docs/plan.md) y su [evidencia](../tasks/P-20261114-01-patient-hub-docs/todo.md) cubren solo este encargo.
+
+Patient Hub tendrá su repositorio para la interfaz web; API tendrá todas sus funciones de servidor. Esto sustituye el backend, API y almacén propios del Hub descritos por D01 y las fuentes del escritorio del 2026-10-21, y las propuestas entre servidores de T04/O02 y los recorridos de P05. Se conservan esos textos como antecedentes con marcas de sustitución. El criterio funcional de P05 permanece: pedir reprogramación no cambia la cita ni su confirmación ni reserva otro horario.
+
+La primera versión futura del Hub incluye micrositios con plantillas para médico independiente y clínica/centro. Su lectura pública no exige cuenta de paciente ni credenciales del personal y solo publica información destinada a ello. El acceso privado a una cita existente será limitado y distinto. Las rutas y datos actuales no prueban un contrato público del Hub. Se revisaron por lectura los routers registrados en `src/api/api.py`, los de servicios/citas y sus controles de acceso; no se ejecutó ni cambió la API.
+
+El contrato actual del escritorio no cambia. Quedan el mecanismo de enlace/acceso, vigencia/revocación, proyecciones, formas HTTP y ciclo de solicitudes/resultados. No se modifican código, migraciones, dependencias o artefactos generados. No se consulta ni cambia otro repositorio; reunir `patient-hub-docs/` y su `Master-Plan.md` en el escritorio corresponde a otra sesión.
+
+Las secciones siguientes conservan fuentes y comprobaciones de sus fechas; no sustituyen D11 ni acreditan el estado actual del árbol. En particular, las rutas históricas `contracts/` y `nightingale-desktop-docs/` no están presentes en este árbol. Los enlaces ausentes y los límites de esta revisión se registran en la evidencia del plan documental, sin generar artefactos ni reconstruir copias retiradas.
+
 ## Fuentes técnicas de T33 · 2026-10-28
 
 - [Pydantic models_json_schema](https://docs.pydantic.dev/latest/api/json_schema/#pydantic.json_schema.models_json_schema): colección de pares modelo/modo, referencias y definiciones comunes para los payloads de operaciones. Se conserva Pydantic 2.14.1 resuelto; guía actual contrastada con la firma instalada y exportación real. No se afirma lectura de un tag de documentación no disponible.
@@ -127,16 +183,18 @@ Se leyeron en la copia local `C:/Users/Pedro/Documents/GitHub/nightingale/`. Son
 |---|---|
 | `docs/decisions/transactional-sync-three-projects.md` | Decisión aceptada el 2026-10-21; tres proyectos, API transaccional y sustitución del acceso SQL directo |
 | `docs/specifications/nightingale-api.md` | v0.1, 2026-10-21; origen de la especificación copiada por el usuario |
-| `docs/specifications/nightingale-patient-hub.md` | v0.1, 2026-10-21; accesos/solicitudes propios y contrato interno de citas propiedad de API |
+| `docs/specifications/nightingale-patient-hub.md` | v0.1, 2026-10-21; antecedente con accesos/solicitudes propios. D11 sustituye ese reparto por todo el servidor en API; no se afirma haber revisado la copia actual del escritorio |
 | `docs/master-plan.md` | v0.3; §§3–7, 9.6–9.11, 12–15 y 17: precedencia, componentes, propiedad, concurrencia, contratos y recuperación |
 | `docs/technical-architecture.md` | v0.3; principios, tres proyectos, sincronización, estados, flujos de Hub/lista de espera, seguridad, operación y recuperación |
 | `docs/srs.md` | v0.5; alcance, RF-01–RF-16, reglas administrativas, WhatsApp inicial y preguntas abiertas |
 | `AGENTS.md`, `CONTRIBUTING.md`, `tasks/README.md` | Plan previo, cambio mínimo, documentación oficial por versión, evidencia y revisión por checkpoints; se adaptan aquí sin exigir skills ni comandos del escritorio |
 | `docs/decisions/native-desktop-cloud-boundaries.md` | Marcado como sustituido el 2026-10-21; solo se usa para detectar instrucciones históricas |
 
-La especificación de API ahora se mantiene aquí. La copia previa del escritorio queda como antecedente; su propietario debe reemplazarla por una referencia a este documento en otra tarea. No se modificó ese repositorio ni se trasladaron sus planes o código. La SRS y el plan general del producto siguen allí; este repositorio contiene los límites de API necesarios para trabajar sin esa copia. Hub mantiene su propio contrato público; no se copia su especificación como una segunda fuente editable.
+La especificación de API ahora se mantiene aquí. La copia previa del escritorio queda como antecedente; su propietario debe reemplazarla por una referencia a este documento en otra tarea. No se modificó ese repositorio ni se trasladaron sus planes o código. La SRS y el plan general del producto siguen allí; este repositorio contiene los límites de API necesarios para trabajar sin esa copia. D11 asigna a API el futuro contrato público y las acciones limitadas del Hub; el reparto anterior de contrato público propio del Hub queda sustituido. No se copia su especificación como una segunda fuente editable.
 
 ## Diferencias y decisiones abiertas detectadas
+
+Registro histórico de la revisión inicial. D11 sustituye la propiedad de servidor del Hub y acota O02; D08/D09 y P05/P06 conservan sus decisiones posteriores. Esta tabla no reabre acuerdos confirmados.
 
 | Hallazgo | Tratamiento en esta entrega |
 |---|---|

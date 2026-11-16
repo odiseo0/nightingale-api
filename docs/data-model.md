@@ -2,6 +2,8 @@
 
 > **Retirado el 2026-10-24 por instrucción del usuario.** No se usa para diseño ni implementación. La única fuente vigente es [database-schema.md](database-schema.md). El texto siguiente se conserva como antecedente y no expresa reglas actuales.
 
+> **Aclaración del 2026-11-14:** [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) sustituye también las referencias de este borrador a un almacén privado del Hub y a la propiedad de enlaces/sesiones/solicitudes fuera de API. Se conservan abajo como historia; no autorizan recrear ese reparto.
+
 **Versión:** 0.1. **Fecha:** 2026-10-23. **Estado:** Draft, para revisión del usuario. Solo D07 y los acuerdos previos están confirmados; las entidades, campos y relaciones siguientes son una propuesta. No hay DDL, migraciones ni cambios en los modelos Python.
 
 ## Alcance y fuentes

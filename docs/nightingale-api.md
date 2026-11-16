@@ -1,13 +1,15 @@
 # Especificación técnica breve: Nightingale API
 
-**Versión:** 0.4
-**Fecha:** 2026-10-28
+**Versión:** 0.8 (etapa 1 clínica implementada y comprobada para revisión C06).
+**Fecha:** 2026-11-15
 **Estado:** C01–C06, C09/C10 y C12–C18 aceptados. T31–T33 para revisión expresa C11: SSE y recuperación entre dos procesos, diez streams y contratos generados con ejemplos comprobados. C07/C08 conservan autorización de paso sin aceptaciones separadas. Consumidores Rust/Hub y producción siguen fuera; C11 no está aceptado.
-**Decisión:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional).
+**Decisiones:** [Tres proyectos y API transaccional](decisions.md#d01--tres-proyectos-y-api-transaccional), con el reparto del Hub sustituido por [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api).
 
 ## 1. Propósito y tecnología
 
 La primera etapa aprobada está en [P-20261024-01-desktop-shared-api](../tasks/P-20261024-01-desktop-shared-api/plan.md). [api-v1.md](api-v1.md) fija su diseño de rutas/operaciones/modelos públicos; [database-schema.md](database-schema.md) conserva la única fuente física, ampliada en 1.0 para revisar en C01. Los apartados generales de Hub, comunicaciones y analítica describen el producto posterior, no trabajo autorizado de esta entrega.
+
+La ampliación clínica acordada el 2026-11-15 se desarrolla en [Registro clínico y seguimiento del paciente](patient-clinical-record.md), referencia funcional para los planes de tres etapas bajo [D12](decisions.md#d12--registro-clínico-y-seguimiento-del-paciente). Comprende datos de referencia, registro habitual y funciones completas, incluida analítica individual con referencias OMS. El usuario aprobó [P-20261115-02-patient-clinical-data](../tasks/P-20261115-02-patient-clinical-data/plan.md) y autorizó T01–T03 hasta C01: acuerdos, diseño físico/contratos y línea base, sin código, migraciones o generados. T04–T06 añadieron permisos por asistente/sección y filtrado cerrado. T07–T09 añaden perfil clínico, sexo al nacer, historial y cambios de nacimiento para revisión C03. T10–T12 añaden condiciones y revisión de su sección para revisión C04. T13–T15 añadieron alergias/intolerancias. T16–T18 completan captura/delta clínica, contratos y verificación de etapa 1 para revisión C06. La etapa 2 no se inicia.
 
 La corrección aprobada conserva arquitectura hexagonal por componentes con api/users como estilo: infrastructure solo endpoints; application casos de uso sin acceso directo a SQLAlchemy; repository modelos y DAOs derivados; domain esquemas de la base del proyecto, valores y errores. JSON camelCase, listas y snapshot con page/shows, LIMIT/OFFSET e items/total. No hay cursores de página; sí posición de avance incremental de sync. authorization y accounts tienen propietarios separados. Los workflows de alta son scripts pequeños, sin sistema CLI. App de módulo, fábrica existente, inyección de dependencias y Uvicorn directo; sin lifespan para base de datos.
 
@@ -20,7 +22,7 @@ La API recibe operaciones de alto nivel y entrega cambios incrementales. No ofre
 - Autenticar personas, dispositivos y servicios; comprobar cuenta, pertenencia, alcance y revocaciones según la política de acceso.
 - Aceptar operaciones sobre pacientes, servicios, agenda y citas, con versiones, transiciones e integridad compartida.
 - Conservar en PostgreSQL operativo entidades aceptadas, historial, auditoría, operaciones y resultados idempotentes, Change Log y trabajos persistentes.
-- Atender al backend del Patient Hub con consultas limitadas y acciones sobre la cita autorizada. La API aplica reglas comunes; el Hub posee enlaces y política del paciente.
+- Proveer en el futuro todas las funciones de servidor del Patient Hub: lectura pública del micrositio y gestión limitada de citas existentes. API poseerá sus contratos, accesos y solicitudes y aplicará las reglas comunes; el repositorio del Hub contendrá la interfaz web.
 - Poseer migraciones del esquema operativo y sus contratos de lectura/escritura. Ningún escritorio ni Hub migra o escribe directamente ese esquema.
 - Incluir módulos y workers para recordatorios, entregas/webhooks, integración con n8n y analítica. No son proyectos adicionales ni parte de la transacción de sincronización.
 
@@ -50,9 +52,28 @@ Define arranque desde snapshot, retención, caducidad del cursor y recuperación
 
 ## 5. Integración con Patient Hub
 
-El Hub tiene su API y su autenticación del paciente. Su backend consulta y envía acciones a Nightingale API por HTTPS autenticado, con actor, cita, cuenta, alcance y versión verificables. API no acepta esos campos solo por recibirlos de un servicio autenticado.
+**Alcance futuro acordado por D11, sin implementar.** Nightingale conserva el escritorio. Patient Hub tendrá repositorio propio para la interfaz web; Nightingale API tendrá todas las funciones de servidor que requiera. Este reparto sustituye la API, el backend y el almacén privado antes asignados al Hub. El Hub no accede directamente a PostgreSQL.
 
-Confirmar, cancelar o aplicar una reprogramación respeta las mismas versiones y restricciones que una operación nativa. API cambia el intervalo e invalida la confirmación anterior en la misma transacción PostgreSQL; no espera un aviso posterior del escritorio al Hub. El Hub concilia después sus accesos y solicitudes con la versión aceptada. El Hub registra sus solicitudes; pedir otro horario no lo reserva. No hay una transacción distribuida con el almacenamiento privado del Hub: deben definirse reintentos y reconciliación de resultados.
+### Micrositio de lectura pública
+
+La primera versión del Hub incluirá ambas presentaciones mediante plantillas definidas:
+
+- Médico independiente: presentación del profesional, servicios, ubicación y datos de contacto.
+- Clínica o centro médico: presentación del centro, catálogo de servicios, profesionales y ubicación.
+
+No habrá editor libre de páginas ni gestión de pacientes dentro del Hub. La presentación pública de clínicas no autoriza toda su gestión interna, varias sedes ni cambios generales en el escritorio.
+
+API ofrecerá endpoints públicos que entreguen solo información destinada a publicación. Leer el micrositio no exigirá cuenta de paciente, inicio de sesión ni permisos del personal. Las rutas internas actuales no pasan a ser públicas. No se publicarán fichas de pacientes, listados de citas, notas internas ni otros datos privados. Los datos actuales de cuentas, profesionales y servicios pueden servir de base, pero no prueban que exista una proyección pública.
+
+### Gestión limitada de una cita existente
+
+El paciente podrá consultar la información permitida de su cita, confirmar asistencia, cancelar conforme a las reglas, solicitar reprogramación y consultar el resultado de la acción. API verificará un acceso limitado a esa cita, acción e información necesaria, sin exigir credenciales del personal. No se confunde este acceso privado con la lectura pública del micrositio ni se diseña un sistema de cuentas de paciente para resolverla.
+
+El paciente no creará ni reservará citas, no explorará disponibilidad para elegir o reservar otro horario y no marcará ausencias. El personal conserva el registro de ausencias según las reglas actuales. Solicitar reprogramación no altera estado, horario ni confirmación y no reserva otro intervalo. El personal decide el cambio; API aplica la reprogramación con las reglas comunes. El cambio de intervalo invalida la confirmación anterior en la misma transacción.
+
+### Contrato actual y pendientes
+
+[api-v1.md](api-v1.md) describe las funciones actuales para escritorio y personal autorizado; no incluye endpoints de micrositio ni acciones del paciente. Sus rutas y resultados no conceden acceso al paciente. Quedan pendientes el mecanismo exacto del enlace/acceso, su vigencia y revocación, las proyecciones permitidas, las formas HTTP y el ciclo de solicitudes y resultados. La autorización entre dos backends ya no es un requisito. No se fijan rutas, campos ni tablas para completar este acuerdo.
 
 ## 6. Workers y rendimiento
 
@@ -79,7 +100,7 @@ El repositorio de API posee la fuente OpenAPI y los contratos de eventos/operaci
 
 T19–T27 comprueban aislamiento, transiciones inválidas sin Rust, reservas concurrentes, duplicados, revocación vigente, rollback e historia. T28–T30 añaden descarga, snapshot y recuperación con PostgreSQL real. T31/T32 prueban SSE, reservas, duplicados, revocación con stream abierto y recuperación con dos procesos reales; p95 local 120.1 ms y cota superior que incluye commit 122.5 ms, con diez streams y 20 commits. T33 genera [contratos](../contracts/README.md) y comprueba los ejemplos de la [guía Rust](rust-api-guide.md). El soporte de sync conserva su prueba de respuesta perdida tras commit. La [lista de control](../tasks/P-20261024-01-desktop-shared-api/todo.md) registra comandos, resultados y límites. Estas pruebas no acreditan consumidores, saturación ni producción. Hub y workers siguen fuera.
 
-Pendientes de producto fuera de esta etapa: autorización del Hub, despliegue/proveedor, cola, política de comunicaciones/espera, objetivos de producción, copias, restauración y RPO/RTO, verificación y corrección global de identidad. D09 concreta identidad, dispositivo, operaciones, cursores, lotes y ventana de recuperación para el escritorio; no demuestra implementación. El objetivo local de avisos no sustituye un SLO de producción. No incluye historia clínica ni lógica de presentación del escritorio o del Hub.
+Pendientes de producto fuera de esta etapa: diseño de acceso y contratos del Hub bajo D11, despliegue/proveedor, cola, política de comunicaciones/espera, objetivos de producción, copias, restauración y RPO/RTO, verificación y corrección global de identidad. D09 concreta identidad, dispositivo, operaciones, cursores, lotes y ventana de recuperación para el escritorio; no demuestra implementación. El objetivo local de avisos no sustituye un SLO de producción. No incluye historia clínica ni lógica de presentación del escritorio o del Hub.
 
 ## Referencias
 
@@ -87,3 +108,9 @@ Pendientes de producto fuera de esta etapa: autorización del Hub, despliegue/pr
 - [OWASP REST Security](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html), [PostgreSQL 18: transacciones](https://www.postgresql.org/docs/18/tutorial-transactions.html), [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252.html) y [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html).
 
 Esta es la fuente de alcance de Nightingale API, trasladada por el usuario a este repositorio el 2026-10-21. La versión 0.2 alinea identidad y revocación con D06 y aclara la invalidación atómica de confirmación; no implementa funciones. La referencia en `nightingale-desktop-docs/specifications/` identifica esta fuente por repositorio y documento, sin depender de una ruta relativa entre proyectos. El usuario trasladará la documentación revisada al repositorio original del escritorio; esta entrega no realiza ese traslado.
+
+La revisión 0.5 del 2026-11-14 aplica D11 solo a documentación de API. La reunión futura en `patient-hub-docs/` con `Master-Plan.md` corresponde a otra sesión en el repositorio del escritorio.
+
+La revisión 0.6 del 2026-11-15 enlaza la especificación clínica y D12. La exclusión de historia clínica de la entrega del núcleo se conserva; el producto futuro tiene el alcance ampliado y los pendientes que detalla esa fuente. No modifica HTTP, esquema físico ni evidencia de implementación.
+
+La revisión 0.7 registra la aprobación del plan de etapa 1 clínica y la autorización limitada a T01–T03. No acepta C01, no habilita T04 y no acredita funciones clínicas implementadas.
