@@ -32,6 +32,10 @@ class ClinicalRecordsStructureTests(structure.AuthorizationStructureTests):
         "PatientClinicalSectionReviewDAO", "PatientClinicalSectionReviewHistoryDAO",
         "PatientAllergyIntoleranceDAO", "PatientAllergyIntoleranceHistoryDAO",
         "ClinicalEntryDAO", "ClinicalHistoryDAO", "PatientClinicalTimelineDAO",
+        "PatientNoteDAO", "PatientNoteHistoryDAO",
+        "PatientMeasurementDAO", "PatientMeasurementHistoryDAO",
+        "PatientImmunizationDAO", "PatientImmunizationHistoryDAO",
+        "PatientAntecedentDAO", "PatientAntecedentHistoryDAO",
     }
 
 

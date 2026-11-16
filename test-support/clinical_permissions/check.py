@@ -251,7 +251,7 @@ async def check_clinical_permissions(runtime, administrative, client, tokens):
             action, uuid7(), {}, actor=assistant, operation_id=result_id
         )
         assert result["status"] == "rejected"
-        assert result["error"]["code"] == "UNSUPPORTED_OPERATION"
+        assert result["error"]["code"] == "VALIDATION_ERROR"
         routine_results.append(result_id)
 
     combined = {
