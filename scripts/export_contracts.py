@@ -34,7 +34,7 @@ def source_metadata():
         digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + content + b"\0")
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
     return {"origin": "src.application:app and src/api/*/domain", "generator": "scripts/export_contracts.py",
-            "contractVersion": 1, "modelRevision": "api-v1.1", "sourceHead": head, "sourceSha256": digest.hexdigest(),
+            "contractVersion": 1, "modelRevision": "api-v1.2", "sourceHead": head, "sourceSha256": digest.hexdigest(),
             "packages": {name: version(name) for name in ("nightingale-api", "fastapi", "pydantic", "sqlalchemy", "asyncpg")}}
 
 
@@ -49,7 +49,7 @@ def documents():
     schema = app.openapi()
     schema["x-generated"] = metadata
     capabilities = get_capabilities().value
-    public_models = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:public-models:1.1",
+    public_models = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:public-models:1.2",
                      "title": "Public HTTP model definitions", "x-generated": metadata,
                      "$defs": local_refs(schema["components"]["schemas"])}
     payload_types = list(dict.fromkeys([OperationEnvelope, *OPERATION_SCHEMAS.values()]))
@@ -58,11 +58,11 @@ def documents():
     for action in capabilities.operation_catalog:
         payload = refs[(OPERATION_SCHEMAS[action], "validation")] if action in OPERATION_SCHEMAS else {"type": "object", "maxProperties": 0}
         variants.append({"type": "object", "properties": {"action": {"const": action}, "payload": payload}, "required": ["action", "payload"]})
-    operations = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:accepted-operations:1.1",
+    operations = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:accepted-operations:1.2",
                   "title": "Known operations with valid payloads; business rules still apply", "x-generated": metadata,
                   "$defs": combined["$defs"], "allOf": [refs[(OperationEnvelope, "validation")], {"oneOf": variants}]}
     sse = StreamEvent.model_json_schema(by_alias=True, mode="serialization")
-    sse.update({"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:sse:1.1", "x-generated": metadata})
+    sse.update({"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:sse:1.2", "x-generated": metadata})
     catalogue = {"x-generated": metadata, **capabilities.model_dump(mode="json", by_alias=True),
                  "payloadModels": {action: model.__module__ + "." + model.__name__ for action, model in sorted(OPERATION_SCHEMAS.items())},
                  "emptyPayloadActions": sorted(EMPTY_PAYLOAD_ACTIONS - {"AcceptInvitation"})}
@@ -86,8 +86,11 @@ def documents():
 def main():
     parser = argparse.ArgumentParser(description="Export public contracts or check their current sources")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--output", default="contracts/api-v1")
     args = parser.parse_args()
-    target = ROOT / "contracts/api-v1"
+    target = (ROOT / args.output).resolve()
+    if not target.is_relative_to(ROOT):
+        raise ValueError("El destino debe pertenecer al repositorio")
     (ROOT / ".tmp").mkdir(exist_ok=True)
     previous = Path.cwd()
     # Import with a valid, unreachable fixture URI and no local .env. This does
@@ -101,7 +104,7 @@ def main():
         finally:
             os.chdir(previous)
     encoded = {name: json_bytes(value) for name, value in result.items()}
-    manifest = {"generated": True, "origin": "scripts/export_contracts.py", "modelRevision": "api-v1.1",
+    manifest = {"generated": True, "origin": "scripts/export_contracts.py", "modelRevision": "api-v1.2",
                 "files": {name: hashlib.sha256(value).hexdigest() for name, value in encoded.items()},
                 "paths": len(result["openapi.json"]["paths"]), "schemas": len(result["openapi.json"]["components"]["schemas"])}
     encoded["manifest.json"] = json_bytes(manifest)
@@ -112,7 +115,8 @@ def main():
             assert (target / name).read_bytes() == value, "Stale generated contract: " + name
         else:
             (target / name).write_bytes(value)
-    print(f"Contracts {'checked' if args.check else 'generated'}: {manifest['paths']} paths, {manifest['schemas']} HTTP schemas, 42 batch actions.")
+    actions = len(result["capabilities.json"]["operationCatalog"])
+    print(f"Contracts {'checked' if args.check else 'generated'}: {manifest['paths']} paths, {manifest['schemas']} HTTP schemas, {actions} batch actions.")
 
 
 if __name__ == "__main__":
