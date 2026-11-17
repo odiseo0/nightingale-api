@@ -175,6 +175,62 @@ La tercera etapa incluye planes de cuidados, medicación declarada y prescripci�
 
 D08 conserva la fuente física y D10 la arquitectura. El diseño detallado se revisa en C01. Las políticas de copias, restauración, datos reales y producción no quedan resueltas; Etapa 1 conserva sus aceptaciones y límites.
 
+### D14 · Especificación separada de autorización RBAC/ABAC
+
+**Alcance acordado por el usuario el 2026-11-17.** Antes de planificar el desarrollo de los nuevos componentes, cada uno tendrá una especificación propia y detallada. El usuario eligió comenzar por autorización y confirmó que quiere estandarizar de forma deliberada los permisos actuales mediante roles y atributos, en vez de mantenerlos solo como una consecuencia del desarrollo.
+
+La fuente funcional aprobada es [authorization-rbac-abac.md](authorization-rbac-abac.md). Distingue comportamiento vigente, dirección acordada, propuestas de destino y pendientes. Conserva `owner`/`assistant`, la condición profesional como relación, los niveles clínicos por sección, la autoridad de API y la separación D10 entre `authorization` y `accounts`. No traslada permisos de negocio a Keycloak ni introduce un motor externo, roles nuevos, rutas, tablas o dependencias por esta decisión.
+
+La suscripción y sus asientos son condiciones comerciales separadas del permiso personal. El futuro paciente, el operador de Nightingale y los servicios tampoco heredan roles del personal. Sus concesiones concretas pertenecen a las especificaciones correspondientes.
+
+El usuario aprobó la especificación completa el 2026-11-17, incluidas sus propuestas de destino; los `AU-Oxx` permanecen abiertos para las decisiones que expresamente remiten a otros componentes. Esta entrega es documental y no forma un plan de desarrollo: no autoriza código o migraciones, no cambia C09 de Etapa 2 y no acredita implementación nueva. Las especificaciones de suscripciones, facturación y documentos se elaboran por separado.
+
+### D15 · Especificación de suscripciones con verificación manual
+
+**Alcance acordado por el usuario el 2026-11-17.** El siguiente componente especificado es `subscriptions`. La fuente funcional aprobada es [account-subscriptions.md](account-subscriptions.md), separada de autorización y de la futura facturación de pacientes.
+
+El ámbito inicial es Venezuela. Los planes se expresan en USD y se calcula su equivalente a tasa BCV del día; no se utiliza Stripe ni otra plataforma de Billing. El cliente paga fuera del sistema y presenta una captura con los últimos cuatro dígitos de referencia o datos manuales. Un operador de Nightingale revisa y aprueba/rechaza: reportar no activa ni extiende por sí solo. Las periodicidades acordadas son 30 días o un año.
+
+Los planes comerciales son médico independiente, consultorio pequeño y centro médico. Todos conceden las mismas capacidades sin límites comerciales salvo asientos; no se crea una matriz de entitlements por función. Plan, suscripción, pertenencia y dispositivo son conceptos distintos. El plan de centro médico no acredita gestión interna de clínicas ya implementada.
+
+La especificación conserva historia de precios/tasas/periodos, separa datos declarados y verificados, exige aprobación idempotente, protege capturas como documentos privados y coordina asientos concurrentes. Precios, límites, regla anual, fecha exacta de tasa BCV, gracia, suspensión y demás `SU-Oxx` permanecen pendientes; no se inventan valores por esta decisión.
+
+El usuario aprobó la especificación completa el 2026-11-17, incluidas sus propuestas de destino; los `SU-Oxx` permanecen abiertos para las decisiones expresamente pendientes. La entrega es documental: no autoriza código, migraciones, almacenamiento de archivos, operador, rutas o enforcement comercial y no acredita funciones implementadas.
+
+### D16 · Especificación de facturación administrativa de pacientes
+
+**Alcance acordado por el usuario el 2026-11-17.** El siguiente componente especificado es `billing`, con fuente funcional aprobada en [patient-billing.md](patient-billing.md). Registra precios de consultas, cargos, documentos y pagos aprobados, y entrega analítica financiera. No procesa ni mueve dinero, no integra una pasarela y no emite factura fiscal por esta decisión.
+
+El paciente realiza el pago fuera del sistema y presenta un reporte con captura. La asistente autorizada revisa, anota datos verificados y aprueba o rechaza. Un reporte pendiente no reduce saldo ni cuenta como cobrado; una aprobación crea un efecto administrativo único. Datos declarados/verificados, evidencia, cargo, pago y comprobante son conceptos separados.
+
+**Ampliación del acceso futuro del paciente:** D11 se amplía para que el enlace de una cita pueda autorizar también consultar un cargo relacionado, presentar el reporte, consultar su resultado y obtener un comprobante permitido. Sigue sin crear una cuenta general de paciente ni abrir rutas del personal o el micrositio público. El mecanismo, vigencia, revocación y proyecciones concretas permanecen pendientes en `BI-O09`; conocer identificadores no concede acceso.
+
+Los permisos financieros son independientes de los clínicos y de las suscripciones. El componente conserva instantáneas de precios, moneda exacta, historia, idempotencia, concurrencia de saldo y almacenamiento privado. Monedas/BCV para pacientes, permisos iniciales, pagos parciales/excedentes, archivos y demás `BI-Oxx` no se fijan por esta decisión.
+
+El usuario aprobó la especificación completa el 2026-11-17, incluidas sus propuestas de destino; los `BI-Oxx` permanecen abiertos para las decisiones expresamente pendientes. La entrega es documental: no autoriza código, migraciones, almacenamiento, rutas del Hub o analítica nueva y no acredita funciones implementadas.
+
+### D17 · Especificación de récipes y órdenes de diagnóstico
+
+**Alcance acordado por el usuario el 2026-11-17.** El siguiente componente especificado es `clinical_documents`, con fuente funcional aprobada en [clinical-documents.md](clinical-documents.md). Comprende récipes con copia para farmacia/paciente y órdenes de diagnóstico con motivo, exámenes e indicaciones, siguiendo el estilo de las imágenes aportadas.
+
+El médico emite el documento y firma a mano después de imprimir. No se añade firma digital, certificado, envío a farmacias/laboratorios, recomendación clínica o seguimiento de cumplimiento. API conserva datos, instantáneas, historia, sustitución/anulación y PDF privado. Emitir no acredita consumo, dispensación, realización de exámenes o firma física.
+
+El documento creado desde una cita queda vinculado automáticamente, sin copiar contenido a `appointment_histories` ni cambiar cita, atención o última visita. **D11/D16 se amplían** para que el enlace privado pueda autorizar lectura/descarga de documentos clínicos emitidos relacionados con la cita. No crea cuenta general de paciente, acceso a toda la historia ni publicación en el micrositio. Concesión, vigencia, revocación y herencia a sustitutos quedan en `CD-O10`.
+
+El QR se propone para verificación mínima de número/fecha/estado, separado del enlace privado y sin paciente, medicamentos, diagnóstico o exámenes. La emisión exige profesional activo y permiso específico; ser propietario o asistente no basta. Numeración, datos mínimos, permisos iniciales, emisión online/offline, plantilla, requisitos jurídicos y demás `CD-Oxx` permanecen pendientes.
+
+El usuario aprobó la especificación completa el 2026-11-17, incluidas sus propuestas de destino; los `CD-Oxx` permanecen abiertos para las decisiones expresamente pendientes. Con esta aprobación, las cuatro especificaciones nuevas son referencias funcionales aprobadas. La entrega es documental: no autoriza código, migraciones, PDF, almacenamiento, rutas del Hub o verificación pública y no acredita funciones implementadas.
+
+### D18 · Planes separados para implementar los cuatro componentes
+
+**Alcance acordado por el usuario el 2026-11-17.** El usuario pidió un plan de implementación dedicado a cada especificación aprobada, redactados en secuencia sin detenerse entre ellos para aprobar cada borrador. Se aplicó `planning-task-breakdown` y se conservó `docs-first-framework-code` para las futuras decisiones de bibliotecas/plataforma. No se delegó ni se implementó código.
+
+Los planes son [P-20261117-01-authorization-policies](../tasks/P-20261117-01-authorization-policies/plan.md), [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md), [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md) y [P-20261117-04-clinical-documents](../tasks/P-20261117-04-clinical-documents/plan.md). Contienen 103 tareas y 36 checkpoints en total, con propietarios, dependencias, datos/contratos/transacciones/consumidores, archivos previstos, comprobaciones y evidencia pendiente.
+
+El orden de ejecución es autorización → suscripciones → facturación → documentos clínicos. Autorización requiere antes el cierre aceptado de C09 de Etapa 2; cada plan posterior depende del checkpoint final aceptado del anterior. Las decisiones `SU-Oxx`, `BI-Oxx` y `CD-Oxx` se resuelven en tareas iniciales antes del trabajo dependiente, sin valores supuestos. Almacenamiento, comprobantes y PDF exigen fuentes oficiales/versiones antes de elegir herramientas.
+
+El usuario aprobó los cuatro planes el 2026-11-17. Quedan **Approved** y todas sus tareas Todo; ningún checkpoint está aceptado. La aprobación no habilita trabajo paralelo ni elimina las precondiciones y el orden de ejecución, y no cambia por sí sola el plan activo de Etapa 2. Solo el usuario acepta los checkpoints durante la ejecución.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |

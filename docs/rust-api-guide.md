@@ -57,11 +57,11 @@ Las listas GET corrientes también usan page/shows, pero no ofrecen una vista ú
 
 ## Datos clínicos opcionales
 
-La captura acepta `includeClinical=false` por defecto. Con `true`, incluye solo secciones legibles: perfil, condiciones y alergias/intolerancias, con sus revisiones. No incluye historias completas. `SnapshotResponse.clinicalSections` y el cursor conservan ese alcance. Condiciones y alergias no se limitan por la ventana de citas.
+La captura acepta `includeClinical=false` por defecto. Con `true`, incluye solo secciones legibles de las Etapas 1 y 2: perfil, condiciones, alergias/intolerancias y sus revisiones, atenciones, notas, mediciones, vacunas y antecedentes. Incluye el estado clínico elegido para evolución y todas las tomas válidas, pero no historias de versiones, timeline ni adjuntos. `SnapshotResponse.clinicalSections` y el cursor conservan ese alcance. Los hechos clínicos no se limitan por la ventana de citas.
 
-Cada sección tiene permisos `none`, `read` o `read_write`; el propietario configura asistentes online con `SetMemberClinicalPermissions`. Cambiar permisos incrementa la época y exige otra captura. No hay borrado remoto garantizado de copias ya descargadas. Resultados de escritura clínica exigen `read_write` vigente. Las historias se consultan aparte con conexión.
+Las ocho secciones tienen permisos `none`, `read` o `read_write`; el propietario configura asistentes online con `SetMemberClinicalPermissions`. Cambiar permisos incrementa la época y exige otra captura. No hay borrado remoto garantizado de copias ya descargadas. Resultados de escritura clínica exigen `read_write` vigente. Las historias se consultan aparte con conexión. Un consumidor sin modelos y proyectores clínicos debe conservar `includeClinical=false`.
 
-Los contratos clínicos incluyen `SetPatientSexAtBirth`, acciones de condiciones/alergias y revisión de sección. Fechas históricas: `YYYY`, `YYYY-MM` o `YYYY-MM-DD`, siempre opcionales y sin completar días ficticios. Perfil ausente devuelve versión 0 sin escribir. La edad se calcula desde nacimiento.
+Los contratos clínicos incluyen perfil, condiciones/alergias, atenciones, notas, mediciones, vacunas y antecedentes, con corrección y anulación por tipo. Fechas históricas: `YYYY`, `YYYY-MM` o `YYYY-MM-DD` donde el modelo las admita, sin completar días ficticios. Perfil ausente devuelve versión 0 sin escribir. La edad y última visita se calculan desde nacimiento y atenciones válidas. La [referencia portable completa](../contracts/api-v1/nightingale-api.md) detalla rutas, acciones, modelos y límites.
 
 ## SSE como aviso
 

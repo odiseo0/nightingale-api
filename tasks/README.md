@@ -1,5 +1,14 @@
 # Planes y tareas
 
+## Planes de componentes nuevos
+
+- [P-20261117-01-authorization-policies](P-20261117-01-authorization-policies/plan.md), **Approved**, con [lista de control](P-20261117-01-authorization-policies/todo.md). Normaliza la autorización aprobada sin ampliar permisos. No inicia hasta aceptar C09 de Etapa 2 y completar su plan; ninguna tarea o checkpoint está ejecutado/aceptado.
+- [P-20261117-02-account-subscriptions](P-20261117-02-account-subscriptions/plan.md), **Approved**, con [lista de control](P-20261117-02-account-subscriptions/todo.md). Implementa planes, asientos, USD/BCV, evidencias y verificación manual. Depende de C06 del plan de autorización; las decisiones `SU-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
+- [P-20261117-03-patient-billing](P-20261117-03-patient-billing/plan.md), **Approved**, con [lista de control](P-20261117-03-patient-billing/todo.md). Implementa precios, cargos, reportes del paciente, revisión, saldos, comprobantes y analítica. Depende de C10 de suscripciones; las decisiones `BI-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
+- [P-20261117-04-clinical-documents](P-20261117-04-clinical-documents/plan.md), **Approved**, con [lista de control](P-20261117-04-clinical-documents/todo.md). Implementa récipes/órdenes, emisión profesional, PDF, historia, paciente y QR como bloque acotado de Etapa 3. Depende de C10 de facturación; las decisiones `CD-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
+
+## Planes vigentes y antecedentes
+
 Plan de etapa 2 clínica: [P-20261116-02-clinical-routine](P-20261116-02-clinical-routine/plan.md), **In progress**, con [lista de control](P-20261116-02-clinical-routine/todo.md). T01–T27 están Done. C01–C08 fueron aceptados; C09 espera revisión del usuario. Etapa 2 publica `api-v1.3`; no se inicia Etapa 3. Los cierres anteriores se conservan sin atribuirles nuevas aceptaciones.
 
 El 2026-11-16 el usuario aprobó todas las revisiones pendientes de trabajo ya completado: C08 de P-20261116-01-clinical-review-refactor, C06 de P-20261115-02-patient-clinical-data, C11 de P-20261024-01-desktop-shared-api y C01 de los dos encargos documentales. Esos cinco planes quedan **Completed**. Esto no acepta por anticipado tareas o checkpoints futuros de etapa 2.
