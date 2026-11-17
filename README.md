@@ -27,6 +27,10 @@ El [contrato actual](docs/api-v1.md) sirve al escritorio y al personal autorizad
 | [Calidad y pruebas](docs/quality.md) | Requisitos verificables y pruebas futuras |
 | [Decisiones](docs/decisions.md) | Qué está confirmado, propuesto o pendiente |
 | [Diseño de acceso](docs/access-design.md) | Acceso actual del personal; lectura pública y acceso limitado a citas del futuro Hub |
+| [Autorización RBAC/ABAC](docs/authorization-rbac-abac.md) | Especificación aprobada para normalizar roles, atributos, relaciones, permisos y revocación; sin implementación autorizada |
+| [Suscripciones](docs/account-subscriptions.md) | Especificación aprobada de planes, asientos, USD/BCV, reportes de pago y verificación manual; sin implementación autorizada |
+| [Facturación de pacientes](docs/patient-billing.md) | Especificación aprobada de precios, cargos, capturas, revisión por asistentes, saldos y analítica; sin implementación autorizada |
+| [Récipes y órdenes de diagnóstico](docs/clinical-documents.md) | Especificación aprobada de emisión profesional, impresión, firma manuscrita, PDF, historia y acceso del paciente; sin implementación autorizada |
 | [Fuentes y revisión](docs/sources.md) | Referencias, diferencias y comprobaciones documentales |
 | [Plan sucesor aprobado](tasks/P-20261024-01-desktop-shared-api/plan.md) | Tareas, dependencias y checkpoints de API para escritorio |
 | [Revisión documental del Hub](tasks/P-20261114-01-patient-hub-docs/plan.md) | Alcance del encargo del 2026-11-14 y comprobaciones; sin implementar funciones |

@@ -34,7 +34,7 @@ def source_metadata():
         digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + content + b"\0")
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
     return {"origin": "src.application:app and src/api/*/domain", "generator": "scripts/export_contracts.py",
-            "contractVersion": 1, "modelRevision": "api-v1.2", "sourceHead": head, "sourceSha256": digest.hexdigest(),
+            "contractVersion": 1, "modelRevision": "api-v1.3", "sourceHead": head, "sourceSha256": digest.hexdigest(),
             "packages": {name: version(name) for name in ("nightingale-api", "fastapi", "pydantic", "sqlalchemy", "asyncpg")}}
 
 
@@ -49,7 +49,7 @@ def documents():
     schema = app.openapi()
     schema["x-generated"] = metadata
     capabilities = get_capabilities().value
-    public_models = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:public-models:1.2",
+    public_models = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:public-models:1.3",
                      "title": "Public HTTP model definitions", "x-generated": metadata,
                      "$defs": local_refs(schema["components"]["schemas"])}
     payload_types = list(dict.fromkeys([OperationEnvelope, *OPERATION_SCHEMAS.values()]))
@@ -58,11 +58,11 @@ def documents():
     for action in capabilities.operation_catalog:
         payload = refs[(OPERATION_SCHEMAS[action], "validation")] if action in OPERATION_SCHEMAS else {"type": "object", "maxProperties": 0}
         variants.append({"type": "object", "properties": {"action": {"const": action}, "payload": payload}, "required": ["action", "payload"]})
-    operations = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:accepted-operations:1.2",
+    operations = {"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:accepted-operations:1.3",
                   "title": "Known operations with valid payloads; business rules still apply", "x-generated": metadata,
                   "$defs": combined["$defs"], "allOf": [refs[(OperationEnvelope, "validation")], {"oneOf": variants}]}
     sse = StreamEvent.model_json_schema(by_alias=True, mode="serialization")
-    sse.update({"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:sse:1.2", "x-generated": metadata})
+    sse.update({"$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:nightingale:sse:1.3", "x-generated": metadata})
     catalogue = {"x-generated": metadata, **capabilities.model_dump(mode="json", by_alias=True),
                  "payloadModels": {action: model.__module__ + "." + model.__name__ for action, model in sorted(OPERATION_SCHEMAS.items())},
                  "emptyPayloadActions": sorted(EMPTY_PAYLOAD_ACTIONS - {"AcceptInvitation"})}
@@ -104,7 +104,7 @@ def main():
         finally:
             os.chdir(previous)
     encoded = {name: json_bytes(value) for name, value in result.items()}
-    manifest = {"generated": True, "origin": "scripts/export_contracts.py", "modelRevision": "api-v1.2",
+    manifest = {"generated": True, "origin": "scripts/export_contracts.py", "modelRevision": "api-v1.3",
                 "sourceHead": result["openapi.json"]["x-generated"]["sourceHead"],
                 "sourceSha256": result["openapi.json"]["x-generated"]["sourceSha256"],
                 "files": {name: hashlib.sha256(value).hexdigest() for name, value in encoded.items()},

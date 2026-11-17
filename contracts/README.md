@@ -16,6 +16,7 @@ Origen editable: esquemas Pydantic de `src/api/*/domain` y `src.application:app`
 ## Contenido
 
 - `api-v1/openapi.json`: rutas y modelos HTTP reales.
+- `api-v1/nightingale-api.md`: especificación portable y guía de consumo para el escritorio; documento fuente, no JSON generado.
 - `api-v1/public-models.schema.json`: definiciones y referencias locales.
 - `api-v1/accepted-operations.schema.json`: envoltura y payloads del catálogo actual.
 - `api-v1/sse.schema.json`: eventos SSE.
