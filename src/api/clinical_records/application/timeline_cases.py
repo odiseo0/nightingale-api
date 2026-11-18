@@ -50,3 +50,39 @@ async def project_entry(
     entry: PatientConditionResponse | PatientAllergyIntoleranceResponse,
 ) -> None:
     await dao_clinical_timeline.project_entry(db, account_id, entry)
+
+
+async def project_stage3_entry(
+    db,
+    account_id,
+    *,
+    patient_id,
+    entry_type: str,
+    entry_id,
+    source_section: str,
+    occurrence_date: str | None,
+    occurred_at,
+    date_precision: str,
+    accepted_at,
+    entity_version: int,
+    record_status: str,
+) -> None:
+    await dao_clinical_timeline.project_generic(
+        db,
+        account_id,
+        patient_id=patient_id,
+        entry_type=entry_type,
+        entry_id=entry_id,
+        source_section=source_section,
+        occurrence_date=occurrence_date,
+        occurred_at=occurred_at,
+        date_precision=date_precision,
+        accepted_at=accepted_at,
+        entity_version=entity_version,
+        record_status=record_status,
+    )
+
+def _date_precision(value: str | None) -> tuple[str | None, str]:
+    if value is None:
+        return None, "reference"
+    return value, {4: "year", 7: "month", 10: "day"}[len(value)]

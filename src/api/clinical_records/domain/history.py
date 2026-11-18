@@ -15,6 +15,10 @@ type ClinicalEntryType = Literal[
     "antecedent",
     "condition",
     "allergy_intolerance",
+    "declared_medication",
+    "care_plan",
+    "diagnostic_report",
+    "specialty_record",
 ]
 
 
