@@ -1,6 +1,6 @@
 # P-20261117-01-authorization-policies: normalización de autorización RBAC/ABAC
 
-**Estado:** Approved. **Creado:** 2026-11-17. **Actualizado:** 2026-11-17. **Lista de tareas:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-11-17. **Actualizado:** 2026-11-18. **Lista de tareas:** [todo.md](todo.md).
 
 ## 1. Contexto y resultado
 
@@ -58,74 +58,74 @@ No hay tareas paralelas. Los planes de suscripciones, facturación y documentos 
 
 ### Fase 1 · Caracterización y diseño ejecutable
 
-- [ ] **T01:** Caracterizar matriz de roles y acciones publicadas.
-- [ ] **T02:** Caracterizar secciones, resultados y audiencias clínicas.
-- [ ] **T03:** Fijar correspondencia del catálogo y compatibilidad en documentación vigente.
+- [x] **T01:** Caracterizar matriz de roles y acciones publicadas.
+- [x] **T02:** Caracterizar secciones, resultados y audiencias clínicas.
+- [x] **T03:** Fijar correspondencia del catálogo y compatibilidad en documentación vigente.
 
 #### C01 · Línea base de autorización
 
-- [ ] Pruebas de caracterización y suite completas pasan.
-- [ ] La correspondencia propuesta cubre todas las acciones/secciones sin cambiar comportamiento.
+- [x] Pruebas de caracterización y suite completas pasan.
+- [x] La correspondencia propuesta cubre todas las acciones/secciones sin cambiar comportamiento.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### Fase 2 · Catálogo y escrituras administrativas
 
-- [ ] **T04:** Introducir descriptores y evaluación pura de políticas.
-- [ ] **T05:** Derivar `AccessResponse.allowedActions` del catálogo.
-- [ ] **T06:** Autorizar acciones administrativas del lote mediante descriptores.
+- [x] **T04:** Introducir descriptores y evaluación pura de políticas.
+- [x] **T05:** Derivar `AccessResponse.allowedActions` del catálogo.
+- [x] **T06:** Autorizar acciones administrativas del lote mediante descriptores.
 
 #### C02 · Descubrimiento y ejecución administrativa unificados
 
-- [ ] Catálogo, acciones publicadas y rechazos administrativos coinciden.
-- [ ] Pruebas de estructura, acceso, cuentas y operaciones pasan.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Catálogo, acciones publicadas y rechazos administrativos coinciden.
+- [x] Pruebas de estructura, acceso, cuentas y operaciones pasan.
+- [x] El usuario aceptó C02 el 2026-11-17 y autorizó la fase 3 hasta C03.
 
 ### Fase 3 · Clínica y reglas por objeto
 
-- [ ] **T07:** Unificar sección/nivel de escrituras y resultados clínicos.
-- [ ] **T08:** Integrar reglas de catálogo profesional y bloqueos sin trasladar propiedad.
-- [ ] **T09:** Unificar lecturas y secciones legibles con el catálogo.
+- [x] **T07:** Unificar sección/nivel de escrituras y resultados clínicos.
+- [x] **T08:** Integrar reglas de catálogo profesional y bloqueos sin trasladar propiedad.
+- [x] **T09:** Unificar lecturas y secciones legibles con el catálogo.
 
 #### C03 · Autorización clínica y de objetos coherente
 
-- [ ] `none`/`read`/`read_write`, recibos y reglas por objeto conservan comportamiento.
-- [ ] Probes reales de permisos clínicos, servicios y acceso pasan.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] `none`/`read`/`read_write`, recibos y reglas por objeto conservan comportamiento.
+- [x] Probes reales de permisos clínicos, servicios y acceso pasan.
+- [x] C03 aceptado por el usuario el 2026-11-17; fase 4 autorizada hasta C04.
 
 ### Fase 4 · Sincronización y cambios de alcance
 
-- [ ] **T10:** Derivar audiencias de snapshot/delta del catálogo.
-- [ ] **T11:** Aplicar el mismo alcance a cursores, época y SSE.
-- [ ] **T12:** Conservar versiones y épocas al cambiar permisos/pertenencias.
+- [x] **T10:** Derivar audiencias de snapshot/delta del catálogo.
+- [x] **T11:** Aplicar el mismo alcance a cursores, época y SSE.
+- [x] **T12:** Conservar versiones y épocas al cambiar permisos/pertenencias.
 
 #### C04 · Alcance de sincronización unificado
 
-- [ ] Capturas, deltas, grupos invisibles y cierre de streams pasan.
-- [ ] Los cambios de permisos conservan atomicidad y recuperación.
+- [x] Capturas, deltas, grupos invisibles y cierre de streams pasan.
+- [x] Los cambios de permisos conservan atomicidad y recuperación.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### Fase 5 · Riesgo transaccional y compatibilidad
 
-- [ ] **T13:** Demostrar carreras de aceptación/revocación y cambio de sección en PostgreSQL.
-- [ ] **T14:** Ejecutar matriz HTTP de aislamiento, resultados y no divulgación.
-- [ ] **T15:** Comprobar compatibilidad de contratos y ejemplos generados.
+- [x] **T13:** Demostrar carreras de aceptación/revocación y cambio de sección en PostgreSQL.
+- [x] **T14:** Ejecutar matriz HTTP de aislamiento, resultados y no divulgación.
+- [x] **T15:** Comprobar compatibilidad de contratos y ejemplos generados.
 
 #### C05 · Seguridad y compatibilidad demostradas localmente
 
-- [ ] Carreras y matriz HTTP pasan en servicios Test aislados.
-- [ ] Contratos, ejemplos y build conservan compatibilidad.
+- [x] Carreras y matriz HTTP pasan en servicios Test aislados.
+- [x] Contratos, ejemplos y build conservan compatibilidad.
 - [ ] Revisión y aceptación expresa del usuario.
 
 ### Fase 6 · Documentación y cierre
 
-- [ ] **T16:** Actualizar arquitectura, acceso y explicación contractual.
-- [ ] **T17:** Ejecutar cierre integral y registrar evidencia/límites.
+- [x] **T16:** Actualizar arquitectura, acceso y explicación contractual.
+- [x] **T17:** Ejecutar cierre integral y registrar evidencia/límites.
 
 #### C06 · Normalización lista para revisión final
 
-- [ ] Suite, probes afectados, contratos y build pasan.
-- [ ] Documentación y diff no contienen afirmaciones de consumidores/producción.
-- [ ] Revisión y aceptación expresa del usuario; solo entonces pueden extenderlo otros planes.
+- [x] Suite, probes afectados, contratos y build pasan.
+- [x] Documentación y diff no contienen afirmaciones de consumidores/producción.
+- [x] El usuario aceptó C06 el 2026-11-18. El plan queda Completed.
 
 ## 7. Riesgos y mitigación
 
@@ -150,3 +150,9 @@ No hay tareas paralelas. Los planes de suscripciones, facturación y documentos 
 ## 9. Evidencia y cierre
 
 Cada tarea registra comandos y resultados reales en `todo.md`. La concurrencia e integridad se acreditan solo con PostgreSQL Test aislado. Las pruebas HTTP no acreditan Rust/Hub, datos reales, saturación, despliegue o producción. Ningún checkpoint se marca aceptado por el agente.
+
+Ampliación de alcance del 2026-11-17: el usuario autorizó corregir AU-32 y continuar hasta C02. El paso por C01 habilita T04–T06 sin registrar aceptación formal de C01. Solo C02 detiene ahora la ejecución para revisión.
+
+El 2026-11-17 el usuario autorizó continuar hasta el último checkpoint C06. Se pasa C04 y C05 para ejecutar T13–T17 sin atribuirles aceptación formal; se detiene en C06 para revisión final.
+
+El 2026-11-18 el usuario indicó que el contrato incorporará las rutas nuevas de la Etapa 3 cuando esa etapa se complete. La verificación de autorización continúa con los controles de seguridad y compatibilidad disponibles. La comparación integral entre el contrato publicado y el árbol compartido queda pendiente hasta esa actualización.

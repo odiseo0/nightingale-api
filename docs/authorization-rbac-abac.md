@@ -419,9 +419,9 @@ El recibo se consulta después de autenticar y autorizar la acción y su secció
 
 ### AU-32 · Recuperación de resultados
 
-`GET` de resultado exige el mismo actor, cuenta y permiso vigente exigidos por el contrato. Un dispositivo nuevo del mismo usuario puede recuperar solo si está autorizado. Para clínica, una escritura exige `read_write` vigente en la sección persistida en el recibo; `read` no basta.
+`GET` de resultado exige el mismo actor, la misma cuenta y una pertenencia vigente. Un dispositivo nuevo del mismo usuario puede recuperar el resultado si tiene acceso a esa cuenta. La cuenta debe estar activa, salvo para recuperar un resultado de `SetAccountStatus`. `SetMemberClinicalPermissions` exige que el actor siga siendo propietario. La API verifica también el alcance vigente de servicios, ofertas y bloqueos cuando corresponde a la acción registrada.
 
-Un recibo histórico sin alcance clínico inequívoco falla cerrado. No se intenta adivinar su sección a partir del contenido devuelto.
+Para recuperar una escritura clínica, el actor necesita `read_write` vigente en la sección registrada en el recibo. La API deniega la recuperación si un recibo de una acción clínica carece de sección y comprueba el permiso antes de consultar el resultado completo.
 
 ### AU-33 · Dependencias
 
