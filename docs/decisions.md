@@ -231,6 +231,18 @@ El orden de ejecución es autorización → suscripciones → facturación → d
 
 El usuario aprobó los cuatro planes el 2026-11-17. Quedan **Approved** y todas sus tareas Todo; ningún checkpoint está aceptado. La aprobación no habilita trabajo paralelo ni elimina las precondiciones y el orden de ejecución, y no cambia por sí sola el plan activo de Etapa 2. Solo el usuario acepta los checkpoints durante la ejecución.
 
+### D19 · Plan del resto de Etapa 3 sin prescripción
+
+**Alcance acordado por el usuario el 2026-11-17.** El usuario pidió dejar prescripción/récipes en su plan existente y planificar los demás bloques de Etapa 3, sin afectar el trabajo actual de Autorización. La nueva fuente de ejecución propuesta es [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), con [lista de tareas](../tasks/P-20261117-05-clinical-stage-3/todo.md).
+
+El plan cubre medicación declarada, tratamiento/planes de cuidados, informes/resultados, plantillas/primera especialidad y analítica histórica individual con referencias OMS. Contiene 36 tareas y 12 checkpoints. No modifica ni sustituye P-20261117-04 y no ejecuta prescripción, emisión, PDF, QR o acceso del paciente a esos documentos.
+
+La planificación usa las reglas de `planning-task-breakdown`; datasets, bibliotecas, almacenamiento y métodos OMS requieren fuentes oficiales/versiones según `docs-first-framework-code`. El usuario aprobó el plan el 2026-11-17: queda **Approved**, con todas las tareas Todo y ningún checkpoint aceptado. No se inicia mientras Autorización esté In progress y no se modifican sus tareas, archivos o estados. No hay trabajo paralelo ni cambios en Rust/Hub.
+
+**Inicio anticipado autorizado el 2026-11-17.** El usuario decidió expresamente comenzar la ejecución de P-20261117-05 ese mismo día, sin esperar el cierre Completed de Autorización (P-20261117-01), que sigue In progress. Esta autorización sustituye solo la precondición de espera de este plan: no modifica el plan de Autorización ni interrumpe su trabajo, no habilita ediciones paralelas sobre sus archivos y no acepta ningún checkpoint de Etapa 3 por adelantado. Las tareas de Etapa 3 que consuman el resultado final de Autorización esperan su cierre; el resto avanza por fases con revisión de checkpoints por el usuario.
+
+**Decisiones de producto cerradas para Etapa 3 el 2026-11-17 (T02/T03):** la primera especialidad es odontología con odontograma; los indicadores OMS iniciales son peso/edad, talla o longitud/edad, peso/talla o longitud e IMC/edad (patrones 2006 y referencia 2007); los permisos de los nuevos bloques reusan las secciones `none/read/read_write` por pertenencia de Etapas 1/2; los adjuntos privados usan almacenamiento de objetos S3 con adaptador mínimo sin instalar dependencias. El detalle figura en [§4.3.1 de la especificación clínica](patient-clinical-record.md) y cierra O09–O13 para el alcance de este plan.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |

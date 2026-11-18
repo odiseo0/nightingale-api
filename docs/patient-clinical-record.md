@@ -1,7 +1,7 @@
 # Registro clínico y seguimiento del paciente
 
-**Versión:** 0.4. **Fecha:** 2026-11-16.
-**Estado:** especificación funcional vigente. Etapas 1 y 2 están implementadas para revisión C09, con atenciones, notas, mediciones, vacunas, antecedentes, permisos, timeline, historial y descarga comprobados hasta C08. C09 espera revisión del usuario.
+**Versión:** 0.5. **Fecha:** 2026-11-17.
+**Estado:** especificación funcional vigente. Etapas 1 y 2 implementadas y aceptadas (C09 aceptado el 2026-11-17). Etapa 3 en ejecución ([P-20261117-05](../tasks/P-20261117-05-clinical-stage-3/plan.md)); O09–O13 cerrados para su alcance en §4.3.1 el 2026-11-17.
 **Decisión de alcance:** [D12](decisions.md#d12--registro-clínico-y-seguimiento-del-paciente).
 **Entrega documental:** [P-20261115-01-clinical-spec](../tasks/P-20261115-01-clinical-spec/plan.md), con [evidencia](../tasks/P-20261115-01-clinical-spec/todo.md).
 
@@ -138,6 +138,31 @@ Base A11–A14. Incluye los siguientes bloques funcionales, cuyo orden interno d
 | Analítica histórica individual | Consultar tendencias y comparar crecimiento pediátrico con referencias OMS aplicables |
 
 La tercera etapa no debe convertirse en una única tarea ni en un requisito de terminar todos los bloques a la vez. Cada bloque tendrá un plan revisable. Un bloque puede depender de otro: el seguimiento de una meta medible usa mediciones; la analítica pediátrica exige datos aptos; la prescripción necesita sus permisos y datos propios.
+
+#### 4.3.1 Concreciones cerradas para la etapa 3 (2026-11-17, T02/T03 de P-20261117-05)
+
+Estas reglas cierran O09–O13 solo para el alcance de este plan; la prescripción/récipes conserva sus propias decisiones en P-20261117-04. No acreditan implementación.
+
+| Decisión | Regla aprobada |
+|---|---|
+| O09 · Medicación declarada | Nombre de medicamento en texto libre, sin catálogo. Fuente del dato obligatoria (`patient`,`caregiver`,`other_professional`,`document`). Periodo conocido admite fechas parciales (`YYYY`,`YYYY-MM`,`YYYY-MM-DD`) conservando precisión. Dosis, frecuencia y prescriptor son opcionales; cuando no se conocen se guardan como desconocidos, nunca inventados. Revisión profesional marca el registro como revisado conservando su fuente original. Corrección con versiones e historia. Sin relación obligatoria con receta y sin inferir consumo, adherencia ni interacciones. |
+| O10 · Planes de cuidados | El plan organiza el cuidado: finalidad, problemas relacionados opcionales (plan preventivo permitido), periodo, estado y revisiones. En esta entrega el tratamiento se representa como indicaciones del plan, sin una segunda lista paralela; T04 confirmará el diseño físico. Objetivos narrativos o medibles (referencia inicial, resultado esperado, unidad, plazo y mediciones relacionadas cuando existan). Acciones con responsable y periodo. Cumplir una acción no evalúa el objetivo: cada objetivo se evalúa por separado en una revisión. Estados `active`,`suspended`,`closed`,`cancelled`; sustituir una indicación conserva la anterior. |
+| O12 · Informes y adjuntos | Informe con fuente, fechas de muestra/emisión/carga, estado `preliminary`/`final` y corrección que conserva el original y sus resultados. Resultados tipados: numérico con unidad obligatoria o texto; intervalo de referencia solo del informe o fuente identificada. Adjuntos en almacenamiento de objetos S3 privado: metadatos y huella en PostgreSQL, bytes fuera de DB/journal, descarga reautorizada, sin URL pública. Sin extracción automática ni integración con laboratorios. |
+| O13 · Especialidad y plantillas | Primera especialidad: odontología con odontograma; su diccionario (pieza/superficie/hallazgos/actuaciones/evolución) se define en T22 sin detalles supuestos. Plantillas versionadas con campos tipados, definidas por el propietario; sin editor libre ni almacén JSON clínico genérico. |
+| O11 · Indicadores OMS iniciales | Peso/edad, talla o longitud/edad, peso/talla o longitud e IMC/edad. Patrones OMS 2006 (0–60 meses) y referencia 2007 (61–228 meses; peso/edad solo 5–10 años). Métodos, versiones, licencias y fixtures se verifican en T28 con fuentes oficiales; sin avisos ni diagnóstico automático. |
+| Permisos | Secciones nuevas reusan los niveles por pertenencia `none`,`read`,`read_write` de Etapas 1/2: medicación declarada, planes de cuidados, informes/resultados, plantillas/especialidad y analítica clínica. Propietario conserva acceso completo; asistentes empiezan con `read_write`. La matriz futura de Autorización sustituirá este mecanismo cuando esté Completed, sin cambiar el contrato de Etapa 3 por deducción. |
+| Adjuntos (almacenamiento) | S3 privado con adaptador mínimo sobre `httpx` y firma SigV4 de biblioteca estándar, sin instalar dependencias nuevas. La verificación de la API S3 con fuentes oficiales ocurre en T18 antes del adaptador. |
+| Offline y recuperación | Mismas reglas de captura, delta, época y revocación de Etapas 1/2. La retención técnica de cambios/resultados de 90 días no borra historia funcional ni adjuntos. |
+
+#### 4.3.2 Diccionario del odontograma (T22, 2026-11-18)
+
+Decisiones del usuario para la primera especialidad: numeración **FDI (ISO 3950)**, hallazgos con **lista cerrada inicial + nota libre**, actuaciones **vinculadas al hallazgo**.
+
+- **Pieza (FDI):** código de dos dígitos; cuadrantes 1–4 permanentes (dientes 1–8) y 5–8 temporales (dientes 1–5). El CHECK SQL valida el rango; no hay catálogo externo.
+- **Superficie:** conjunto cerrado `vestibular`,`palatina`,`lingual`,`mesial`,`distal`,`oclusal`,`incisal`,`cervical` o nulo (pieza completa).
+- **Hallazgo:** conjunto cerrado `healthy`,`caries`,`missing`,`filling`,`crown`,`fracture`,`other` con nota libre opcional. Un hallazgo vigente por pieza/superficie y tipo; resolver conserva historia.
+- **Actuación:** conjunto cerrado `cleaning`,`filling`,`crown`,`extraction`,`other` con estados `planned`/`performed`, fecha y nota; vinculada a su hallazgo. Ningún estado clínico se deriva solo del hallazgo.
+- **Evolución:** hallazgos y actuaciones versionan por cuenta/paciente con historias inmutables; la plantilla de especialidad (`specialty_templates`) ordena la captura narrativa del resto de la consulta sin rellenar hechos.
 
 ## 5. Modelo conceptual y encaje con el proyecto
 
@@ -504,11 +529,11 @@ Los identificadores Oxx siguientes pertenecen solo a esta especificación. Al ci
 | O06 | **Resuelto para etapas 1 y 2:** versiones, correcciones, anulación terminal, motivos opcionales e historial aparte; atenciones/notas editables sin cierre y nueva toma distinta de corrección | Revisión del diseño en C01 |
 | O07 | **Resuelto para etapa 2:** cinco mediciones con unidades fijas y límites de captura definidos en las fuentes técnicas. Talla, peso/talla, IMC y curvas quedan para etapa 3 | Revisión del diseño en C01 |
 | O08 | **Resuelto para etapa 2:** detalles opcionales de vacunas y antecedentes narrativos `personal`,`family`,`other` sin efectos automáticos | Revisión del diseño en C01 |
-| O09 | Catálogo farmacológico, datos/ciclo de receta, permisos de emisión y requisitos del ámbito de uso | Prescripción y medicación de etapa 3 |
-| O10 | Objetivos, acciones, estados/revisiones y relación entre tratamiento, plan y otras indicaciones | Planes de cuidados |
-| O11 | Indicadores OMS iniciales, métodos y versiones, precisión, rangos, límites, prematuridad, pruebas numéricas y avisos si se desean | Analítica de etapa 3 |
-| O12 | Entrada de informes/resultados, correcciones, adjuntos, límites y posible integración externa | Laboratorio |
-| O13 | Primeras especialidades, plantillas definidas o configurables y alcance del ejemplo odontológico | Plantillas y módulos por especialidad |
+| O09 | **Resuelto para medicación declarada (etapa 3, 2026-11-17):** texto libre, fuente obligatoria, periodo con precisión, revisión y corrección con historia; sin inferencia de consumo. El catálogo y el ciclo de prescripción permanecen en P-20261117-04 | Prescripción y medicación de etapa 3 |
+| O10 | **Resuelto para etapa 3 (2026-11-17):** plan como organizador, indicaciones sin lista paralela, objetivos narrativos/medibles, evaluación separada del cumplimiento, estados y sustitución con historia | Planes de cuidados |
+| O11 | **Resuelto para etapa 3 (2026-11-17):** indicadores iniciales peso/edad, talla o longitud/edad, peso/talla o longitud e IMC/edad con patrones 2006 y referencia 2007; métodos/versiones se verifican en T28 | Analítica de etapa 3 |
+| O12 | **Resuelto para etapa 3 (2026-11-17):** informe original/resultados tipados/preliminar-final/corrección, adjuntos S3 privados con metadatos en PostgreSQL, sin extracción ni integración externa | Laboratorio |
+| O13 | **Resuelto para etapa 3 (2026-11-17):** primera especialidad odontología con odontograma; plantillas versionadas de propietario con campos tipados, sin editor libre | Plantillas y módulos por especialidad |
 | O14 | **Resuelto para etapas 1 y 2:** permisos por asistente/sección, lectura/escritura inicial, configuración por propietario y aplicación a resultados, descargas, dispositivos e historial por fuente | Revisión del diseño en C01 |
 | O15 | **Resuelto para etapas 1 y 2:** descarga opcional de hechos vigentes/válidos, todas las tomas para evolución, historial aparte y conservación funcional. Copias, recuperación, datos reales y operación conservan su política pendiente | Revisión del diseño en C01 y antes de operación con datos reales |
 
@@ -577,5 +602,6 @@ Los acuerdos de §3 concretan la ampliación futura. Las propuestas y pendientes
 | 0.2 | 2026-11-15 | Aprobación del plan de etapa 1 y concreción de O01, O04–O06, O14 y la parte funcional de O15; pendientes de otras etapas y operación conservados |
 | 0.3 | 2026-11-16 | Corrección de alcance de resultados, estados, historial, descarga, auditoría e integridad; C01–C06 del sucesor aceptados, C07 pendiente |
 | 0.4 | 2026-11-16 | Decisiones O02/O03/O06/O07/O08/O14/O15 para etapa 2; diseño pendiente de C01, sin implementación |
+| 0.5 | 2026-11-17 | Cierre de O09–O13 para el alcance de Etapa 3 sin prescripción (§4.3.1); C09 de Etapa 2 aceptado; inicio anticipado de P-20261117-05 autorizado por el usuario |
 
 La comprobación de esta entrega vive en [la lista documental](../tasks/P-20261115-01-clinical-spec/todo.md). Escribir y revisar el documento no prueba la API, el escritorio, PostgreSQL, exactitud clínica, métodos de crecimiento ni producción. La aceptación de la especificación y los futuros planes corresponde al usuario.

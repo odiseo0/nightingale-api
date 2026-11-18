@@ -124,9 +124,9 @@ Los casos de alcance ajeno, revocación, versión antigua y respuesta perdida si
 
 En aquel cierre T04 seguía en curso: OIDC y permisos vigentes estaban confirmados, O01/O02 abiertos y aún no había pruebas de seguridad ejecutadas. Es un registro histórico; el contrato del personal y su evidencia actual se consultan arriba y en el plan de escritorio. D11 sustituye las condiciones ligadas al segundo servidor del Hub. [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) respalda comprobar cada solicitud y denegar por defecto; no sustituye estas decisiones.
 
-## Permisos clínicos de etapa 2 · diseño para C01
+## Permisos clínicos de etapa 2 · contrato implementado
 
-Diseño de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md), pendiente de C01 y sin implementación. Conserva las reglas vigentes de identidad, dispositivo y autorización por objeto.
+Diseño de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routine/plan.md), Completed, con C01–C09 aceptados. Conserva las reglas vigentes de identidad, dispositivo y autorización por objeto.
 
 `ClinicalSection` y `ClinicalPermissions` añaden `encounters`,`notes`,`measurements`,`immunizations`,`antecedents`; `account_memberships` conserva un nivel independiente para cada una. Propietario conserva acceso completo; asistentes existentes/nuevos empiezan con `read_write` y solo propietario reduce niveles online. `SetMemberClinicalPermissions` acepta las ocho secciones; un cliente anterior que omita las nuevas conserva su default `read_write`.
 
@@ -139,3 +139,70 @@ Cada recibo conserva su `clinical_section`; autorización precede a duplicados, 
 `last-visit` exige lectura de `encounters`. `clinical-history` no usa permiso global: filtra `source_section` antes de contar/paginar y cada detalle vuelve a autorizar su fuente. La captura con `includeClinical=true` solo incluye secciones legibles; los hechos nuevos no heredan permiso de citas, perfil u otra sección. Grupos invisibles permiten avanzar sin cuerpos.
 
 Escrituras y lecturas clínicas conservan auditoría sin motivos, texto, valores, nombres, filtros, cuerpos o cursores. Si la evidencia falla, no se entregan datos. Revocar permisos no promete borrar copias ya descargadas.
+
+## Correspondencia para normalizar autorización · T03 · 2026-11-17
+
+Fuente única de la correspondencia de P-20261117-01-authorization-policies. **Estado implementado para C06:** T04–T06 implementan OperationPolicy/operation_policies, published_actions en get_access y owner_only en la guarda administrativa. T07–T09 obtienen del catálogo sección/nivel clínicos, secciones legibles y referencias de reglas de objeto. Services/schedule conservan consultas, propiedad y proyecciones. Los descriptores distinguen own_professional (perfil), own_catalog, own_offer y block; la coordinación y la lectura de resultados usan esas referencias sin cambiar sus bloqueos. T01/T02 conservan la caracterización. T10–T12 usan projection_audiences/projection_allowed para captura y delta, sync_scope_matches para captura/cursor/SSE y changes_scope para invalidación atómica. No es otro contrato HTTP.
+
+La fuente ejecutable única es `src/api/accounts/domain/policies.py`; esta tabla explica su correspondencia. Cada nombre de la tabla tiene un descriptor: rol base miembro/propietario, sección y nivel cuando aplique, referencia de regla de objeto y posiciones de publicación. Todas las operaciones privadas mantienen identidad y contexto vigentes. Las reglas del objeto permanecen en su componente; un descriptor no ejecuta SQL ni concede acceso por conocer un ID.
+
+| Acciones exactas | Rol base y nivel | Regla de objeto |
+|---|---|---|
+| RegisterAccountDevice | miembro; excepción sin registro previo, cuenta activa | instalación autenticada propia; no autorrestauración |
+| RegisterPatient, UpdatePatientProfile, SetPatientProfileStatus, SetPatientCompletion, AddPatientIdentifier | miembro | ficha/identificador de la cuenta; patients conserva relaciones y reglas |
+| CreateContactPerson, UpdateContactPerson, SetContactPersonStatus, CreatePatientContactRelationship, UpdatePatientContactRelationship, SetPatientContactRelationshipStatus | miembro | contacto y ficha de la misma cuenta |
+| CreateScheduleRule, UpdateScheduleRule, SetScheduleRuleStatus, CreateScheduleException, UpdateScheduleException, SetScheduleExceptionStatus | miembro | profesional vinculado a cuenta; schedule conserva disponibilidad |
+| CreateScheduleBlock, UpdateScheduleBlock, SetScheduleBlockStatus | miembro | schedule comprueba bloqueo global del profesional propio |
+| CreateAppointment, ConfirmAppointment, RescheduleAppointment, CancelAppointment, CompleteAppointment, MarkAppointmentNoShow | miembro | ficha, profesional, servicio y reserva del ámbito; appointments conserva transiciones |
+| SetPatientSexAtBirth | miembro; profile/read_write | ficha clínica de cuenta |
+| CreatePatientCondition, UpdatePatientCondition, InvalidatePatientCondition | miembro; conditions/read_write | registro/ficha de cuenta |
+| SetPatientClinicalSectionReview | miembro; sección validada conditions o allergies, read_write | revisión de ficha; nunca deducir sección desde resultado |
+| CreatePatientAllergyIntolerance, UpdatePatientAllergyIntolerance, InvalidatePatientAllergyIntolerance | miembro; allergies/read_write | registro/ficha de cuenta |
+| CreatePatientEncounter, UpdatePatientEncounter, InvalidatePatientEncounter | miembro; encounters/read_write | atención, ficha, cita opcional y participantes del ámbito |
+| CreatePatientNote, UpdatePatientNote, InvalidatePatientNote | miembro; notes/read_write | nota/ficha y atención opcional del ámbito |
+| RecordPatientMeasurement, CorrectPatientMeasurement, InvalidatePatientMeasurement | miembro; measurements/read_write | toma/ficha y atención opcional del ámbito |
+| RecordPatientImmunization, UpdatePatientImmunization, InvalidatePatientImmunization | miembro; immunizations/read_write | vacuna/ficha; administered_here exige atención válida |
+| CreatePatientAntecedent, UpdatePatientAntecedent, InvalidatePatientAntecedent | miembro; antecedents/read_write | antecedente/ficha y atención opcional del ámbito |
+| DeclarePatientMedication, UpdatePatientDeclaredMedication, ReviewPatientDeclaredMedication, InvalidatePatientDeclaredMedication | miembro; declared_medications/read_write | medicación declarada/ficha y atención opcional del ámbito; extensión concurrente D19 |
+| CreateInvitation, RevokeInvitation, SetMembershipStatus, SetMemberClinicalPermissions | propietario | destinatario/pertenencia de la cuenta; no configurar propietario |
+| UpdateAccountDetails, UpdateAccountPolicy, SetAccountStatus | propietario | cuenta; solo SetAccountStatus admite reactivación con instalación activa |
+| RevokeAccountDevice, RestoreAccountDevice | propietario | instalación en cuenta; no revivir credenciales globales |
+| UpdateProfessionalProfile | propietario | perfil profesional propio |
+| CreateService, UpdateService, SetServiceStatus, OfferService, UpdateServiceOffer, SetServiceOfferStatus | propietario | services comprueba profesional propio; oferta limitada a cuenta |
+| AcceptInvitation (ruta propia, fuera del catálogo publicado) | destinatario autenticado | invitación pendiente/vigente; accounts conserva aceptación y excepciones |
+
+### Compatibilidad de descubrimiento y ejecución
+
+- Con cuenta activa e instalación pendiente se publica solo RegisterAccountDevice. Revocada no publica acciones. Con instalación activa se publica registro, acciones comunes, clínica escribible y administración del propietario, en ese orden.
+- El orden dentro de cada grupo es el de la tabla y sus nombres. Clínica sigue profile, conditions, allergies, encounters, notes, measurements, immunizations, antecedents. SetPatientClinicalSectionReview aparece tras las tres acciones de condiciones y tras las tres de alergias cuando cada sección permite escritura: se conservan ambas posiciones, sin deduplicar.
+- Asistente en cuenta inactiva recibe denegación. Propietario con dispositivo de cuenta activo solo publica SetAccountStatus; con dispositivo pendiente/revocado no publica acciones. Publicar registro con instalación ya activa no promete que volver a registrarla aplique un efecto.
+- allowedActions no prueba alcance del objeto. Descriptores desconocidos se deniegan en la evaluación pura; el transporte de acciones desconocidas conserva su rechazo UNSUPPORTED_OPERATION y su recibo según api-v1, sin convertirlo en permiso de negocio.
+- Lectura clínica exige read o read_write; ejecución, duplicado y GET de escritura exigen read_write vigente. Owner no omite ámbito, relaciones, versiones ni estados.
+- AU-32: la caracterización detectó GET 200 para una revisión histórica con clinical_section nula. El usuario autorizó corregirlo el 2026-11-17: GET ahora deniega antes de leer el resultado para cualquier acción clínica conocida sin sección. El reintento ya denegaba. Es una corrección autorizada de esta línea base; no se adivina la sección ni se migra el recibo.
+
+### Entidades y audiencias implementadas
+
+| Entidades exactas | Audiencia | Sección |
+|---|---|---|
+| account, professional, patient_profile, patient_identifier, contact_person, patient_contact, service_offer, schedule_rule, schedule_exception, schedule_block, appointment, appointment_history | members | ninguna; proyecciones limitadas por cuenta/objeto y ventana cuando aplica |
+| account_device, membership, invitation, service | owner | ninguna; captura de propietario y filtro de delta |
+| patient_clinical_profile | clinical_profile | profile |
+| patient_condition | clinical_conditions | conditions |
+| patient_allergy_intolerance | clinical_allergies | allergies |
+| patient_clinical_section_review | clinical_conditions o clinical_allergies según sección validada | conditions o allergies |
+| clinical_encounter | clinical_encounters | encounters |
+| patient_note | clinical_notes | notes |
+| patient_measurement | clinical_measurements | measurements |
+| patient_immunization | clinical_immunizations | immunizations |
+| patient_antecedent | clinical_antecedents | antecedents |
+| declared_medication | clinical_declared_medications | declared_medications |
+
+La tabla cubre las 26 proyecciones actuales: 25 de la línea base y una añadida por el desarrollo concurrente de Etapa 3 (D19). El journal no incluye historias clínicas ni timeline adicional; appointment_history es la proyección derivada autorizada de citas. Una captura no incluye clínica sin opt-in y materializa solo secciones legibles. Los filtros preceden al total; grupos invisibles avanzan sin cuerpo. Audiencia general del cursor owner/members y secciones clínicas son controles distintos. Cambiar época invalida alcance y cierra SSE anterior. La evaluación clínica, las secciones legibles y entidad→audiencia usan el catálogo. Una misma regla decide las proyecciones de captura/delta antes de contar o entregar; rol, sección y época se comparan también al reautorizar SSE. La propiedad y las consultas siguen en cada componente.
+
+## Permisos clínicos de etapa 3 · decisión T03 (2026-11-17)
+
+Decisión de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), pendiente de diseño e implementación en T04–T09. No altera las secciones vigentes ni el trabajo en curso de Autorización.
+
+Los bloques nuevos añaden secciones independientes por pertenencia con los mismos niveles `none`,`read`,`read_write`: medicación declarada (`declared_medications`), tratamiento y planes de cuidados (`care_plans`), informes y resultados (`diagnostic_reports`), plantillas y especialidad (`specialty_templates`) y analítica clínica (`clinical_analytics`). Propietario conserva acceso completo; asistentes existentes y nuevos empiezan con `read_write` y solo el propietario reduce niveles online, con la misma semántica de Etapas 1/2: `none` excluye lecturas, historias, totales, resultados, adjuntos, capturas y derivados; `read` permite consultas; `read_write` permite acciones y recuperación de resultados. Los adjuntos exigen además autorización vigente en `diagnostic_reports` antes de cada descarga. Cuando Autorización (P-20261117-01) esté Completed, su matriz de políticas sustituirá esta configuración sin cambiar el contrato de Etapa 3 por deducción.
+
+Compatibilidad autorizada el 2026-11-17: la huella de SetMemberClinicalPermissions omite solo declaredMedications=read_write al normalizar el payload validado. Así, solicitudes antiguas de ocho secciones y el nuevo valor por defecto recuperan el mismo recibo; read y none producen huellas distintas. Validación, ejecución y respuestas conservan las nueve secciones actuales. No se modifican recibos almacenados. Las cuatro acciones de medicación se publican tras antecedentes; el resto del orden permanece igual.

@@ -69,6 +69,9 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 | GET | `A/patients/{patient_id}/encounters/{encounter_id}` | atenciones `read`/`read_write` | PatientEncounterResponse | solo esa cuenta/ficha |
 | GET | `A/patients/{patient_id}/encounters/{encounter_id}/history` | atenciones `read`/`read_write` | PaginatedResponse<PatientEncounterHistoryResponse> | versión ascendente, afterVersion |
 | GET | `A/patients/{patient_id}/last-visit` | atenciones `read`/`read_write` | LastVisitResponse | última atención válida de cuenta/paciente |
+| GET | `A/patients/{patient_id}/declared-medications` | medicación declarada `read`/`read_write` | PaginatedResponse<DeclaredMedicationResponse> | recordStatus, reviewStatus, sourceType; cuenta/ficha autorizadas |
+| GET | `A/patients/{patient_id}/declared-medications/{medication_id}` | medicación declarada `read`/`read_write` | DeclaredMedicationResponse | solo esa cuenta/ficha |
+| GET | `A/patients/{patient_id}/declared-medications/{medication_id}/history` | medicación declarada `read`/`read_write` | PaginatedResponse<DeclaredMedicationHistoryResponse> | afterVersion, versión ascendente |
 | GET | `A/patients/{patient_id}/notes` | notas `read`/`read_write` | PaginatedResponse<PatientNoteResponse> | recordStatus/encounterId; orden createdAt,id |
 | GET | `A/patients/{patient_id}/notes/{note_id}` | notas `read`/`read_write` | PatientNoteResponse | solo esa cuenta/ficha |
 | GET | `A/patients/{patient_id}/notes/{note_id}/history` | notas `read`/`read_write` | PaginatedResponse<PatientNoteHistoryResponse> | versión ascendente, afterVersion |
@@ -121,6 +124,42 @@ A equivale exactamente a /v1/accounts/{account_id}. Parámetros de ruta y filtro
 
 GET /openapi.json, GET /docs y GET /redoc se habilitan solo en desarrollo/prueba. Producción no registra esas rutas. La ruta de bienvenida se conserva fuera del contrato público generado, sin acciones de negocio.
 
+| GET | `A/patients/{patient_id}/declared-medications` | medicación declarada read | PaginatedResponse<DeclaredMedicationResponse> | filtros reviewStatus, sourceType, recordStatus; orden (createdAt,id) |
+| GET | `A/patients/{patient_id}/declared-medications/{medication_id}` | medicación declarada read | DeclaredMedicationResponse | detalle; objeto ajeno = ausencia |
+| GET | `A/patients/{patient_id}/declared-medications/{medication_id}/history` | medicación declarada read | PaginatedResponse<DeclaredMedicationHistoryResponse> | versiones con acción/actor/operación |
+| GET | `A/patients/{patient_id}/care-plans` | planes read | PaginatedResponse<CarePlanResponse> | filtros planStatus, recordStatus |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}` | planes read | CarePlanResponse | detalle del plan |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/history` | planes read | PaginatedResponse<CarePlanHistoryResponse> | historia del plan |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/goals` | planes read | PaginatedResponse<CarePlanGoalResponse> | objetivos del plan |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/goals/{goal_id}` | planes read | CarePlanGoalResponse | detalle del objetivo |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/goals/{goal_id}/history` | planes read | PaginatedResponse<CarePlanGoalHistoryResponse> | historia del objetivo |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/actions` | planes read | PaginatedResponse<CarePlanActionResponse> | acciones del plan |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/actions/{action_id}` | planes read | CarePlanActionResponse | detalle de la acción |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/actions/{action_id}/history` | planes read | PaginatedResponse<CarePlanActionHistoryResponse> | historia de la acción |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/reviews` | planes read | PaginatedResponse<CarePlanReviewResponse> | revisiones del plan |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/reviews/{review_id}` | planes read | CarePlanReviewResponse | detalle de la revisión |
+| GET | `A/patients/{patient_id}/care-plans/{plan_id}/reviews/{review_id}/history` | planes read | PaginatedResponse<CarePlanReviewHistoryResponse> | historia de la revisión |
+| GET | `A/patients/{patient_id}/diagnostic-reports` | informes read | PaginatedResponse<DiagnosticReportResponse> | filtros reportKind, reportStatus, recordStatus, rango sampleDate |
+| GET | `A/patients/{patient_id}/diagnostic-reports/{report_id}` | informes read | DiagnosticReportResponse | detalle del informe |
+| GET | `A/patients/{patient_id}/diagnostic-reports/{report_id}/history` | informes read | PaginatedResponse<DiagnosticReportHistoryResponse> | historia del informe |
+| GET | `A/patients/{patient_id}/diagnostic-reports/{report_id}/results` | informes read | PaginatedResponse<DiagnosticReportResultResponse> | resultados vigentes |
+| GET | `A/patients/{patient_id}/report-attachments/{attachment_id}` | informes read | ReportAttachmentResponse | metadatos sin URL ni storageKey |
+| GET | `A/patients/{patient_id}/report-attachments/{attachment_id}/content` | informes read | bytes | descarga reautorizada; bytes fuera de sync |
+| GET | `A/specialty-templates` | especialidad read | PaginatedResponse<SpecialtyTemplateResponse> | plantillas de la cuenta |
+| GET | `A/specialty-templates/{template_id}` | especialidad read | SpecialtyTemplateResponse | plantilla con campos de su versión |
+| GET | `A/specialty-templates/{template_id}/history` | especialidad read | PaginatedResponse<SpecialtyTemplateHistoryResponse> | versiones de la plantilla |
+| GET | `A/patients/{patient_id}/specialty-records` | especialidad read | PaginatedResponse<SpecialtyRecordResponse> | registros con versión de plantilla |
+| GET | `A/patients/{patient_id}/specialty-records/{record_id}` | especialidad read | SpecialtyRecordResponse | detalle del registro |
+| GET | `A/patients/{patient_id}/specialty-records/{record_id}/history` | especialidad read | PaginatedResponse<SpecialtyRecordHistoryResponse> | historia del registro |
+| GET | `A/patients/{patient_id}/dental-findings` | especialidad read | PaginatedResponse<DentalFindingResponse> | filtros toothFdi, findingKind, findingStatus; orden (toothFdi,surface,id) |
+| GET | `A/patients/{patient_id}/dental-findings/{finding_id}` | especialidad read | DentalFindingResponse | detalle del hallazgo |
+| GET | `A/patients/{patient_id}/dental-findings/{finding_id}/history` | especialidad read | PaginatedResponse<DentalFindingHistoryResponse> | historia del hallazgo |
+| GET | `A/patients/{patient_id}/dental-findings/{finding_id}/treatments` | especialidad read | PaginatedResponse<DentalTreatmentResponse> | actuaciones del hallazgo |
+| GET | `A/patients/{patient_id}/dental-treatments/{treatment_id}` | especialidad read | DentalTreatmentResponse | detalle de la actuación |
+| GET | `A/patients/{patient_id}/dental-treatments/{treatment_id}/history` | especialidad read | PaginatedResponse<DentalTreatmentHistoryResponse> | historia de la actuación |
+| GET | `A/patients/{patient_id}/analytics/series` | mediciones read | SeriesResponse | solo válidos, orden por fecha del hecho |
+| GET | `A/patients/{patient_id}/analytics/growth` | mediciones read | GrowthResponse | z LMS o limitExplanation; sin diagnóstico |
+
 ## 4. Modelos públicos
 
 ### 4.1 Acceso y controles
@@ -136,7 +175,7 @@ GET /openapi.json, GET /docs y GET /redoc se habilitan solo en desarrollo/prueba
 | CapabilitiesResponse | contractVersion=1,modelRevision,operationCatalog,onlineOnlyActions,maxBatchOperations,maxBodyBytes,maxOperationBytes,maxPageSize,syncRetentionDays=90,snapshotTtlSeconds=900,recoveryRequiredCodes,defaultAppointmentWindow. Solo capacidades implementadas al publicar versión. |
 | MeResponse | userId,displayName,status,oidcIssuer,oidcSubject propios y resumen de pertenencias; nunca token o credenciales. |
 | AccessResponse | accountId,userId,deviceId,role owner/assistant,status,permissionEpoch,allowedActions,clinicalPermissions; origen remoto, no editable offline. |
-| MemberClinicalPermissionsResponse | userId,clinicalPermissions{clinicalProfile,conditions,allergies},membershipVersion. |
+| MemberClinicalPermissionsResponse | userId,clinicalPermissions (modelo vigente),membershipVersion. |
 | LiveResponse / ReadyResponse | status; ready incorpora estado general de database/schema/listener, sin URI ni mensajes internos. |
 | PaginatedResponse<T> | items y total (entero no negativo); esquema común existente. No incluye nextCursor ni hasMore. SnapshotPage usa la misma forma con SyncItem. |
 
@@ -200,10 +239,14 @@ Actor/dispositivo no se aceptan en payload. UUID de nuevas entidades procede del
 | CreatePatientAntecedent | antecedentId nuevo | patientId, encounterId?, category, content, relatedPersonDescription?, occurrenceDate?, sourceType, capturedAtLocal?. | antecedentes read_write | family exige persona relacionada; sin condición derivada. |
 | UpdatePatientAntecedent | antecedentId | Patch de contenido/persona/fecha/fuente/captura/correctionReason; versión actual. | antecedentes read_write | Conserva contexto e historia; valida estado combinado. |
 | InvalidatePatientAntecedent | antecedentId | correctionReason opcional; versión actual. | antecedentes read_write | Anulación terminal. |
+| DeclarePatientMedication | medicationId nuevo | patientId, encounterId?, medicationName, sourceType, fechas parciales y detalles opcionales; ver §12.4. | declared_medications read_write | Fuente declarada; sin receta, consumo o adherencia derivados. |
+| UpdatePatientDeclaredMedication | medicationId | Patch validado de datos declarados y correctionReason. | declared_medications read_write | Conserva ficha/atención e historia. |
+| ReviewPatientDeclaredMedication | medicationId | Objeto vacío. | declared_medications read_write | Revisor autenticado; conserva fuente declarada. |
+| InvalidatePatientDeclaredMedication | medicationId | correctionReason opcional. | declared_medications read_write | entered-in-error terminal, sin borrar historia. |
 | CreateInvitation | invitationId nuevo | inviteeUserId requerido; rol assistant implícito. | propietario; online | Destinatario ya identificado por OIDC; vence 72 h después del instante del servidor; no correo. |
 | RevokeInvitation | invitationId | Objeto vacío. | propietario; online | Solo pending no vencida; aceptación/revocación coordinadas; conserva evidencia. |
 | SetMembershipStatus | userId destinatario | status active / inactive. | propietario; online | Solo asistentes ya vinculados; no transfiere propiedad ni desactiva usuario global. |
-| SetMemberClinicalPermissions | userId destinatario | clinicalPermissions con clinicalProfile, conditions y allergies; cada nivel none/read/read_write. | propietario; online | Solo asistentes; versión/época/recibo/auditoría/journal juntos; conserva estado y demás datos de pertenencia. |
+| SetMemberClinicalPermissions | userId destinatario | clinicalPermissions con las secciones implementadas del catálogo; cada nivel none/read/read_write. | propietario; online | Solo asistentes; versión/época/recibo/auditoría/journal juntos; conserva estado y demás datos de pertenencia. |
 | RegisterAccountDevice | deviceId autenticado | Objeto vacío. | miembro activo; online | expectedVersion=0; registra instalación propia. Tras revocación no permite autorrestauración. |
 | RevokeAccountDevice | deviceId | Objeto vacío. | propietario; online | Revoca solo en esta cuenta; no credencial ni otras cuentas. |
 | RestoreAccountDevice | deviceId | Objeto vacío. | propietario; online | Exige dispositivo/usuario globales activos y pertenencia activa; no revive token global revocado. |
@@ -258,6 +301,45 @@ Cambios de contacto o vínculos que afectan varias fichas deben revisar todas ba
 Una ficha con minor_without_document se valida a la fecha local del inicio de la cita en zona de cuenta. Para nacido un 29 de febrero, el cumpleaños administrativo en año no bisiesto es el 1 de marzo (comparación de mes/día, sin guardar edad). Menos de 18 es criterio administrativo aprobado, no prueba legal. own_document admite documento declared o verified y teléfono propio o responsable con teléfono; documento invalidated no sirve. No exigir inspección física.
 
 Confirmar ya confirmed bajo otra operationId devuelve INVALID_STATE_TRANSITION; repetir la misma operación devuelve duplicate. Estados terminales no se reabren. Cambiar catálogo o local no altera snapshots previos. Cambiar zona o agenda debe rechazar incompatibilidad con citas scheduled/confirmed sin recalificar terminales ni mover instantes.
+
+| DeclarePatientMedication | medicationId nuevo | patientId, encounterId?, medicationName, sourceType, periodo y detalles opcionales. | medicación declarada read_write | Sin receta propia ni efectos derivados; fuente obligatoria. |
+| UpdatePatientDeclaredMedication | medicationId | Patch de nombre/fuente/periodo/detalles/correctionReason. | medicación declarada read_write | No cambia ficha/atención. |
+| ReviewPatientDeclaredMedication | medicationId | sin contenido. | medicación declarada read_write | Marca revisado con revisor del contexto; conserva fuente. |
+| InvalidatePatientDeclaredMedication | medicationId | correctionReason opcional. | medicación declarada read_write | Anulación terminal. |
+| CreatePatientCarePlan | planId nuevo | patientId, encounterId?, conditionId?, title, purpose?, fechas opcionales. | planes read_write | Preventivo sin condición; vínculos de la ficha. |
+| UpdatePatientCarePlan | planId | Patch de campos; planStatus con statusReason. | planes read_write | Transiciones con motivo; cerrado/cancelado terminal. |
+| InvalidatePatientCarePlan | planId | correctionReason opcional. | planes read_write | Anulación terminal. |
+| AddCarePlanGoal | goalId nuevo | planId, patientId, description, goalKind y meta/medición opcionales. | planes read_write | Medible exige referencia. |
+| UpdateCarePlanGoal | goalId | Patch de descripción/referencia/meta/plazo. | planes read_write | No evalúa. |
+| EvaluateCarePlanGoal | goalId | evaluationStatus achieved/not_achieved. | planes read_write | Evaluación separada del cumplimiento. |
+| InvalidateCarePlanGoal | goalId | correctionReason opcional. | planes read_write | Anulación terminal. |
+| AddCarePlanAction | actionId nuevo | planId, patientId, goalId?, description, responsable y plazo opcionales. | planes read_write | goalId del mismo plan. |
+| UpdateCarePlanAction | actionId | Patch de descripción/responsable/plazo. | planes read_write | Actividad hecha no evalúa objetivo. |
+| CompleteCarePlanAction | actionId | completionNote opcional. | planes read_write | Marca realizada con instante. |
+| InvalidateCarePlanAction | actionId | correctionReason opcional. | planes read_write | Anulación terminal. |
+| AddCarePlanReview | reviewId nuevo | planId, patientId, summary, findings? opcionales. | planes read_write | No crea hechos nuevos. |
+| InvalidateCarePlanReview | reviewId | correctionReason opcional. | planes read_write | Anulación terminal. |
+| CreateDiagnosticReport | reportId nuevo | patientId, encounterId?, sourceName, fechas parciales, reportKind, reportStatus, attachmentId? opcional. | informes read_write | Original separado de resultados. |
+| UpdateDiagnosticReport | reportId | Patch de fuente/fechas/tipo/resumen/attachmentId. | informes read_write | No cambia ficha. |
+| CorrectDiagnosticReport | reportId | correctionReason. | informes read_write | Versiona el informe; historias conservan original. |
+| AddDiagnosticReportResult | resultId nuevo | reportId, patientId, analyteName, valor tipado con unidad y referencia del informe. | informes read_write | Numérico exige unidad. |
+| UpdateDiagnosticReportResult | resultId | Patch del contenido tipado. | informes read_write | Corrección sin duplicar vigentes. |
+| InvalidateDiagnosticReportResult | resultId | correctionReason opcional. | informes read_write | Anula el punto vigente. |
+| UploadReportAttachment | attachmentId nuevo | patientId, reportId?, fileName, contentType, byteSize, sha256, contentBase64. | informes read_write | Verifica huella; bytes fuera de DB y de sync. |
+| InvalidateReportAttachment | attachmentId | correctionReason opcional. | informes read_write | Retira el adjunto del uso ordinario. |
+| CreateSpecialtyTemplate | templateId nuevo | name, specialty, fields tipados. | especialidad read_write | Versión 1; sin defaults clínicos. |
+| UpdateSpecialtyTemplate | templateId | name?, changeNote, fields completos. | especialidad read_write | Publica versión nueva; anteriores inmutables. |
+| RetireSpecialtyTemplate | templateId | sin contenido. | especialidad read_write | No borra versiones ni registros. |
+| CaptureSpecialtyRecord | recordId nuevo | patientId, encounterId?, templateId, values tipados. | especialidad read_write | Versión de plantilla fija; campos ausentes no se generan. |
+| UpdateSpecialtyRecord | recordId | values y recordedAt opcionales. | especialidad read_write | Conserva templateVersion aplicada. |
+| InvalidateSpecialtyRecord | recordId | correctionReason opcional. | especialidad read_write | Anulación terminal. |
+| RecordDentalFinding | findingId nuevo | patientId, encounterId?, toothFdi, surface?, findingKind, note? y fecha opcional. | especialidad read_write | FDI y superficies cerradas; duplicado vigente rechazado. |
+| UpdateDentalFinding | findingId | Patch de pieza/superficie/tipo/nota. | especialidad read_write | Duplicado vigente rechazado. |
+| ResolveDentalFinding | findingId | correctionReason opcional. | especialidad read_write | Resolver conserva historia y permite nuevo hallazgo. |
+| InvalidateDentalFinding | findingId | correctionReason opcional. | especialidad read_write | Anulación terminal. |
+| AddDentalTreatment | treatmentId nuevo | findingId, patientId, treatmentKind, note? y fecha opcional. | especialidad read_write | Vinculada al hallazgo de la ficha. |
+| UpdateDentalTreatment | treatmentId | Patch de tipo/estado/fecha. | especialidad read_write | performed exige fecha. |
+| InvalidateDentalTreatment | treatmentId | correctionReason opcional. | especialidad read_write | Anulación terminal. |
 
 ## 6. Resultados, idempotencia y errores
 
@@ -526,3 +608,120 @@ La captura de Etapa 2 contiene atenciones válidas actuales y vínculos, versió
 El delta publica correcciones con la versión actual y anulaciones como `entered-in-error`; una captura posterior no incluye la entrada inválida. Los grupos invisibles permiten avanzar sin contenido. La retención de 90 días no borra hechos/historias. No se promete borrado de copias descargadas ni aplicación atómica en SQLite sin prueba del consumidor.
 
 OpenAPI, esquemas, ejemplos y manifiesto se generan desde la app real con `modelRevision=api-v1.3`. Los recuentos proceden del catálogo real, no de cifras fijas. `contractVersion=1` se conserva.
+
+## Compatibilidad de normalización de autorización · T03
+
+La [correspondencia de acceso](access-design.md#correspondencia-para-normalizar-autorización--t03--2026-11-17) fija acciones/reglas/audiencias internas sin duplicar estos modelos HTTP. Se conservan role, allowedActions (incluido orden y las dos posiciones de SetPatientClinicalSectionReview), clinicalPermissions, permissionEpoch, defaults, rutas, estados y recuperación. contractVersion=1 y modelRevision=api-v1.3 no cambian. La excepción autorizada AU-32 deniega GET de un recibo clínico histórico sin sección antes de leer su resultado; no cambia el rechazo ya aplicado al reintento ni añade migración.
+
+## 12. Diseño clínico de etapa 3 para C03
+
+Diseño de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), no implementado al redactarse. Conserva `contractVersion=1`; `modelRevision=api-v1.4` se publicará solo al completar la fase de contratos. Las reglas funcionales proceden de [patient-clinical-record.md §4.3.1](patient-clinical-record.md) y [database-schema.md §§12–14](database-schema.md). Prescripción/récipes, PDF de esos documentos, QR y su acceso del paciente permanecen en P-20261117-04 y no aparecen aquí.
+
+### 12.1 Forma común
+
+Conserva la forma de §11.1: rutas bajo `A/patients/{patient_id}`, token/dispositivo/permiso de sección, camelCase, `page`/`shows`, `items`/`total`, filtros antes de contar, orden estable, historias con `afterVersion`, objeto ajeno = ausencia. Fechas clínicas parciales usan `ClinicalDate` (`YYYY`,`YYYY-MM`,`YYYY-MM-DD`); `recordStatus`, `correctionReason`, `version`, envoltura, huella, idempotencia y `NO_CHANGES` se conservan. Parches: ausencia se conserva, null solo en anulables, al menos un campo.
+
+Reglas propias: la revisión de medicación (`ReviewPatientDeclaredMedication`) y la evaluación de objetivo (`EvaluateCarePlanGoal`) son acciones propias, no parches; completar una acción (`CompleteCarePlanAction`) no evalúa objetivos. Corregir un informe (`CorrectDiagnosticReport`) es acción propia que versiona el informe y sustituye sus resultados vigentes en la misma aceptación. Las subcolecciones de plan (objetivos/acciones/revisiones) usan rutas anidadas y heredan el permiso `care_plans`.
+
+### 12.2 Rutas y lecturas
+
+| Recurso | Rutas GET bajo `A/patients/{patient_id}` | Acceso, filtros y orden |
+|---|---|---|
+| Medicación declarada | `/declared-medications`; `/declared-medications/{medication_id}`; `/declared-medications/{medication_id}/history` | `declared_medications`; `recordStatus`,`reviewStatus`,`sourceType`; orden `(createdAt,id)` |
+| Planes de cuidados | `/care-plans`; `/care-plans/{plan_id}`; `/care-plans/{plan_id}/history`; `/care-plans/{plan_id}/goals`; `/care-plans/{plan_id}/goals/{goal_id}`; `/care-plans/{plan_id}/actions`; `/care-plans/{plan_id}/actions/{action_id}`; `/care-plans/{plan_id}/reviews`; `/care-plans/{plan_id}/reviews/{review_id}`; historia por cada subrecurso | `care_plans`; planes filtran `planStatus`,`recordStatus`; objetivos `goalKind`,`evaluationStatus`; acciones `completionStatus`; revisiones orden `(reviewedAt,id)`; subcolecciones orden `(createdAt,id)` |
+| Informes | `/diagnostic-reports`; `/diagnostic-reports/{report_id}`; `/diagnostic-reports/{report_id}/history`; `/diagnostic-reports/{report_id}/results`; `/report-attachments/{attachment_id}`; `/report-attachments/{attachment_id}/content` | `diagnostic_reports`; informes filtran `reportKind`,`reportStatus`,`recordStatus`, rango de `sampleDate`; orden `(sampleDate,id)`; el contenido del adjunto exige `read` vigente y reautoriza antes de entregar bytes |
+| Plantillas | `/specialty-templates`; `/specialty-templates/{template_id}`; `/specialty-records`; `/specialty-records/{record_id}`; `/specialty-records/{record_id}/history` | `specialty_templates`; plantillas filtran `specialty`,`templateStatus`; registros filtran `templateId`,`recordStatus`; orden `(createdAt,id)` |
+| Analítica | `/analytics/series`; `/analytics/growth` | `measurements` para series de mediciones; `clinical_analytics` para proyecciones derivadas y crecimiento |
+
+Las listas ordinarias excluyen `entered-in-error`; solo el filtro explícito lo incluye. Los resultados vigentes de un informe son los `recordStatus=valid` de su versión actual; las historias conservan versiones anteriores. La descarga de adjunto no usa URL firmada pública: la ruta reautoriza y sirve los bytes en la misma sesión autenticada.
+
+### 12.3 Modelos públicos
+
+| Modelo | Campos específicos además de los comunes |
+|---|---|
+| `DeclaredMedicationResponse` | `medicationId`,`encounterId`,`medicationName`,`sourceType`,`startDate`,`endDate`,`doseDescription`,`frequencyDescription`,`prescriberName`,`routeDescription`,`reviewStatus`,`reviewedAt`,`reviewedByUserId`,`capturedAtLocal` |
+| `CarePlanResponse` | `planId`,`encounterId`,`conditionId`,`title`,`purpose`,`startDate`,`expectedEndDate`,`planStatus`,`statusReason`,`capturedAtLocal` |
+| `CarePlanGoalResponse` | `goalId`,`planId`,`description`,`goalKind`,`measurementKind`,`referenceDescription`,`expectedResult`,`targetValue`,`unit`,`dueDate`,`evaluationStatus`,`evaluatedAt`,`evaluatedByUserId` |
+| `CarePlanActionResponse` | `actionId`,`planId`,`goalId`,`description`,`responsibleUserId`,`dueDate`,`completionStatus`,`completedAt`,`completionNote` |
+| `CarePlanReviewResponse` | `reviewId`,`planId`,`reviewedAt`,`summary`,`findings`,`nextReviewDate` |
+| `DiagnosticReportResponse` | `reportId`,`encounterId`,`sourceName`,`sourceType`,`sampleDate`,`issuedDate`,`reportKind`,`reportStatus`,`attachmentId`,`clinicalSummary`,`capturedAtLocal` |
+| `DiagnosticReportResultResponse` | `resultId`,`reportId`,`analyteName`,`resultKind`,`value`,`textValue`,`unit`,`referenceLow`,`referenceHigh`,`referenceText` |
+| `ReportAttachmentResponse` | `attachmentId`,`reportId?` en carga, `fileName`,`contentType`,`byteSize`,`sha256`,`uploadedAt` (sin `storageKey` ni URL) |
+| `SpecialtyTemplateResponse` | `templateId`,`name`,`specialty`,`templateStatus`,`changeNote`,`version`,`fields` con `fieldKey`,`label`,`fieldKind`,`required`,`options`,`displayOrder` |
+| `SpecialtyRecordResponse` | `recordId`,`encounterId`,`templateId`,`templateVersion`,`recordedAt`,`values` con `fieldKey` y el valor tipado aplicable |
+| `SeriesPointResponse` | `measurementKind`,`measuredAt`,`value`,`systolicValue`,`diastolicValue`,`unit`,`sourceMeasurementId`,`sourceVersion` |
+| `GrowthResponse` | `indicator`,`referenceCode`,`referenceVersion`,`ageDays`,`points` con medición, percentil/z cuando aplica y `limitExplanation` cuando la referencia no aplica |
+
+`ClinicalPermissions` añade `declaredMedications`,`carePlans`,`diagnosticReports`,`specialtyTemplates`,`clinicalAnalytics`. `sourceType` de medicación admite `patient`,`caregiver`,`other_professional`,`document`. Ningún modelo incluye consumo, adherencia, diagnóstico, normalidad por defecto ni URL de adjunto.
+
+### 12.4 Acciones nuevas
+
+Todas conservan envoltura, huella, idempotencia, permiso vigente, recibo con `clinicalSection`, auditoría y grupo; los UUID nuevos proceden del cliente; no aceptan actor/cuenta/aceptación del payload.
+
+**Medicación declarada** (`declared_medications read_write`):
+
+| Acción | `entityKey` | Payload | Regla |
+|---|---|---|---|
+| `DeclarePatientMedication` | `medicationId` nuevo | `patientId`,`encounterId?`,`medicationName`,`sourceType`,`startDate?`,`endDate?`,`doseDescription?`,`frequencyDescription?`,`prescriberName?`,`routeDescription?`,`capturedAtLocal?` | Sin receta propia ni efecto derivado |
+| `UpdatePatientDeclaredMedication` | `medicationId` | Patch de nombre/fuente/periodo/detalle/captura/`correctionReason` | No cambia ficha/atención |
+| `ReviewPatientDeclaredMedication` | `medicationId` | — | Marca `reviewed` con revisor del contexto; conserva fuente |
+| `InvalidatePatientDeclaredMedication` | `medicationId` | `correctionReason?` | `entered-in-error` terminal |
+
+**Planes de cuidados** (`care_plans read_write`):
+
+| Acción | `entityKey` | Payload | Regla |
+|---|---|---|---|
+| `CreatePatientCarePlan` | `planId` nuevo | `patientId`,`encounterId?`,`conditionId?`,`title`,`purpose?`,`startDate?`,`expectedEndDate?`,`capturedAtLocal?` | Condición nula = preventivo; debe ser de la misma ficha |
+| `UpdatePatientCarePlan` | `planId` | Patch de título/finalidad/fechas/captura/`correctionReason`; `planStatus` con `statusReason` | Transiciones `active`⇄`suspended`, a `closed`/`cancelled`; terminal con historia |
+| `AddCarePlanGoal` | `goalId` nuevo | `planId`,`description`,`goalKind`,`measurementKind?`,`referenceDescription?`,`expectedResult?`,`targetValue?`,`unit?`,`dueDate?` | Medible exige meta o unidad o medición |
+| `UpdateCarePlanGoal` | `goalId` | Patch de descripción/referencia/meta/plazo/`correctionReason` | No evalúa |
+| `EvaluateCarePlanGoal` | `goalId` | `evaluationStatus`,`note?` | `achieved`/`not_achieved` con evaluador del contexto |
+| `CompleteCarePlanAction` | `actionId` | `completedAt?`,`completionNote?` | Actividad hecha ≠ objetivo logrado |
+| `AddCarePlanAction` / `UpdateCarePlanAction` / `InvalidateCarePlanAction` | `actionId` | Descripción/responsable/plazo/nota; patch; motivo | `goalId` debe pertenecer al mismo plan |
+| `AddCarePlanReview` | `reviewId` nuevo | `planId`,`reviewedAt?`,`summary`,`findings?`,`nextReviewDate?` | Registra lo comunicado; no crea hechos |
+| `InvalidateCarePlanReview` | `reviewId` | `correctionReason?` | Terminal |
+
+**Informes y adjuntos** (`diagnostic_reports read_write` para escrituras; `read` para lecturas y descarga):
+
+| Acción | `entityKey` | Payload | Regla |
+|---|---|---|---|
+| `CreateDiagnosticReport` | `reportId` nuevo | `patientId`,`encounterId?`,`sourceName`,`sourceType`,`sampleDate?`,`issuedDate?`,`reportKind`,`reportStatus`,`clinicalSummary?`,`capturedAtLocal?` | Fechas parciales conservan precisión |
+| `UpdateDiagnosticReport` | `reportId` | Patch de fuente/fechas/tipo/resumen/captura/`correctionReason` | No cambia ficha |
+| `CorrectDiagnosticReport` | `reportId` | `correctionReason` y `results` completos vigentes | Versiona el informe, anula resultados anteriores y crea los corregidos en una aceptación; historias conservan el original |
+| `AddDiagnosticReportResult` / `UpdateDiagnosticReportResult` / `InvalidateDiagnosticReportResult` | `resultId` | Nombre/valor/unidad/referencia según tipo | Numérico exige unidad; referencia solo del informe |
+| `UploadReportAttachment` | `attachmentId` nuevo | `patientId`,`reportId?`,`fileName`,`contentType`,bytes | Verifica tamaño/tipo y calcula huella; bytes fuera de la transacción; no acredita informe |
+| `LinkReportAttachment` | `attachmentId` | `reportId` | Vincula adjunto de la misma ficha |
+| `InvalidateReportAttachment` | `attachmentId` | `correctionReason?` | Retira el adjunto del uso ordinario |
+
+**Plantillas y registros** (`specialty_templates read_write`; las plantillas las configura el propietario):
+
+| Acción | `entityKey` | Payload | Regla |
+|---|---|---|---|
+| `CreateSpecialtyTemplate` | `templateId` nuevo | `name`,`specialty`,`fields` | Versión 1; campos tipados, sin defaults clínicos |
+| `UpdateSpecialtyTemplate` | `templateId` | `name?`,`changeNote`,`fields` completos | Publica versión nueva; versiones anteriores inmutables |
+| `RetireSpecialtyTemplate` | `templateId` | — | No borra versiones ni registros |
+| `CaptureSpecialtyRecord` | `recordId` nuevo | `patientId`,`encounterId?`,`templateId`,`recordedAt?`,`values` | Versión de plantilla vigente queda fija; valores ausentes no se generan |
+| `UpdateSpecialtyRecord` / `InvalidateSpecialtyRecord` | `recordId` | Patch de valores/`correctionReason`; motivo | Conserva `templateVersion` aplicada |
+
+### 12.5 Analítica, acceso, sync, auditoría y recuperación
+
+`GET /analytics/series` exige `measurements read` y devuelve solo tomas válidas ordenadas `(measuredAt,id)` con `sourceMeasurementId`/`sourceVersion`; correcciones sustituyen el punto vigente sin duplicar. `GET /analytics/growth` exige `clinical_analytics read`, calcula la edad en cada medición desde el nacimiento y selecciona la referencia OMS por indicador/sexo/edad/método; fuera de rango, dato insuficiente o referencia inaplicable devuelve la medición con `limitExplanation`, sin curva inventada ni diagnóstico. Cambio de nacimiento o corrección recalcula en la consulta: los derivados no se persisten como hechos.
+
+Captura: `clinicalSections` amplía su conjunto con `declaredMedications`,`carePlans`,`diagnosticReports`,`specialtyTemplates`; `clinicalAnalytics` no se descarga, se consulta online. La captura incluye medicación declarada vigente, planes vigentes con objetivos/acciones/revisiones vigentes, informes vigentes con resultados vigentes y referencias de adjuntos sin bytes, y registros de especialidad vigentes con su versión de plantilla; sin historias de versiones. El delta publica correcciones con versión actual y anulaciones como `entered-in-error`; los adjuntos y sus bytes quedan fuera de sync y se recuperan por ruta reautorizada.
+
+Auditoría y recibos conservan las reglas de §11.5 con las cinco secciones nuevas; la autorización precede a duplicados, resultados, adjuntos y derivados. La respuesta perdida se recupera con la misma clave idempotente; una revocación entre reintento y resultado deniega sin filtrar. `SetMemberClinicalPermissions` acepta las trece secciones; payloads anteriores normalizan las omitidas a `read_write`.
+
+`modelRevision=api-v1.4` se publicará al completar T34 con artefactos generados desde la app real; `contractVersion=1` se conserva.
+
+Integración concurrente del 2026-11-17: el árbol de desarrollo de Etapa 3 añade la sección declared_medications, cuatro acciones y tres lecturas anteriores. Se conservan los ocho permisos y las acciones previas. Los demás bloques del §12 continúan como diseño futuro; esta integración no publica api-v1.4 ni acredita toda Etapa 3.
+
+### 12.7 Primera especialidad: odontograma
+
+Diseño de T22/T24 para C08, no implementado al redactarse; el diccionario clínico está en [patient-clinical-record.md §4.3.2](patient-clinical-record.md). Misma forma común de §12.1 con sección `specialty_templates`.
+
+| Recurso | Rutas GET bajo `A/patients/{patient_id}` | Acceso y orden |
+|---|---|---|
+| Hallazgos | `/dental-findings`; `/dental-findings/{finding_id}`; `/dental-findings/{finding_id}/history` | `specialty_templates`; filtros `findingKind`,`findingStatus`,`toothFdi`,`recordStatus`; orden `(toothFdi,surface,id)` |
+| Actuaciones | `/dental-findings/{finding_id}/treatments`; `/dental-treatments/{treatment_id}`; `/dental-treatments/{treatment_id}/history` | Misma sección; orden `(createdAt,id)` |
+
+Acciones (`specialty_templates read_write`): `RecordDentalFinding` (pieza FDI, superficie nula o cerrada, tipo, nota, fecha), `UpdateDentalFinding`, `ResolveDentalFinding`, `InvalidateDentalFinding`, `AddDentalTreatment` (vinculada al hallazgo), `UpdateDentalTreatment` (incluye `planned`→`performed`), `InvalidateDentalTreatment`. Modelos: `DentalFindingResponse` (`findingId`,`toothFdi`,`surface`,`findingKind`,`findingStatus`,`note`,`recordedDate`) y `DentalTreatmentResponse` (`treatmentId`,`findingId`,`treatmentKind`,`treatmentStatus`,`performedDate`,`note`). Pieza FDI inválida, superficie fuera del conjunto o hallazgo duplicado vigente se rechazan; objeto ajeno = ausencia.

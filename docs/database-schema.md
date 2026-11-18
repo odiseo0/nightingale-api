@@ -2073,3 +2073,498 @@ F82–F119 continúan F01–F81. Las referencias actuales a ficha, cita, atenci�
 El estado actual y su historia comparten contenido, versión y marcas; los controles diferidos exigen secuencia desde 1 sin huecos y máximo actual. La guarda de identidad existente se aplica a las cinco tablas actuales. `patient_clinical_timeline` se reconstruye y no recibe una FK polimórfica que no pueda expresar su destino; su escritura transaccional y las pruebas contra fuentes mantienen la correspondencia.
 
 Las once tablas añaden 197 columnas y 38 FK; cinco columnas de permisos y la UQ técnica modifican tablas existentes. El inventario objetivo es **48 tablas, 622 columnas y 119 FK**. Las cifras son documentales y deberán contrastarse con las migraciones reales. No se purgan historias funcionales por retención técnica de 90 días.
+
+
+## 12. Medicación declarada y planes de cuidados · revisión 1.4 para C04
+
+**Estado:** diseño físico propuesto para T04 de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), pendiente de C02/C04. No crea migraciones, modelos ni datos. Las reglas funcionales proceden de [patient-clinical-record.md §4.3.1](patient-clinical-record.md) (O09/O10 cerrados el 2026-11-17).
+
+### 12.1 Cambios existentes y reglas comunes
+
+`patient_conditions` añade UQ `(account_id,id,patient_id)` como destino del vínculo de planes; no cambia su ciclo ni sus estados.
+
+`account_memberships` añade `declared_medications_access` y `care_plans_access`: dos columnas `text` NN, valor inicial `read_write`, CHECK `none`/`read`/`read_write`. `operation_receipts.clinical_section`, `sync_snapshots.clinical_sections` y `change_log.audience` amplían sus conjuntos cerrados con `declared_medications`,`care_plans`. Los cambios de nivel conservan versión, época, capturas, cursores y SSE de §§9–11.
+
+Son ocho tablas nuevas: dos pares estado actual/historia para medicación declarada y cuatro pares para planes (plan, objetivo, acción y revisión). Reutilizan las reglas comunes de §11.1: IDs UUIDv7; FK `(account_id,patient_id)` a `account_patients` sin borrado en cascada ni reasignación; `record_status` `valid`/`entered-in-error` con anulación terminal; `version` secuencial con FK diferida e historia append-only; autores a `account_memberships` e historia a `operation_receipts`; instantes `timestamptz` finitos; fechas clínicas parciales en `text` (`YYYY`,`YYYY-MM`,`YYYY-MM-DD`) con validación de calendario; texto no vacío; efecto/historia/timeline/auditoría/recibo/grupo en una transacción.
+
+Reglas propias de este bloque:
+
+- La medicación declarada no es prescripción: no hay relación con recetas, catálogo, dispensación ni administración, y ninguna restricción exige vínculo con condición o atención.
+- Los planes no exigen condición (`condition_id` nulo = plan preventivo). Cerrar, suspender o cancelar usa `plan_status`; sustituir una indicación conserva la fila anterior con su historia.
+- Cumplir una acción (`completion_status`) no evalúa el objetivo: `evaluation_status` del objetivo se cambia solo en una evaluación explícita.
+- Todas las filas de objetivos, acciones y revisiones referencian su plan por `(account_id,plan_id,patient_id)`; no cruzan fichas ni cuentas.
+
+### 12.2 `declared_medications`
+
+**Propietario:** `medications`. Lo que el paciente comunica que toma o tomó, aunque otro profesional lo indicara.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id,patient_id)`; CHECK UUIDv7 | Registro estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK | Cuenta de la ficha. |
+| `patient_id` | `uuid` | Sí | Sin valor | UQ/FK | Paciente. |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta | Atención donde se comunicó, si existe. |
+| `medication_name` | `text` | Sí | Sin valor | Texto no vacío | Nombre declarado; texto libre, sin catálogo. |
+| `source_type` | `text` | Sí | `patient` | CHECK `patient`,`caregiver`,`other_professional`,`document` | Quién informa el dato. |
+| `start_date` | `text` | No | Nulo | Fecha parcial válida | Inicio conocido del periodo. |
+| `end_date` | `text` | No | Nulo | Fecha parcial válida | Fin conocido; posterior a inicio en la aceptación cuando ambos existen. |
+| `dose_description` | `text` | No | Nulo | Texto no vacío | Dosis declarada; nulo = desconocida, no inventada. |
+| `frequency_description` | `text` | No | Nulo | Texto no vacío | Frecuencia declarada; nulo = desconocida. |
+| `prescriber_name` | `text` | No | Nulo | Texto no vacío | Prescriptor declarado; puede ser de otro profesional. |
+| `route_description` | `text` | No | Nulo | Texto no vacío | Vía declarada, si se conoce. |
+| `review_status` | `text` | Sí | `declared` | CHECK `declared`,`reviewed` | Revisión profesional; no cambia la fuente original. |
+| `reviewed_at` | `timestamptz` | No | Nulo | CHECK finito | Momento de la revisión. |
+| `reviewed_by_user_id` | `uuid` | No | Nulo | FK a pertenencia | Revisor; obligatorio si `reviewed`. |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito | Captura reportada. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez de la afirmación. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+CHECK de coherencia: `review_status='reviewed'` exige `reviewed_at` y `reviewed_by_user_id`; `declared` los exige nulos. F120 a ficha; F121 opcional `(account_id,encounter_id,patient_id)` a `clinical_encounters`; F122/F123 autores; F124 revisión a pertenencia; F125 diferida a historia. Índices B-tree `(account_id,patient_id,record_status,id)` para listas y `(account_id,patient_id,review_status,id)` para revisión pendiente; vínculo de atención y autores para sus FK.
+
+Corregir conserva paciente, fuente e inicio cuando proceda; un vínculo de atención erróneo exige anular y crear otro registro. Marcar como revisado no modifica `medication_name` ni `source_type`. No hay CHECK de interacciones, adherencia ni consumo: esas funciones están excluidas.
+
+### 12.3 `declared_medication_histories`
+
+Contiene `account_id`,`id`,`patient_id`,`encounter_id`,`medication_name`,`source_type`,`start_date`,`end_date`,`dose_description`,`frequency_description`,`prescriber_name`,`route_description`,`review_status`,`reviewed_at`,`reviewed_by_user_id`,`captured_at_local`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con tipos/nulabilidad/conjuntos de §12.2 y campos técnicos NN.
+
+PK `(account_id,id,version)`; F126 a `(account_id,id)` actual y F127 a recibo. Índice de recibo. Cada fila conserva el contenido resultante completo y es inmutable.
+
+### 12.4 `care_plans`
+
+**Propietario:** `care_plans`. Organiza el cuidado en el tiempo; admite planes preventivos sin condición.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id,patient_id)`; CHECK UUIDv7 | Plan estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK | Cuenta de la ficha. |
+| `patient_id` | `uuid` | Sí | Sin valor | UQ/FK | Paciente. |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta | Atención de origen, si existe. |
+| `condition_id` | `uuid` | No | Nulo | FK compuesta a `patient_conditions` | Problema relacionado; nulo = preventivo. |
+| `title` | `text` | Sí | Sin valor | Texto no vacío | Nombre del plan. |
+| `purpose` | `text` | No | Nulo | Texto no vacío | Finalidad; puede ser preventiva. |
+| `start_date` | `text` | No | Nulo | Fecha parcial válida | Inicio previsto o acordado. |
+| `expected_end_date` | `text` | No | Nulo | Fecha parcial válida | Fin previsto. |
+| `plan_status` | `text` | Sí | `active` | CHECK `active`,`suspended`,`closed`,`cancelled` | Ciclo del plan, no validez de la afirmación. |
+| `status_reason` | `text` | No | Nulo | Texto no vacío | Motivo de cierre/suspensión/cancelación. |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito | Captura reportada. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez, independiente de `plan_status`. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+CHECK de coherencia: `plan_status` distinto de `active` exige `status_reason`. F128 a ficha; F129 opcional a atención; F130 opcional `(account_id,condition_id,patient_id)` a `patient_conditions`; F131/F132 autores; F133 diferida a historia. Índices `(account_id,patient_id,plan_status,record_status,id)` y `(account_id,patient_id,record_status,id)`; vínculos y autores para sus FK. Paciente, condición y atención no se reasignan por corrección.
+
+### 12.5 `care_plan_histories`
+
+Contiene `account_id`,`id`,`patient_id`,`encounter_id`,`condition_id`,`title`,`purpose`,`start_date`,`expected_end_date`,`plan_status`,`status_reason`,`captured_at_local`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §12.4. PK `(account_id,id,version)`; F134 actual y F135 recibo; índice de recibo; append-only.
+
+### 12.6 `care_plan_goals`
+
+**Propietario:** `care_plans`. Objetivo del plan; narrativo o medible. Evaluarlo es distinto de cumplir acciones.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id)`; CHECK UUIDv7 | Objetivo estable. |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | UQ `(account_id,id,plan_id)` implícito por FK; FK a plan | Ámbito del plan. |
+| `plan_id` | `uuid` | Sí | Sin valor | FK `(account_id,plan_id,patient_id)` | Plan del objetivo. |
+| `description` | `text` | Sí | Sin valor | Texto no vacío | Qué se busca. |
+| `goal_kind` | `text` | Sí | Sin valor | CHECK `narrative`,`measurable` | Tipo de objetivo. |
+| `measurement_kind` | `text` | No | Nulo | CHECK `weight`,`temperature`,`oxygen_saturation`,`heart_rate`,`blood_pressure` | Medición de seguimiento cuando existe. |
+| `reference_description` | `text` | No | Nulo | Texto no vacío | Punto de referencia inicial conocido. |
+| `expected_result` | `text` | No | Nulo | Texto no vacío | Resultado esperado. |
+| `target_value` | `numeric` | No | Nulo | Finito | Meta numérica cuando aplica. |
+| `unit` | `text` | No | Nulo | Texto no vacío; coherente con `measurement_kind` en la aceptación | Unidad de la meta. |
+| `due_date` | `text` | No | Nulo | Fecha parcial válida | Plazo de revisión. |
+| `evaluation_status` | `text` | Sí | `pending` | CHECK `pending`,`achieved`,`not_achieved` | Evaluación profesional del objetivo. |
+| `evaluated_at` | `timestamptz` | No | Nulo | CHECK finito | Momento de la evaluación. |
+| `evaluated_by_user_id` | `uuid` | No | Nulo | FK a pertenencia | Evaluador. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+CHECK de coherencia: `goal_kind='measurable'` exige al menos una de `target_value`,`unit`,`measurement_kind`; `evaluation_status` distinto de `pending` exige `evaluated_at` y `evaluated_by_user_id`. F136 a plan; F137/F138 autores; F139 evaluador a pertenencia; F140 diferida a historia. Índices `(account_id,plan_id,record_status,id)` y `(account_id,patient_id,record_status,id)`; autores para sus FK. La evaluación nunca se deriva de acciones completadas.
+
+### 12.7 `care_plan_goal_histories`
+
+Contiene `account_id`,`id`,`patient_id`,`plan_id`,`description`,`goal_kind`,`measurement_kind`,`reference_description`,`expected_result`,`target_value`,`unit`,`due_date`,`evaluation_status`,`evaluated_at`,`evaluated_by_user_id`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §12.6. PK `(account_id,id,version)`; F141 actual y F142 recibo; índice de recibo; append-only.
+
+### 12.8 `care_plan_actions`
+
+**Propietario:** `care_plans`. Acción acordada con responsable y periodo; cumplirla no evalúa el objetivo.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id)`; CHECK UUIDv7 | Acción estable. |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | FK a plan | Ámbito del plan. |
+| `plan_id` | `uuid` | Sí | Sin valor | FK `(account_id,plan_id,patient_id)` | Plan de la acción. |
+| `goal_id` | `uuid` | No | Nulo | FK `(account_id,goal_id,patient_id)` a objetivo del mismo plan | Objetivo al que contribuye, si existe. |
+| `description` | `text` | Sí | Sin valor | Texto no vacío | Actividad acordada. |
+| `responsible_user_id` | `uuid` | No | Nulo | FK a pertenencia | Responsable; nulo = sin responsable concreto. |
+| `due_date` | `text` | No | Nulo | Fecha parcial válida | Fecha prevista. |
+| `completion_status` | `text` | Sí | `not_completed` | CHECK `not_completed`,`completed` | Actividad realizada o no. |
+| `completed_at` | `timestamptz` | No | Nulo | CHECK finito | Momento del cumplimiento. |
+| `completion_note` | `text` | No | Nulo | Texto no vacío | Constancia del cumplimiento. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+CHECK de coherencia: `completion_status='completed'` exige `completed_at`; `goal_id` debe pertenecer al mismo plan. F143 a plan; F144 a objetivo; F145 responsable y F146/F147 autores a pertenencias; F148 diferida a historia. Índices `(account_id,plan_id,record_status,id)` y `(account_id,patient_id,record_status,id)`. Sustituir una indicación conserva la acción anterior en historia; no se borra.
+
+### 12.9 `care_plan_action_histories`
+
+Contiene `account_id`,`id`,`patient_id`,`plan_id`,`goal_id`,`description`,`responsible_user_id`,`due_date`,`completion_status`,`completed_at`,`completion_note`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §12.8. PK `(account_id,id,version)`; F149 actual y F150 recibo; índice de recibo; append-only.
+
+### 12.10 `care_plan_reviews`
+
+**Propietario:** `care_plans`. Revisión fechada del plan con hallazgos; evalúa objetivos sin confundirlos con actividades.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id)`; CHECK UUIDv7 | Revisión estable. |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | FK a plan | Ámbito del plan. |
+| `plan_id` | `uuid` | Sí | Sin valor | FK `(account_id,plan_id,patient_id)` | Plan revisado. |
+| `reviewed_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Momento de la revisión. |
+| `summary` | `text` | Sí | Sin valor | Texto no vacío | Síntesis de la revisión. |
+| `findings` | `text` | No | Nulo | Texto no vacío | Hallazgos y notas. |
+| `next_review_date` | `text` | No | Nulo | Fecha parcial válida | Próxima revisión prevista. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+F151 a plan; F152/F153 autores; F154 diferida a historia. Índices `(account_id,plan_id,record_status,reviewed_at,id)` y `(account_id,patient_id,record_status,id)`. La revisión registra lo comunicado y las mediciones disponibles como texto referenciado; no copia valores de otras tablas ni crea hechos nuevos.
+
+### 12.11 `care_plan_review_histories`
+
+Contiene `account_id`,`id`,`patient_id`,`plan_id`,`reviewed_at`,`summary`,`findings`,`next_review_date`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §12.10. PK `(account_id,id,version)`; F155 actual y F156 recibo; índice de recibo; append-only.
+
+### 12.12 Timeline
+
+`patient_clinical_timeline` añade `declared_medication` y `care_plan` a `entry_type`, con `source_section` `declared_medications` y `care_plans`. La medicación usa `start_date` como `occurrence_date` (precisión `year`/`month`/`day`) o marca de aceptación como `reference` cuando falta; el plan usa `start_date` o `reference`. T31 evaluará si objetivos, acciones y revisiones entran al timeline; este diseño no los incluye.
+
+### 12.13 Integridad, conservación e inventario
+
+F120–F156 continúan F01–F119 con las mismas reglas: actuales RESTRICT a ficha, atención, condición y autores; FK de versión NO ACTION diferida; historias RESTRICT a actual y recibo. Los CHECK de coherencia revisados en aceptación complementan, no sustituyen, la autorización por sección. Los objetivos, acciones y revisiones no pueden referenciar planes de otra ficha por la forma de la FK compuesta.
+
+Las ocho tablas añaden 173 columnas y 37 FK; dos columnas de permisos y los conjuntos cerrados modifican tablas existentes; el timeline amplía dos conjuntos. El inventario objetivo pasa a **56 tablas, 795 columnas y 156 FK**. Las cifras son documentales y deberán contrastarse con las migraciones reales. No se purgan historias funcionales por retención técnica de 90 días.
+
+
+## 13. Informes, resultados y adjuntos · revisión 1.4 para C04
+
+**Estado:** diseño físico propuesto para T05 de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), pendiente de C02/C06. No crea migraciones, modelos ni datos. Las reglas funcionales proceden de [patient-clinical-record.md §4.3.1](patient-clinical-record.md) (O12 cerrado el 2026-11-17).
+
+### 13.1 Cambios existentes y reglas comunes
+
+`account_memberships` añade `diagnostic_reports_access`: columna `text` NN, valor inicial `read_write`, CHECK `none`/`read`/`read_write`. `operation_receipts.clinical_section`, `sync_snapshots.clinical_sections` y `change_log.audience` amplían sus conjuntos cerrados con `diagnostic_reports`. Los cambios de nivel conservan versión, época, capturas, cursores y SSE de §§9–11.
+
+Son seis tablas nuevas: informe y resultado como pares estado actual/historia, y adjunto como par de metadatos/historia. Reutilizan las reglas comunes de §11.1 y las reglas propias de §12.1.
+
+Reglas propias de este bloque:
+
+- El informe original y los resultados estructurados son entidades distintas; el PDF u otro archivo es un adjunto privado y nunca sustituye a los resultados.
+- La corrección de un informe crea una nueva versión del mismo informe y anula los resultados de la versión anterior en la misma aceptación; el contenido anterior queda en historias. Solo hay un conjunto de resultados válidos por informe.
+- Los adjuntos guardan solo metadatos y huella; los bytes viven en almacenamiento de objetos S3 privado fuera de la base, del journal y de los logs. `storage_key` es una clave interna, nunca una URL pública.
+- Un adjunto puede existir sin informe (carga previa al vínculo); no acredita informe ni resultado. La descarga reautoriza en `diagnostic_reports` antes de entregar bytes.
+- No hay extracción automática, intervalo universal por nombre de prueba ni integración con laboratorios.
+
+### 13.2 `diagnostic_reports`
+
+**Propietario:** `diagnostic_results`. Informe recibido de una fuente diagnóstica; lo corregible es el registro, no el documento original.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id,patient_id)`; CHECK UUIDv7 | Informe estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK | Cuenta de la ficha. |
+| `patient_id` | `uuid` | Sí | Sin valor | UQ/FK | Paciente. |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta | Atención relacionada, si existe. |
+| `source_name` | `text` | Sí | Sin valor | Texto no vacío | Laboratorio, clínica u origen. |
+| `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Cómo se conoce el origen. |
+| `sample_date` | `text` | No | Nulo | Fecha parcial válida | Fecha de muestra/estudio. |
+| `issued_date` | `text` | No | Nulo | Fecha parcial válida | Fecha de emisión del informe. |
+| `report_kind` | `text` | Sí | Sin valor | CHECK `laboratory`,`imaging`,`pathology`,`other` | Tipo de informe. |
+| `report_status` | `text` | Sí | Sin valor | CHECK `preliminary`,`final` | Preliminar o final según el informe. |
+| `attachment_id` | `uuid` | No | Nulo | FK compuesta | Adjunto del documento original, si existe. |
+| `clinical_summary` | `text` | No | Nulo | Texto no vacío | Resumen libre del profesional; no extrae datos. |
+| `captured_at_local` | `timestamptz` | No | Nulo | CHECK finito | Captura reportada. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez del registro. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo de la corrección vigente. |
+| `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
+| `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
+| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación; fecha de carga. |
+| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual; la corrección la incrementa. |
+
+F157 a ficha; F158 opcional a atención; F159 opcional a adjunto; F160/F161 autores; F162 diferida a historia. Índices `(account_id,patient_id,record_status,sample_date,id)` y `(account_id,patient_id,record_status,id)`; vínculos y autores para sus FK. Corregir no cambia paciente ni fuente; `report_status` final puede pasar a una nueva versión solo por corrección. La fecha de carga (`created_at`) no se presenta como fecha clínica.
+
+### 13.3 `diagnostic_report_histories`
+
+Contiene las columnas de §13.2 más `action`,`actor_user_id`,`operation_id`,`changed_at`, con tipos/nulabilidad/conjuntos del estado resultante y campos técnicos NN. PK `(account_id,id,version)`; F163 a `(account_id,id)` actual y F164 a recibo. Índice de recibo; append-only. La versión corregida conserva el contenido anterior completo.
+
+### 13.4 `diagnostic_report_results`
+
+**Propietario:** `diagnostic_results`. Resultado estructurado de un informe; unidad obligatoria solo para valores numéricos.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id)`; CHECK UUIDv7 | Resultado estable. |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | FK a informe | Ámbito de la ficha. |
+| `report_id` | `uuid` | Sí | Sin valor | FK `(account_id,report_id,patient_id)` | Informe del resultado. |
+| `analyte_name` | `text` | Sí | Sin valor | Texto no vacío | Qué se midió; texto libre. |
+| `result_kind` | `text` | Sí | Sin valor | CHECK `numeric`,`text` | Forma del valor. |
+| `value` | `numeric` | No | Nulo | Finito | Valor numérico. |
+| `text_value` | `text` | No | Nulo | Texto no vacío | Valor no numérico. |
+| `unit` | `text` | No | Nulo | Texto no vacío; obligatorio si `numeric` | Unidad del valor. |
+| `reference_low`,`reference_high` | `numeric` | No | Nulo | Finito; `high >= low` | Intervalo del informe. |
+| `reference_text` | `text` | No | Nulo | Texto no vacío | Referencia textual del informe. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez; la corrección anula la versión anterior. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+CHECK de coherencia: `result_kind='numeric'` exige `value` y `unit` y prohíbe `text_value`; `text` exige `text_value` y prohíbe `value`,`unit`. Exactamente una referencia por fila: intervalo (`reference_low`/`reference_high`, al menos uno presente y ordenado) o `reference_text`; la aceptación verifica que proceden del informe. No hay CHECK de rango por analyte ni banderas: eso sería interpretación. F165 a informe; F166/F167 autores; F168 diferida a historia. Índices `(account_id,report_id,record_status,id)` y `(account_id,patient_id,record_status,id)`.
+
+### 13.5 `diagnostic_report_result_histories`
+
+Contiene las columnas de §13.4 más `action`,`actor_user_id`,`operation_id`,`changed_at`. PK `(account_id,id,version)`; F169 actual y F170 recibo; índice de recibo; append-only.
+
+### 13.6 `report_attachments`
+
+**Propietario:** `diagnostic_results`. Metadatos del archivo privado; los bytes están en S3 y no se tocan en la transacción.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id,patient_id)`; CHECK UUIDv7 | Adjunto estable. |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | FK a ficha | Ámbito. |
+| `file_name` | `text` | Sí | Sin valor | Texto no vacío | Nombre original. |
+| `content_type` | `text` | Sí | Sin valor | Texto no vacío | Tipo MIME declarado y verificado en carga. |
+| `byte_size` | `bigint` | Sí | Sin valor | CHECK positivo | Tamaño verificado. |
+| `sha256` | `text` | Sí | Sin valor | Texto fijo 64 hex | Huella de integridad calculada en carga. |
+| `storage_key` | `text` | Sí | Sin valor | Texto no vacío; UQ parcial por vigencia | Clave interna en S3; nunca URL. |
+| `uploaded_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Carga confirmada. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
+
+F171 a ficha; F172/F173 autores; F174 diferida a historia. Índices `(account_id,patient_id,record_status,id)` y único de huella por cuenta. La carga confirma bytes y huella fuera de la aceptación del informe; el borrado de bytes huérfanos es operación posterior, no transaccional. Conocer `storage_key` no concede acceso: la descarga exige autorización vigente y entrega los bytes por una vuelta reautorizada.
+
+### 13.7 `report_attachment_histories`
+
+Contiene las columnas de §13.6 más `action`,`actor_user_id`,`operation_id`,`changed_at`. PK `(account_id,id,version)`; F175 actual y F176 recibo; índice de recibo; append-only.
+
+### 13.8 Corrección y vigencia
+
+Corregir un informe (E18) es una operación sobre el mismo `id`: incrementa `version` del informe, anula con `record_status='entered-in-error'` los resultados de la versión anterior y crea los resultados corregidos en la misma aceptación. Las historias conservan el contenido anterior; las consultas vigentes filtran `record_status='valid'`, por lo que no hay puntos duplicados. Un resultado válido nunca se edita in place: la corrección crea otra versión del resultado. El adjunto original se conserva; un informe corregido puede añadir otro adjunto sin borrar el anterior.
+
+### 13.9 Timeline
+
+`patient_clinical_timeline` añade `diagnostic_report` a `entry_type`, con `source_section` `diagnostic_reports`. Usa `sample_date` como `occurrence_date` (precisión conservada) o `issued_date`; sin ambas, marca de aceptación como `reference`. Los resultados y adjuntos no son entradas de timeline propias.
+
+### 13.10 Integridad, conservación e inventario
+
+F157–F176 continúan F01–F156 con las mismas reglas de §11.13/§12.13. La FK de informe a adjunto y las de resultados a informe usan la forma compuesta que impide cruzar fichas; el adjunto sin informe es legal y no acredita nada. Las seis tablas añaden 124 columnas y 20 FK; una columna de permiso y los conjuntos cerrados modifican tablas existentes; el timeline amplía un conjunto. El inventario objetivo pasa a **62 tablas, 919 columnas y 176 FK**. Las cifras son documentales y deberán contrastarse con las migraciones reales. Los bytes en S3 quedan fuera del recuento y su retención sigue la política operativa pendiente.
+
+
+## 14. Plantillas, especialidad y analítica · revisión 1.4 para C04
+
+**Estado:** diseño físico propuesto para T06 de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), pendiente de C02. No crea migraciones, modelos ni datos. Las reglas funcionales proceden de [patient-clinical-record.md §4.3.1](patient-clinical-record.md) (O11/O13 cerrados el 2026-11-17). El diccionario odontológico concreto se fija en T22 y sus tablas en T23; esta sección define el mecanismo de plantillas y el almacén analítico.
+
+### 14.1 Cambios existentes y reglas comunes
+
+`account_memberships` añade `specialty_templates_access` y `clinical_analytics_access`: columnas `text` NN, valor inicial `read_write`, CHECK `none`/`read`/`read_write`. `operation_receipts.clinical_section`, `sync_snapshots.clinical_sections` y `change_log.audience` amplían sus conjuntos cerrados con `specialty_templates`; las consultas analíticas heredan la sección `measurements` de las mediciones que usan como entrada, y `clinical_analytics` gobierna las proyecciones derivadas. Los cambios de nivel conservan versión, época, capturas, cursores y SSE de §§9–11.
+
+Son seis tablas nuevas en el almacén operativo (plantilla, campo, registro y valor, cada uno con su historia donde aplica) más dos grupos en el almacén analítico separado. Reutilizan las reglas comunes de §11.1.
+
+Reglas propias de este bloque:
+
+- Las plantillas las define el propietario de la cuenta; son datos de la cuenta, no configuración global. No hay editor libre ni almacén JSON clínico: los campos se declaran con tipo cerrado y los valores se guardan en columnas tipadas.
+- Cambiar una plantilla crea una versión nueva; los registros creados con versiones anteriores conservan su `(template_id, template_version)` y su significado. Ningún valor normal, diagnóstico o respuesta se genera por defecto: los campos ausentes quedan ausentes.
+- El almacén analítico vive en PostgreSQL analítico separado; el ETL avanza con cursor durable y reconstruye proyecciones desde entradas/versiones identificables. Los conjuntos cerrados y permisos del almacén operativo no se copian: cada consulta analítica reautoriza contra el operativo.
+
+### 14.2 `specialty_templates`
+
+**Propietario:** `specialties`. Plantilla de captura para un uso clínico concreto, versionada.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id)`; CHECK UUIDv7 | Plantilla estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK a cuenta | Cuenta propietaria de la definición. |
+| `name` | `text` | Sí | Sin valor | Texto no vacío | Nombre de la plantilla. |
+| `specialty` | `text` | Sí | Sin valor | CHECK `dentistry` | Especialidad; solo la primera elegida. |
+| `template_status` | `text` | Sí | `active` | CHECK `active`,`retired` | Retirar no borra versiones ni registros. |
+| `change_note` | `text` | No | Nulo | Texto no vacío | Qué cambia en esta versión. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión vigente de la plantilla. |
+
+F177 a cuenta; F178/F179 autores; F180 diferida a historia. Índices `(account_id,template_status,id)` y autores. Publicar una versión nueva incrementa `version` y copia los campos vigentes a filas de la nueva versión en la misma aceptación; no modifica versiones anteriores.
+
+### 14.3 `specialty_template_histories`
+
+Contiene `account_id`,`id`,`name`,`specialty`,`template_status`,`change_note`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`. PK `(account_id,id,version)`; F181 actual y F182 recibo; append-only. Cada fila es una versión completa e inmutable de la plantilla.
+
+### 14.4 `specialty_template_fields`
+
+**Propietario:** `specialties`. Campo tipado de una versión de plantilla.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 | Campo estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ compuesta | Cuenta. |
+| `template_id` | `uuid` | Sí | Sin valor | FK `(account_id,template_id)` a versión vigente | Plantilla del campo. |
+| `template_version` | `integer` | Sí | Sin valor | CHECK positivo | Versión a la que pertenece. |
+| `field_key` | `text` | Sí | Sin valor | Texto no vacío | Clave estable del campo dentro de la versión. |
+| `label` | `text` | Sí | Sin valor | Texto no vacío | Etiqueta visible. |
+| `field_kind` | `text` | Sí | Sin valor | CHECK `text`,`number`,`boolean`,`date_partial` | Tipo cerrado; sin JSON libre. |
+| `required` | `boolean` | Sí | `false` | — | Obligatorio al capturar. |
+| `options` | `text` | No | Nulo | Lista cerrada separada por `|` | Solo para campos con opciones; no inventa respuestas. |
+| `display_order` | `integer` | Sí | Sin valor | CHECK positivo | Orden de captura. |
+
+UQ `(account_id,template_id,template_version,field_key)`. F183 a plantilla; la aceptación verifica que `template_version` coincide con la versión vigente al crear campos. Índice UQ. Los campos de versiones anteriores se conservan para lectura histórica y no se editan.
+
+### 14.5 `specialty_records`
+
+**Propietario:** `specialties`. Registro capturado con una versión concreta de plantilla.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; UQ `(account_id,id,patient_id)`; CHECK UUIDv7 | Registro estable. |
+| `account_id` | `uuid` | Sí | Sin valor | UQ/FK | Cuenta. |
+| `patient_id` | `uuid` | Sí | Sin valor | UQ/FK | Ficha. |
+| `encounter_id` | `uuid` | No | Nulo | FK compuesta | Atención, si existe. |
+| `template_id` | `uuid` | Sí | Sin valor | FK `(account_id,template_id)` | Plantilla usada. |
+| `template_version` | `integer` | Sí | Sin valor | CHECK positivo | Versión aplicada; inmutable. |
+| `recorded_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Momento del hecho o captura. |
+| `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
+| `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
+| `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión del registro. |
+
+F184 a ficha; F185 opcional a atención; F186 a plantilla; F187/F188 autores; F189 diferida a `specialty_record_histories`. Índices `(account_id,patient_id,record_status,id)` y `(account_id,template_id,template_version,id)`. Corregir no cambia plantilla ni versión aplicada.
+
+### 14.6 `specialty_record_histories`
+
+Contiene las columnas de §14.5 más `action`,`actor_user_id`,`operation_id`,`changed_at`. PK `(account_id,id,version)`; F190 actual y F191 recibo; append-only. La historia conserva la versión de plantilla con la que se capturó.
+
+### 14.7 `specialty_record_values`
+
+**Propietario:** `specialties`. Valor tipado de un campo; las columnas tipadas sustituyen a cualquier JSON clínico.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla | Significado |
+|---|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 | Valor estable. |
+| `account_id`,`patient_id` | `uuid` | Sí | Sin valor | FK a registro | Ámbito. |
+| `record_id` | `uuid` | Sí | Sin valor | FK `(account_id,record_id,patient_id)` | Registro del valor. |
+| `field_key` | `text` | Sí | Sin valor | Texto no vacío | Campo de la versión aplicada. |
+| `value_text` | `text` | No | Nulo | Texto no vacío | Valor textual. |
+| `value_number` | `numeric` | No | Nulo | Finito | Valor numérico. |
+| `value_boolean` | `boolean` | No | Nulo | — | Valor sí/no. |
+| `value_date` | `text` | No | Nulo | Fecha parcial válida | Valor de fecha. |
+| `version` | `integer` | Sí | Sin valor | CHECK positivo | Versión del registro a la que pertenece. |
+
+UQ `(account_id,record_id,field_key,version)`. F192 a registro; índice UQ y `(account_id,patient_id,field_key)`. CHECK de coherencia: exactamente una columna de valor no nula; el tipo debe coincidir con `field_kind` del campo en la versión aplicada, verificado en la aceptación. Los campos ausentes no se crean: ausencia frente a null se conserva. La corrección del registro crea versiones nuevas de los valores cambiados en la misma aceptación.
+
+### 14.8 Almacén analítico separado
+
+**Propietario:** `analytics`. PostgreSQL analítico distinto del operativo; sin permisos del operativo ni contenido clínico adicional. Dos tablas de proyección y una de referencias OMS versionadas; su migración pertenece al T26.
+
+`analytic_measurement_points`: punto de serie reconstruible.
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `account_id`,`patient_id` | `uuid` | Ámbito de la ficha. |
+| `measurement_kind` | `text` | CHECK de las cinco mediciones. |
+| `measured_at` | `timestamptz` | Fecha del hecho; orden de la serie. |
+| `value`,`systolic_value`,`diastolic_value` | `numeric` | Como la toma fuente. |
+| `unit` | `text` | Unidad de la serie. |
+| `source_measurement_id` | `uuid` | Toma de origen. |
+| `source_version` | `integer` | Versión de la toma que produjo el punto. |
+| `etl_batch` | `bigint` | Lote de avance; reintento idempotente por `(source_measurement_id,source_version)`. |
+
+UQ `(account_id,patient_id,measurement_kind,measured_at,source_measurement_id,source_version)`. La corrección de una toma produce un punto nuevo con `source_version` distinto y retira el anterior en el mismo lote; la serie consulta solo el punto vigente por entrada.
+
+`analytic_etl_state`: cursor durable por cuenta.
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `account_id` | `uuid` | PK parcial. |
+| `last_change_seq` | `bigint` | Frontera consumida del journal. |
+| `updated_at` | `timestamptz` | Último avance confirmado. |
+
+El ETL reclama, procesa y confirma avance con los efectos; una caída reanuda desde `last_change_seq` sin duplicar puntos por la UQ de origen/versión. La reconstrucción borra proyecciones y vuelve a correr desde cero con el mismo resultado.
+
+`who_reference_values`: referencias OMS verificadas en T28.
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `reference_code` | `text` | CHECK `who2006`,`who2007`; versión identificable. |
+| `indicator` | `text` | CHECK `weight_for_age`,`length_height_for_age`,`weight_for_length`,`bmi_for_age`. |
+| `sex` | `text` | CHECK `male`,`female`. |
+| `age_days` | `integer` | CHECK positivo; edad al día del cálculo. |
+| `metric` | `text` | CHECK `median`,`sd`,`z_scores`,`percentiles` según lo verificado en T28. |
+| `value` | `numeric` | Valor de referencia documentado. |
+
+UQ `(reference_code,indicator,sex,age_days,metric)`. Ninguna fila fuera del rango publicado de su referencia; el cálculo rechaza edades fuera de rango con límite explícito (E20). Los datos se incorporan solo tras T28 con fuente, versión y licencia registradas.
+
+### 14.9 Timeline e inventario
+
+`patient_clinical_timeline` añade `specialty_record` a `entry_type`, con `source_section` `specialty_templates`, usando `recorded_at` como instante. Las seis tablas operativas añaden 94 columnas y 15 FK; dos columnas de permiso y los conjuntos cerrados modifican tablas existentes. El inventario operativo objetivo pasa a **68 tablas, 1013 columnas y 191 FK**; las tres tablas analíticas viven fuera de ese inventario. Las cifras son documentales y deberán contrastarse con las migraciones reales.
+
+## 15. Odontograma de la primera especialidad · revisión 1.5 para C08
+
+**Estado:** diseño físico propuesto para T23 de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), pendiente de C08. El diccionario clínico (FDI, superficies, hallazgos, actuaciones) está en [patient-clinical-record.md §4.3.2](patient-clinical-record.md); solo odontología, sin afirmar otras especialidades.
+
+`account_memberships` reutiliza `specialty_templates_access` (los hallazgos y actuaciones comparten la sección de la especialidad). `operation_receipts.clinical_section`, `sync_snapshots.clinical_sections` y `change_log.audience` ya incluyen `specialty_templates` desde la revisión 1.4.
+
+Dos pares estado actual/historia con las reglas comunes de §11.1:
+
+### 15.1 `dental_findings`
+
+**Propietario:** `specialties`. Hallazgo vigente por pieza/superficie/tipo.
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `id`,`account_id`,`patient_id` | `uuid` | PK/UQ compuesta; CHECK UUIDv7 |
+| `encounter_id` | `uuid` | Opcional; FK a atención de la ficha |
+| `tooth_fdi` | `smallint` | CHECK: (11–48 y diente 1–8) o (51–85 y diente 1–5) |
+| `surface` | `text` | Nulo o CHECK `vestibular`,`palatina`,`lingual`,`mesial`,`distal`,`oclusal`,`incisal`,`cervical` |
+| `finding_kind` | `text` | CHECK `healthy`,`caries`,`missing`,`filling`,`crown`,`fracture`,`other` |
+| `finding_status` | `text` | `active`/`resolved`; resolver conserva historia |
+| `note` | `text` | Nota libre opcional |
+| `recorded_date` | `text` | Fecha parcial del hecho |
+| `record_status`,`correction_reason` | `text` | CHECK común |
+| autores, instantes, `version` | | Reglas comunes; historia `dental_finding_histories` |
+
+UQ parcial vigente: `UNIQUE (account_id,patient_id,tooth_fdi,surface,finding_kind) WHERE record_status='valid' AND finding_status='active' AND surface IS NOT NULL` y la misma variante con `surface IS NULL`. Índices por ficha y por pieza.
+
+### 15.2 `dental_treatments`
+
+**Propietario:** `specialties`. Actuación vinculada al hallazgo.
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `id`,`account_id`,`patient_id` | `uuid` | PK/UQ compuesta |
+| `finding_id` | `uuid` | FK `(account_id,finding_id,patient_id)` a hallazgo de la ficha |
+| `treatment_kind` | `text` | CHECK `cleaning`,`filling`,`crown`,`extraction`,`other` |
+| `treatment_status` | `text` | `planned`/`performed` |
+| `performed_date` | `text` | Fecha parcial; obligatoria si `performed` |
+| `note` | `text` | Opcional |
+| `record_status`,`correction_reason`, autores, instantes, `version` | | Reglas comunes; historia `dental_treatment_histories` |
+
+CHECK: `treatment_status='performed'` exige `performed_date`. No hay derivación clínica automática entre hallazgo y actuación.

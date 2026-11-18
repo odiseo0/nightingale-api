@@ -91,6 +91,34 @@ Casos de [P-20261116-02-clinical-routine](../tasks/P-20261116-02-clinical-routin
 
 Dominio/aplicación no usan red. Integridad, migraciones, idempotencia concurrente y carreras usan PostgreSQL Test 18.3 y Keycloak Test aislados, con bases aleatorias eliminadas al terminar. SQLite no acredita esas reglas. No se declara integración Rust/Hub, operación con datos reales ni producción.
 
+## Criterios clínicos de la primera especialidad · odontograma (T22)
+
+Casos de la primera especialidad (odontología), preparados en T22 el 2026-11-18 sin ejecutarse: pieza FDI inválida (quadrante/diente fuera de rango o temporal con diente 6–8) rechazada por SQL; superficie fuera del conjunto cerrado rechazada; hallazgo duplicado vigente en misma pieza/superficie/tipo rechazado; resolver hallazgo conserva historia; actuación `planned`→`performed` con fecha y vínculo al hallazgo; cambio de plantilla no altera odontograma ni inventa hallazgos; usuario sin `specialty_templates read` no obtiene piezas, hallazgos ni evolución.
+
+## Verificación de fuentes OMS · T28 (2026-11-18)
+
+Fuentes oficiales comprobadas con enlaces y fixtures reproducibles:
+
+| Referencia | Ámbito | Fuente oficial | Fixtures verificados |
+|---|---|---|---|
+| Patrones OMS 2006 | Peso/edad 0–60 meses | [Tabla LMS niños (z)](https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/wfa-boys-0-5-zscores.pdf?sfvrsn=be07c977_11), [tabla de campo simplificada](https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/sft-wfa-boys-z-0-5.pdf?sfvrsn=c735bc54_11) | Niños mes 0: L=0.3487, M=3.3464 kg, S=0.14602; mes 5: L=0.1395, M=7.5105 kg, S=0.11080; medianas de campo: 3.3 kg (mes 0), 4.5 kg (mes 1) |
+| Referencia OMS 2007 | Talla/edad e IMC/edad 61–228 meses; peso/edad solo 5–10 años | [Referencia 5–19 años](https://www.who.int/tools/growth-reference-data-for-5to19-years/indicators) | Pendiente de incorporación de tabla (límite registrado en todo.md) |
+
+Método: parámetros LMS (z = ((valor/M)^L − 1)/(L·S); z = ln(valor/M)/S si L=0), conforme a [WHO Child Growth Standards: methods and development, 2006](https://www.who.int/publications/i/item/924154693X). Las publicaciones OMS se distribuyen con fines de salud pública; la incorporación completa del dataset queda registrada como límite hasta su descarga y huella. No se extrapola fuera de rango y no hay diagnóstico.
+
+## Criterios clínicos de etapa 3 · línea base T01
+
+Casos de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-stage-3/plan.md), preparados en T01 el 2026-11-17 sin ejecutarse. Usan datos ficticios y distinguen medicación declarada de prescripción, actividad de objetivo, informe original de resultado estructurado, plantilla de hecho clínico y referencia OMS de diagnóstico. La línea base y la trazabilidad caso→tarea figuran en [plan.md §1.1](../tasks/P-20261117-05-clinical-stage-3/plan.md).
+
+- **E15:** medicamento indicado por otro médico consta como uso declarado sin receta propia; fuente, periodo, precisión e incertidumbre explícitos; sin inferir consumo/adherencia.
+- **E17:** plan con objetivos/acciones/revisiones; completar actividad no equivale a lograr objetivo; cierre/suspensión/sustitución con historia.
+- **E18:** informe corregido conserva original y resultados vigentes sin puntos duplicados; adjuntos privados en S3 con metadatos/huella en PostgreSQL y descarga reautorizada; subir PDF no acredita extracción.
+- **E19:** cambio de plantilla conserva significado/versión de registros previos; sin hechos normales ni respuestas por defecto.
+- **E20/E21:** referencia OMS solo dentro de rango con indicador/método/versión; fuera de rango explica el límite; cambio de nacimiento/entrada recalcula o invalida derivados con versiones identificables.
+- **Comunes (E03/E09/E22/E23/E24):** series solo con datos válidos; correcciones no duplican puntos; permisos, respuesta perdida y retención técnica sin borrado funcional ni filtrado por sync.
+
+Dominio/aplicación sin red; integridad, migraciones, idempotencia concurrente y carreras exigen PostgreSQL Test aislado. Autorización sigue In progress: las pruebas de permisos de estos bloques reutilizan el mecanismo vigente de Etapas 1/2 hasta su cierre.
+
 ## Evidencia clínica de Etapa 2 · T25/C08
 
 Los casos E06–E14 y E22–E24 están comprobados en el servidor mediante suite, persistencia y probes HTTP reales. Los siete tipos aparecen en timeline con filtros autorizados; captura/delta conservan hechos históricos, correcciones y anulaciones. Integración con consumidores, operación con datos reales y producción siguen pendientes.
