@@ -1,8 +1,8 @@
 # Lista de tareas: P-20261116-02-clinical-routine
 
-**Plan:** [plan.md](plan.md). **Estado del plan:** In progress. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16.
+**Plan:** [plan.md](plan.md). **Estado del plan:** Completed. **Creado:** 2026-11-16. **Actualizado:** 2026-11-17.
 
-El usuario autorizó T01 → T02 → T03 hasta C01 y, tras aceptarlo, T04 → T05 → T06 hasta C02. T19–T27 permanecen Todo. C01–C06 están aceptados; C07–C09 siguen pendientes de revisión y aceptación expresa.
+T01–T27 están Done y C01–C09 están aceptados. El usuario aceptó C09 el 2026-11-17 y autorizó continuar con el plan de autorización. Se conserva la evidencia histórica sin ampliar sus garantías.
 
 El plan sucesor de Etapa 1 y el plan original quedaron Completed con C08 y C06 aceptados el 2026-11-16. Esta aceptación de cierres no autoriza ejecutar T01 de Etapa 2 ni acepta anticipadamente sus checkpoints. Trabajo secuencial, sin delegación, sin dependencias nuevas, commits, despliegues, datos reales ni cambios en otros repositorios.
 
@@ -846,7 +846,7 @@ Suite: 170 pruebas OK. Contratos: fallo previo por `openapi.json` desactualizado
 
 - [x] Todas las funciones aprobadas y sus casos de aceptación están comprobados según la matriz.
 - [x] Contratos, documentación, build y revisión final son coherentes con el entregable.
-- [ ] El usuario revisa y decide sobre C09. No se inicia Etapa 3 ni se aceptan automáticamente este plan o los anteriores.
+- [x] El usuario aceptó C09 el 2026-11-17. El plan queda Completed; esta aceptación no acredita consumidores ni producción ni acepta checkpoints futuros.
 
 **Evidencia T26–T27/C09:** publicación `api-v1.3` con `contractVersion=1`: 78 rutas, 127 esquemas y 66 acciones; dos generaciones y `--check` correctos; probe real de contratos correcto. Suite: 198 pruebas en 72,864 s, OK. Los 25 probes pasan: 19 anteriores y seis nuevos de Etapa 2. Persistencia, SQL offline/head `20261116_10`, build offline e inspección del wheel correctos. Basedpyright: 15 errores históricos, 0 avisos, sin nuevos. `git diff --check` correcto. El único fallo del cierre fue una expectativa antigua `UNSUPPORTED_OPERATION`; se corrigió a `VALIDATION_ERROR` para acciones ya implementadas y los once probes clínicos se repitieron con éxito. API comprobada con datos ficticios y servicios Test; integración Rust/Hub, operación con datos reales y producción quedan pendientes.
 

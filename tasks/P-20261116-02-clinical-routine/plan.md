@@ -1,6 +1,6 @@
 # P-20261116-02-clinical-routine: Etapa 2, registro clínico habitual
 
-**Estado:** In progress. **Creado:** 2026-11-16. **Actualizado:** 2026-11-16. **Lista de tareas:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-11-16. **Actualizado:** 2026-11-17. **Lista de tareas:** [todo.md](todo.md).
 
 ## 1. Contexto y autoridad
 
@@ -394,3 +394,5 @@ No se seleccionan bibliotecas, catálogos médicos ni servicios externos nuevos.
 - Las revisiones pendientes de Etapa 1 y de planes anteriores no se aceptan por redactar o aprobar este plan.
 
 **Preguntas abiertas:** ninguna para el alcance aprobado de esta planificación. Las decisiones operativas para datos reales y las funciones de Etapa 3 permanecen fuera.
+
+Aceptación de cierre: el usuario aceptó C09 el 2026-11-17 y autorizó continuar con P-20261117-01-authorization-policies. Se conserva la evidencia y sus límites.
