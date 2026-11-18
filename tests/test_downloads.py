@@ -1,15 +1,53 @@
 import unittest
 from datetime import UTC, datetime, timedelta
+from typing import get_args, get_type_hints
 from uuid import uuid7
 
 from pydantic import ValidationError
 
+from src.api.accounts.domain.accounts import AccountChange
+from src.api.sync.application.download_cases import CLINICAL_AUDIENCES, clinical_change_allowed
 from src.api.sync.domain.downloads import ChangeGroup, ChangeQuery, SnapshotRequest, SnapshotResponse, SyncChange, SyncPosition, SyncWindow
 from src.api.sync.domain.events import Heartbeat
 from src.core.services.sync_signatures import sign_position, verify_position
 
 
 class DownloadSchemaTests(unittest.TestCase):
+    def test_projection_catalog_covers_entities_and_filters_roles_and_sections(self):
+        from src.api.accounts.domain.policies import projection_allowed, projection_audiences
+        from src.api.sync.domain.downloads import PROJECTION_SCHEMAS
+
+        self.assertEqual(set(projection_audiences()), set(PROJECTION_SCHEMAS))
+        for entity in ("account_device", "membership", "invitation", "service"):
+            self.assertFalse(projection_allowed(entity, None, False, []))
+            self.assertTrue(projection_allowed(entity, None, True, []))
+        for entity, section in (
+            ("patient_clinical_profile", "profile"), ("patient_condition", "conditions"),
+            ("patient_allergy_intolerance", "allergies"), ("clinical_encounter", "encounters"),
+            ("patient_note", "notes"), ("patient_measurement", "measurements"),
+            ("patient_immunization", "immunizations"), ("patient_antecedent", "antecedents"),
+            ("declared_medication", "declared_medications"),
+            ("care_plan", "care_plans"), ("care_plan_goal", "care_plans"),
+            ("care_plan_action", "care_plans"), ("care_plan_review", "care_plans"),
+            ("diagnostic_report", "diagnostic_reports"),
+            ("diagnostic_report_result", "diagnostic_reports"),
+            ("report_attachment", "diagnostic_reports"),
+            ("specialty_template", "specialty_templates"),
+            ("specialty_record", "specialty_templates"),
+            ("dental_finding", "specialty_templates"),
+            ("dental_treatment", "specialty_templates"),
+        ):
+            for level in ("none", "read", "read_write"):
+                sections = [] if level == "none" else [section]
+                self.assertEqual(projection_allowed(entity, None, False, sections), level != "none")
+                self.assertEqual(projection_allowed(entity, "clinical_" + section, False, sections), level != "none")
+        for section in ("conditions", "allergies"):
+            self.assertTrue(projection_allowed("patient_clinical_section_review", None, False, [section], section))
+        self.assertFalse(projection_allowed("patient_clinical_section_review", None, True, ["conditions"]))
+        self.assertFalse(projection_allowed("patient_note", "clinical_conditions", True, ["conditions"]))
+        self.assertFalse(projection_allowed("unknown", "members", True, []))
+        self.assertFalse(clinical_change_allowed("unknown", []))
+
     def test_public_instants_use_utc_z_with_an_offset_input(self):
         instant = "2026-11-01T03:00:00-04:00"
         expected = "2026-11-01T07:00:00Z"
@@ -62,3 +100,20 @@ class DownloadSchemaTests(unittest.TestCase):
         for patch in ({"change_kind": "upsert"}, {"entity_type": "unknown"}, {"state": {"private": "fixture"}}):
             with self.assertRaises(ValidationError):
                 SyncChange(**{**data, **patch})
+
+    def test_every_journal_audience_has_exactly_one_section_rule(self):
+        audience_type = get_type_hints(AccountChange)["audience"]
+        audiences = set(get_args(audience_type))
+        administrative = {"members", "owner"}
+        self.assertEqual(audiences, administrative | set(CLINICAL_AUDIENCES))
+        self.assertFalse(administrative & set(CLINICAL_AUDIENCES))
+        self.assertEqual(set(CLINICAL_AUDIENCES.values()), set(get_args(get_type_hints(AccountChange)["audience"])[2:]) and {
+            "profile", "conditions", "allergies", "encounters", "notes",
+            "measurements", "immunizations", "antecedents", "declared_medications", "care_plans", "diagnostic_reports", "specialty_templates",
+        })
+        for audience in administrative:
+            for sections in ([], ["conditions"]):
+                self.assertTrue(clinical_change_allowed(audience, sections))
+        for audience, section in CLINICAL_AUDIENCES.items():
+            self.assertTrue(clinical_change_allowed(audience, [section]))
+            self.assertFalse(clinical_change_allowed(audience, [s for s in CLINICAL_AUDIENCES.values() if s != section]))
