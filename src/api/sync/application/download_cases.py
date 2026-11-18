@@ -7,9 +7,9 @@ from uuid import UUID, uuid7
 
 from pydantic import ValidationError
 
-from src.api.accounts.application.accounts_cases import readable_clinical_sections
 from src.api.accounts.domain.accounts import AccountContext, ClinicalSection
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
+from src.api.accounts.domain.policies import clinical_audiences, projection_allowed, sync_scope_matches
 from src.api.appointments.application.appointments_cases import captured_history
 from src.api.appointments.domain.appointments import AppointmentResponse
 from src.api.audit.application.audit_cases import record_control
@@ -61,11 +61,10 @@ def position_for_scope(
         position.account_id != context.account.id
         or position.user_id != context.actor.user_id
         or position.device_id != context.actor.device_id
-        or position.audience != ("owner" if context.owner else "members")
-        or not set(position.clinical_sections).issubset(
-            readable_clinical_sections(context)
+        or not sync_scope_matches(
+            context, position.audience, position.clinical_sections,
+            position.permission_epoch, head.permission_epoch,
         )
-        or position.permission_epoch != head.permission_epoch
         or position.sequence < head.retained_from_sequence - 1
         or position.sequence > head.last_sequence
         or position.expires_at <= now
@@ -76,21 +75,15 @@ def position_for_scope(
     return Ok(position)
 
 
-CLINICAL_AUDIENCES: dict[str, ClinicalSection] = {
-    "clinical_profile": "profile",
-    "clinical_conditions": "conditions",
-    "clinical_allergies": "allergies",
-    "clinical_encounters": "encounters",
-    "clinical_notes": "notes",
-    "clinical_measurements": "measurements",
-    "clinical_immunizations": "immunizations",
-    "clinical_antecedents": "antecedents",
-}
+# Compatibility name for existing callers; the catalogue owns the definitions.
+CLINICAL_AUDIENCES = clinical_audiences()
 
 
 def clinical_change_allowed(audience: str, sections: list[ClinicalSection]) -> bool:
+    if audience in ("members", "owner"):
+        return True
     section = CLINICAL_AUDIENCES.get(audience)
-    return section is None or section in sections
+    return section is not None and section in sections
 
 
 def visible_change(row: ChangeLog, window: SyncWindow) -> SyncChange | None:
@@ -190,11 +183,8 @@ async def read_changes(
             changes: list[SyncChange] = []
 
             for row in group:
-                if row.audience == "owner" and not context.owner:
-                    continue
-
-                if not clinical_change_allowed(
-                    row.audience, position.clinical_sections
+                if not projection_allowed(
+                    row.entity_type, row.audience, context.owner, position.clinical_sections
                 ):
                     continue
 

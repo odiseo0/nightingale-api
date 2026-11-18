@@ -87,6 +87,13 @@ async def check_access(client, factory, tokens):
         headers={"Authorization": f"Bearer {owner['access_token']}"},
     ), 422)
 
+    for field in ("userId", "deviceId", "role", "issuedAt"):
+        forged = "fixture-untrusted-identity-" + str(uuid7())
+        response = await client.post("/v1/auth/device-tokens", json={**registration, field: forged},
+                                     headers={"Authorization": f"Bearer {owner['access_token']}"})
+        expect(response, 422)
+        assert forged not in response.text
+
     primary = await issue(client, owner["access_token"])
     async with factory() as db:
         assert await db.scalar(select(func.count()).select_from(AppUser)) == 1

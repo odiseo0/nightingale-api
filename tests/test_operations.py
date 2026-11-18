@@ -249,16 +249,77 @@ class ClinicalResultTests(unittest.TestCase):
                 denied, read_count, audit_count = await get('read')
                 assert isinstance(denied, Err) and isinstance(denied.error, AccessDenied)
                 assert read_count == audit_count == 0
-                return {'checks': 5}
+                receipt.clinical_section = None
+                for action in ('SetPatientClinicalSectionReview', 'SetPatientSexAtBirth', 'CreatePatientNote'):
+                    receipt.action = action
+                    for level in ('none', 'read', 'read_write'):
+                        denied, read_count, audit_count = await get(level)
+                        assert isinstance(denied, Err) and isinstance(denied.error, AccessDenied)
+                        assert read_count == audit_count == 0, (action, level)
+                # Administrative receipts need no clinical section.
+                receipt.action = 'RegisterPatient'
+                allowed, read_count, audit_count = await get('none')
+                assert isinstance(allowed, Ok) and read_count == 1 and audit_count == 0
+                return {'checks': 15}
 
             print(json.dumps(asyncio.run(check())))
         """, self.database_settings())
-        self.assertEqual(result, {"checks": 5})
+        self.assertEqual(result, {"checks": 15})
 
 
 class PayloadReuseTests(unittest.TestCase):
     run_python = foundation.FoundationTests.run_python
     database_settings = foundation.FoundationTests.database_settings
+
+    def test_legacy_permission_receipt_survives_the_new_default_section(self):
+        result = self.run_python("""
+            import asyncio, hashlib
+            from datetime import UTC, datetime, timedelta
+            from types import SimpleNamespace
+            from unittest.mock import AsyncMock, patch
+            from uuid import uuid7
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from src.api.accounts.domain.accounts import ClinicalPermissions, ClinicalPermissionsPayload
+            from src.api.sync.application import operations_cases as cases
+            from src.api.sync.domain.operations import OperationEnvelope, OperationResult
+            from src.core import Ok
+            from src.core.schema import ApiError
+
+            async def check():
+                account, user, device, target, identifier = [uuid7() for _ in range(5)]
+                permissions = {name: 'read_write' for name in ('clinicalProfile','conditions','allergies','encounters','notes','measurements','immunizations','antecedents')}
+                envelope = dict(operationId=str(identifier), contractVersion=1, action='SetMemberClinicalPermissions', entityKey=str(target), expectedVersion=1, payload={'clinicalPermissions': permissions})
+                original = OperationEnvelope.model_validate(envelope)
+                legacy = original.model_dump(mode='json', by_alias=True)
+                fingerprint = hashlib.sha256(json.dumps(legacy, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode()).digest()
+                now = datetime.now(UTC)
+                previous = OperationResult(operation_id=identifier, status='rejected', entity_version=2, state=None, error=ApiError(code='NO_CHANGES', message='Fixture', correlation_id=uuid7()))
+                receipt = SimpleNamespace(request_hash=fingerprint, clinical_section=None, action='SetMemberClinicalPermissions', entity_key=str(target), result_json=previous.model_dump(mode='json', by_alias=True), result_expires_at=now+timedelta(days=90))
+                context = SimpleNamespace(owner=True, account=SimpleNamespace(id=account, status='active'), actor=SimpleNamespace(user_id=user, device_id=device), device_status='active', clinical_permissions=ClinicalPermissions())
+                statuses = []
+                for level in (None, 'read_write', 'read', 'none'):
+                    fields = dict(permissions)
+                    if level is not None: fields['declaredMedications'] = level
+                    operation = OperationEnvelope.model_validate({**envelope, 'payload': {'clinicalPermissions': fields}})
+                    with patch.object(cases, 'authorized_context', new=AsyncMock(return_value=Ok((context, SimpleNamespace())))), patch.object(cases.dao_heads, 'get_server_time', new=AsyncMock(return_value=now)), patch.object(cases.dao_receipts, 'get_scoped', new=AsyncMock(return_value=receipt)):
+                        async with AsyncSession() as db:
+                            outcome = await cases.accept_operation(db, None, account, operation, uuid7())
+                    assert isinstance(outcome, Ok)
+                    statuses.append(outcome.value.status)
+                    if level in (None, 'read_write'):
+                        prior = outcome.value.original_result
+                        assert prior is not None and prior.error is not None
+                        assert prior.error.code == 'NO_CHANGES'
+                    else:
+                        error = outcome.value.error
+                        assert error is not None and error.code == 'IDEMPOTENCY_CONFLICT'
+                    validated = operation.validated_payload()
+                    assert isinstance(validated, ClinicalPermissionsPayload)
+                    assert validated.clinical_permissions.declared_medications == (level or 'read_write')
+                return {'statuses': statuses}
+            print(json.dumps(asyncio.run(check())))
+        """, self.database_settings())
+        self.assertEqual(result['statuses'], ['duplicate', 'duplicate', 'conflict', 'conflict'])
 
     def test_previous_fingerprints_and_single_payload_selection(self):
         fixture = json.loads(
@@ -339,3 +400,52 @@ class PayloadReuseTests(unittest.TestCase):
         """, self.database_settings())
 
         self.assertEqual(result["cases"], 2)
+
+
+class AdministrativePolicyTests(unittest.TestCase):
+    run_python = foundation.FoundationTests.run_python
+    database_settings = foundation.FoundationTests.database_settings
+
+    def test_all_owner_actions_deny_assistants_before_receipt_lookup(self):
+        result = self.run_python("""
+            import asyncio
+            from datetime import UTC, datetime
+            from types import SimpleNamespace
+            from unittest.mock import AsyncMock, patch
+            from uuid import uuid7
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from src.api.accounts.domain.accounts import ClinicalPermissions
+            from src.api.authorization.domain.errors import AccessDenied
+            from src.api.sync.application import operations_cases as cases
+            from src.api.sync.domain.operations import OperationEnvelope
+            from src.core import Err, Ok
+
+            class ReachedReceipt(Exception):
+                pass
+
+            async def check():
+                actions = 'CreateInvitation RevokeInvitation SetMembershipStatus SetMemberClinicalPermissions UpdateAccountDetails UpdateAccountPolicy SetAccountStatus RevokeAccountDevice RestoreAccountDevice UpdateProfessionalProfile CreateService UpdateService SetServiceStatus OfferService UpdateServiceOffer SetServiceOfferStatus'.split()
+                account_id, user_id, device_id = [uuid7() for _ in range(3)]
+                for owner in (False, True):
+                    context = SimpleNamespace(owner=owner,
+                        actor=SimpleNamespace(user_id=user_id, device_id=device_id),
+                        account=SimpleNamespace(id=account_id, status='active'),
+                        device_status='active', clinical_permissions=ClinicalPermissions())
+                    for action in actions:
+                        operation = OperationEnvelope(operation_id=uuid7(), contract_version=1,
+                            action=action, entity_key=uuid7(), expected_version=0, payload={})
+                        with patch.object(cases, 'authorized_context', new=AsyncMock(return_value=Ok((context, SimpleNamespace())))), \
+                            patch.object(cases.dao_heads, 'get_server_time', new=AsyncMock(return_value=datetime.now(UTC))), \
+                            patch.object(cases.dao_receipts, 'get_scoped', new=AsyncMock(side_effect=ReachedReceipt)) as read:
+                            async with AsyncSession() as db:
+                                try:
+                                    outcome = await cases.accept_operation(db, None, account_id, operation, uuid7())
+                                except ReachedReceipt:
+                                    assert owner and read.await_count == 1, action
+                                else:
+                                    assert not owner and isinstance(outcome, Err)
+                                    assert isinstance(outcome.error, AccessDenied) and read.await_count == 0, action
+                return {'role_checks': len(actions) * 2}
+            print(json.dumps(asyncio.run(check())))
+        """, self.database_settings())
+        self.assertEqual(result, {'role_checks': 32})

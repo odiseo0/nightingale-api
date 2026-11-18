@@ -75,6 +75,14 @@ async def check_sync(runtime, administrative, client, tokens):
     await submit([operation(entityKey=outsider["deviceId"])], owner, 403)
     assert await counts() == before
 
+    # Claimed actor, role, account and server time never become authority.
+    for field in ("actorUserId", "deviceId", "accountId", "role", "acceptedAt"):
+        forged = "fixture-untrusted-claim-" + str(uuid7())
+        response = await client.post(base, json={"operations": [{**first, field: forged}]}, headers=access.authorization(owner))
+        access.expect(response, 422)
+        assert forged not in response.text
+        assert await counts() == before
+
     # Two separate HTTP requests and database sessions must confirm one effect.
     concurrent = await asyncio.gather(submit([first]), submit([first]))
     assert sorted(item[0]["status"] for item in concurrent) == ["accepted", "duplicate"]
@@ -294,6 +302,73 @@ async def check_sync(runtime, administrative, client, tokens):
             await db.execute(text("UPDATE nightingale.operation_receipts SET result_json=NULL,purged_at=clock_timestamp() WHERE operation_id=:id"), {"id": UUID(expired["operationId"])})
     await submit([expired], another, 410)
     assert (await submit([dict(expired, expectedVersion=1)], another))[0]["error"]["code"] == "IDEMPOTENCY_CONFLICT"
+
+    # Global revocation and account acceptance serialize on identity before account rows.
+    from src.api.authorization.application import authorization_cases
+    original_control = authorization_cases.record_control
+    original_append = dao_changes.append
+    for global_revocation, acceptance_first in ((True, False), (True, True), (False, False), (False, True)):
+        installation = await access.issue(client, tokens[0]["access_token"])
+        assert (await submit([operation(installation)], installation))[0]["status"] == "accepted"
+        patient = uuid7()
+        write = operation(installation, action="RegisterPatient", entityKey=str(patient), payload={"fullName": "Fixture global race"})
+        revoke_operation = operation(action="RevokeAccountDevice", entityKey=installation["deviceId"], expectedVersion=1)
+        entered, release = asyncio.Event(), asyncio.Event()
+        holder_pid = None
+
+        async def hold(db):
+            nonlocal holder_pid
+            holder_pid = await db.scalar(text("SELECT pg_backend_pid()"))
+            entered.set()
+            await asyncio.wait_for(release.wait(), 10)
+
+        async def paused_control(db, event):
+            await original_control(db, event)
+            if global_revocation and not acceptance_first and event.action == "RevokeDevice" and event.object_key == installation["deviceId"]:
+                await hold(db)
+
+        async def paused_append(db, values, **kwargs):
+            result = await original_append(db, values, **kwargs)
+            if (acceptance_first and str(values["operation_id"]) == write["operationId"]) or (not global_revocation and not acceptance_first and str(values["operation_id"]) == revoke_operation["operationId"]):
+                await hold(db)
+            return result
+
+        async def revoke():
+            if global_revocation:
+                response = await client.post(f"/v1/me/devices/{installation['deviceId']}/revoke", headers=access.authorization(another))
+                access.expect(response, 204)
+            else:
+                assert (await submit([revoke_operation], another))[0]["status"] == "accepted"
+
+        def accept():
+            return submit([write], installation, 200 if acceptance_first else (401 if global_revocation else 403))
+
+        tasks = []
+        with patch.object(authorization_cases, "record_control", side_effect=paused_control), patch.object(dao_changes, "append", side_effect=paused_append):
+            try:
+                tasks.append(asyncio.create_task(accept() if acceptance_first else revoke()))
+                await asyncio.wait_for(entered.wait(), 10)
+                tasks.append(asyncio.create_task(revoke() if acceptance_first else accept()))
+                assert holder_pid is not None
+                async with administrative() as observer:
+                    for _ in range(150):
+                        if await observer.scalar(text("SELECT EXISTS(SELECT FROM pg_stat_activity WHERE :pid=ANY(pg_blocking_pids(pid)))"), {"pid": holder_pid}):
+                            break
+                        await asyncio.sleep(.02)
+                    else:
+                        raise AssertionError("Global revocation race did not block in PostgreSQL")
+            finally:
+                release.set()
+                await asyncio.gather(*tasks, return_exceptions=True)
+        for task in tasks:
+            await task
+        response = await client.get(base + "/" + write["operationId"], headers=access.authorization(installation))
+        access.expect(response, 401 if global_revocation else 403)
+        async with administrative() as db:
+            effect = await db.scalar(text("SELECT count(*) FROM nightingale.account_patients WHERE account_id=:account AND patient_id=:patient"), {"account": account_id, "patient": patient})
+            receipt = await db.scalar(text("SELECT count(*) FROM nightingale.operation_receipts WHERE account_id=:account AND operation_id=:operation"), {"account": account_id, "operation": UUID(write["operationId"])})
+            assert effect == receipt == int(acceptance_first)
+    print("Global/account identity races passed: observed PostgreSQL waiters in both commit orders, without partial effect or result access after revocation.")
 
 
 async def main(check=check_sync):

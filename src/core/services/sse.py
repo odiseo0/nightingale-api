@@ -1,29 +1,37 @@
-"""Bound network writes and release stream resources on every exit."""
-
 import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
-from fastapi.sse import EventSourceResponse, ServerSentEvent, format_sse_event
 from anyio import move_on_after
+from fastapi.sse import EventSourceResponse, ServerSentEvent, format_sse_event
 from starlette.types import Message, Receive, Scope, Send
 
 
 class BoundedEventSourceResponse(EventSourceResponse):
     def __init__(
-        self, events: AsyncGenerator[ServerSentEvent, None], cleanup: Callable[[], Awaitable[None]],
+        self,
+        events: AsyncGenerator[ServerSentEvent],
+        cleanup: Callable[[], Awaitable[None]],
     ) -> None:
         self.events = events
         self.cleanup = cleanup
         self.frames = self.encode()
-        super().__init__(self.frames, headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+        super().__init__(
+            self.frames,
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
 
-    async def encode(self) -> AsyncGenerator[bytes, None]:
+    async def encode(self) -> AsyncGenerator[bytes]:
         # Direct responses validate access before sending HTTP headers. Reuse the
         # installed FastAPI 0.159.1 SSE formatter and event validation.
         # https://fastapi.tiangolo.com/tutorial/server-sent-events/
         async for event in self.events:
-            yield format_sse_event(data_str=event.raw_data, event=event.event, id=event.id,
-                                   retry=event.retry, comment=event.comment)
+            yield format_sse_event(
+                data_str=event.raw_data,
+                event=event.event,
+                id=event.id,
+                retry=event.retry,
+                comment=event.comment,
+            )
 
     async def stream_response(self, send: Send) -> None:
         async def bounded_send(message: Message) -> None:

@@ -78,7 +78,8 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     clinical = await capture(include=True)
     assert set(clinical["clinicalSections"]) == {
         "profile", "conditions", "allergies", "encounters", "notes",
-        "measurements", "immunizations", "antecedents",
+        "measurements", "immunizations", "antecedents", "declared_medications",
+        "care_plans", "diagnostic_reports", "specialty_templates",
     }
     clinical_items = await items(clinical["snapshotId"])
     types = {item["entityType"] for item in clinical_items}
@@ -101,7 +102,8 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
     limited = await capture(actor=assistant, include=True)
     assert set(limited["clinicalSections"]) == {
         "profile", "allergies", "encounters", "notes", "measurements",
-        "immunizations", "antecedents",
+        "immunizations", "antecedents", "declared_medications",
+        "care_plans", "diagnostic_reports", "specialty_templates",
     }
     limited_items = await items(limited["snapshotId"], actor=assistant)
     assert not any(item["entityType"] == "patient_condition" for item in limited_items)
@@ -133,7 +135,18 @@ async def check_clinical_downloads(runtime, administrative, client, tokens):
         access.expect(response, 503)
     async with administrative() as db:
         assert await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE account_id=:id AND action='ReadClinicalChanges'"), {"id": account_id}) == delta_audits
-    print("Clinical download checks passed: opt-in, sections, current state, delta, epoch, audit and rollback.")
+    response = await client.get(
+        base + f"/sync/snapshots/{limited['snapshotId']}/items?shows=1",
+        headers=access.authorization(assistant),
+    )
+    access.expect(response, 200)
+    assert response.json()["total"] == limited["itemCount"] == len(limited_items)
+    assert (await operation("UpdatePatientCondition", condition_id, {"clinicalStatus": "active"}, 2))["status"] == "accepted"
+    response = await client.get(base + f"/sync/changes?cursor={limited['baseCursor']}", headers=access.authorization(assistant))
+    access.expect(response, 200)
+    assert response.json()["groups"] == []
+    assert response.json()["nextCursor"] != limited["baseCursor"]
+    print("Clinical download checks passed: opt-in, sections, current state, invisible delta groups, authorized totals, epoch, audit and rollback.")
 
 
 if __name__ == "__main__":

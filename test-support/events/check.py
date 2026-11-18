@@ -199,8 +199,17 @@ async def check_events(runtime, administrative, client, tokens):
                 assert len(pids) == 2
                 for row in pids:
                     assert await admin.fetchval("SELECT pg_terminate_backend($1)", row["pid"])
-                states = await asyncio.gather(*(api.get("/health/ready") for api in clients))
-                assert all(state.status_code == 503 for state in states)
+                async def wait_for_listener_loss(api: httpx.AsyncClient) -> httpx.Response:
+                    # Backend termination returns before the API handles the socket closure.
+                    for _ in range(25):
+                        state = await api.get("/health/ready")
+                        if state.status_code == 503:
+                            return state
+                        access.expect(state, 200)
+                        await asyncio.sleep(.02)
+                    raise AssertionError("Listener loss did not change readiness")
+
+                states = await asyncio.gather(*(wait_for_listener_loss(api) for api in clients))
                 missed = envelope("RegisterPatient", uuid7(), {"fullName": "Fixture During Listener Loss"})
                 await submit(second, base, owner, missed)
                 recovered_notice = await event(lines_one, "changes_available")
@@ -230,6 +239,30 @@ async def check_events(runtime, administrative, client, tokens):
                 break
             await asyncio.sleep(.02)
         assert remaining_leases == 0, "Stream cleanup did not release all leases"
+        assistant = await access.issue(first, tokens[1]["access_token"])
+        invitation_id = uuid7()
+        await submit(first, base, extra, envelope("CreateInvitation", invitation_id, {"inviteeUserId": assistant["userId"]}))
+        response = await first.post(f"/v1/me/invitations/{invitation_id}/accept",
+                                    headers=access.authorization(assistant), json={"operationId": str(uuid7())})
+        access.expect(response, 200)
+        await submit(first, base, assistant, envelope("RegisterAccountDevice", assistant["deviceId"], {}))
+        response = await first.post(base + "/sync/snapshots", headers=access.authorization(assistant), json={"includeClinical": True})
+        access.expect(response, 201)
+        clinical_cursor = response.json()["baseCursor"]
+        async with first.stream("GET", url, params={"cursor": clinical_cursor}, headers=access.authorization(assistant)) as stream:
+            access.expect(stream, 200)
+            lines = stream.aiter_lines()
+            await event(lines, "heartbeat")
+            await submit(second, base, extra, envelope("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {"notes": "none"}}, 1))
+            changed = await event(lines, "access_revoked")
+            assert "data" not in changed
+            async with asyncio.timeout(5):
+                assert [line async for line in lines] == []
+        access.expect(await first.get(base + "/sync/changes", params={"cursor": clinical_cursor}, headers=access.authorization(assistant)), 410)
+        response = await first.post(base + "/sync/snapshots", headers=access.authorization(assistant), json={"includeClinical": True})
+        access.expect(response, 201)
+        assert "notes" not in response.json()["clinicalSections"]
+        access.expect(await first.get(base + "/sync/changes", params={"cursor": response.json()["baseCursor"]}, headers=access.authorization(assistant)), 200)
         report = {"processIds": [process.pid for process in processes], "processCount": 2, "connectionLimit": 2,
                   "heartbeatSeconds": heartbeat["receivedAt"] - initial["receivedAt"], "retryMs": 3000,
                   "listenerLossReadiness": [state.status_code for state in states], "recovered": True,

@@ -76,11 +76,13 @@ class AuthorizationStructureTests(unittest.TestCase):
         for path in (self.component / "domain").glob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             self.assertFalse(any(
-                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) for node in tree.body
+                isinstance(node, ast.AsyncFunctionDef) for node in tree.body
             ), str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.ImportFrom):
                     self.assertFalse((node.module or "").startswith(("fastapi", "sqlalchemy", "httpx", "jwt")))
+                    self.assertNotIn("repository", (node.module or "").split("."))
+                    self.assertFalse((node.module or "").startswith("src.core.services"))
                     if node.module == "pydantic":
                         self.assertNotIn("BaseModel", [name.name for name in node.names])
 

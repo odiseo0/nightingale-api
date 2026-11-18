@@ -20,6 +20,7 @@ from src.api.accounts.domain.accounts import (
     MembershipStatusPayload,
 )
 from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleError
+from src.api.accounts.domain.policies import clinical_permission_values, scope_changes
 from src.api.accounts.repository.dao import (
     dao_account_devices,
     dao_accounts,
@@ -138,16 +139,7 @@ async def apply_invitation_operation(
             return Err(AccountRuleError("VERSION_CONFLICT", membership.version))
 
         data = ClinicalPermissions(**payload.clinical_permissions.model_dump())
-        changes = {
-            "clinical_profile_access": data.clinical_profile,
-            "conditions_access": data.conditions,
-            "allergies_access": data.allergies,
-            "encounters_access": data.encounters,
-            "notes_access": data.notes,
-            "measurements_access": data.measurements,
-            "immunizations_access": data.immunizations,
-            "antecedents_access": data.antecedents,
-        }
+        changes = clinical_permission_values(data)
         if all(getattr(membership, name) == value for name, value in changes.items()):
             return Err(AccountRuleError("NO_CHANGES", membership.version))
 
@@ -173,7 +165,7 @@ async def apply_invitation_operation(
                 state,
                 state.membership_version,
                 [AccountChange("membership", str(entity_key), member, member.version)],
-                True,
+                scope_changes(action),
             )
         )
 
@@ -218,7 +210,7 @@ async def apply_invitation_operation(
                 state,
                 state.version,
                 [AccountChange("membership", str(entity_key), state, state.version)],
-                True,
+                scope_changes(action),
             )
         )
 
@@ -352,7 +344,7 @@ async def apply_invitation_operation(
                     "membership", str(context.actor.user_id), member, member.version
                 ),
             ],
-            True,
+            scope_changes(action),
         )
     )
 

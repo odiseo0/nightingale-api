@@ -2,13 +2,16 @@ import unittest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid7
+from unittest.mock import AsyncMock, patch
 
 from pydantic import ValidationError
 
 from src.api.accounts.domain.accounts import ClinicalPermissions, ClinicalPermissionsPayload
+from src.api.accounts.application.accounts_cases import readable_clinical_sections
 from src.api.clinical_records.application.access_cases import (
     clinical_result_allowed,
     clinical_result_section,
+    clinical_read_scope,
 )
 from src.api.clinical_records.domain.conditions import SetPatientClinicalSectionReviewPayload
 from src.api.sync.application.capabilities_cases import get_capabilities
@@ -74,6 +77,19 @@ class ClinicalPermissionTests(unittest.TestCase):
         for action, section in expected.items():
             with self.subTest(action=action):
                 self.assertEqual(clinical_result_section(action, None), section)
+                for level in ("none", "read", "read_write"):
+                    context = SimpleNamespace(
+                        owner=False,
+                        clinical_permissions=ClinicalPermissions.model_validate({
+                            section if section != "profile" else "clinicalProfile": level,
+                        }),
+                    )
+                    self.assertEqual(clinical_result_allowed(context, section), level == "read_write")
+                    self.assertEqual(section in readable_clinical_sections(context), level != "none")
+                    self.assertEqual(
+                        clinical_change_allowed("clinical_" + section, readable_clinical_sections(context)),
+                        level != "none",
+                    )
         for section in ("conditions", "allergies"):
             payload = SetPatientClinicalSectionReviewPayload(
                 section=section, information_status="unknown"
@@ -201,6 +217,24 @@ class ClinicalPermissionTests(unittest.TestCase):
         self.assertIsInstance(position_for_scope(context, head, cursor, key, now), Err)
         with self.assertRaises(ValidationError):
             SyncPosition.model_validate({**position.model_dump(), "clinical_sections": ["conditions", "conditions"]})
+
+
+class ClinicalReadPolicyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_every_section_reauthorizes_read_levels_and_requires_a_device(self):
+        for section in ("profile", "conditions", "allergies", "encounters", "notes", "measurements", "immunizations", "antecedents"):
+            for level in ("none", "read", "read_write"):
+                field = "clinical_profile" if section == "profile" else section
+                context = SimpleNamespace(owner=False, account=SimpleNamespace(status="active"),
+                                          clinical_permissions=ClinicalPermissions(**{field: level}))
+                with self.subTest(section=section, level=level), \
+                    patch("src.api.clinical_records.application.access_cases.authenticate", new=AsyncMock(return_value=Ok(SimpleNamespace()))) as identity, \
+                    patch("src.api.clinical_records.application.access_cases.account_context", new=AsyncMock(return_value=Ok(context))) as scope:
+                    result = await clinical_read_scope(None, None, uuid7(), section)
+                    self.assertEqual(isinstance(result, Ok), level != "none")
+                    identity.assert_awaited_once()
+                    arguments = scope.await_args
+                    assert arguments is not None
+                    self.assertTrue(arguments.kwargs["require_device"])
 
 
 if __name__ == "__main__":

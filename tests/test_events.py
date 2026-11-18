@@ -11,6 +11,18 @@ from src.core.services.sse import BoundedEventSourceResponse
 
 
 class NotificationTests(unittest.IsolatedAsyncioTestCase):
+    def test_sync_scope_requires_the_current_role_epoch_and_readable_sections(self):
+        from types import SimpleNamespace
+        from src.api.accounts.domain.accounts import ClinicalPermissions
+        from src.api.accounts.domain.policies import sync_scope_matches
+
+        context = SimpleNamespace(owner=False, clinical_permissions=ClinicalPermissions(notes="read"))
+        self.assertTrue(sync_scope_matches(context, "members", ["notes"], 3, 3))
+        self.assertFalse(sync_scope_matches(context, "owner", ["notes"], 3, 3))
+        self.assertFalse(sync_scope_matches(context, "members", ["notes"], 2, 3))
+        context.clinical_permissions.notes = "none"
+        self.assertFalse(sync_scope_matches(context, "members", ["notes"], 3, 3))
+
     async def test_cancelled_stream_finishes_cleanup_in_the_cancel_scope(self):
         cleaned = asyncio.Event()
         async def events():

@@ -24,6 +24,7 @@ from src.api.accounts.domain.accounts import (
     ProfessionalResponse,
 )
 from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleError
+from src.api.accounts.domain.policies import scope_changes
 from src.api.accounts.repository.dao import (
     dao_account_devices,
     dao_accounts,
@@ -178,7 +179,7 @@ async def apply_management_operation(
                         "account", str(entity_key), state, state.version, "members"
                     )
                 ],
-                action == "SetAccountStatus",
+                scope_changes(action),
             )
         )
 
@@ -271,7 +272,7 @@ async def apply_management_operation(
             state,
             state.version,
             [AccountChange("account_device", str(entity_key), state, state.version)],
-            True,
+            scope_changes(action),
         )
     )
 

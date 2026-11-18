@@ -9,6 +9,7 @@ from uuid import UUID
 from anyio import fail_after
 
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
+from src.api.accounts.domain.policies import sync_scope_matches
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.sync.application.download_cases import position_for_scope
 from src.api.sync.application.operations_cases import authorized_context
@@ -109,8 +110,10 @@ async def event_status(
         if (
             position.user_id != context.actor.user_id
             or position.device_id != context.actor.device_id
-            or position.permission_epoch != head.permission_epoch
-            or position.audience != ("owner" if context.owner else "members")
+            or not sync_scope_matches(
+                context, position.audience, position.clinical_sections,
+                position.permission_epoch, head.permission_epoch,
+            )
         ):
             return Err(AccessDenied())
 

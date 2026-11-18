@@ -5,6 +5,7 @@ from uuid import UUID, uuid7
 from src.api.accounts.application.accounts_cases import account_context
 from src.api.accounts.domain.accounts import AccountContext, ClinicalSection
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
+from src.api.accounts.domain.policies import clinical_level_allows, clinical_section_for_action
 from src.api.audit.application.audit_cases import record_control
 from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.application.authorization_cases import authenticate
@@ -20,64 +21,17 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
-CLINICAL_ROUTINE_SECTIONS: dict[str, ClinicalSection] = {
-    "CreatePatientEncounter": "encounters",
-    "UpdatePatientEncounter": "encounters",
-    "InvalidatePatientEncounter": "encounters",
-    "CreatePatientNote": "notes",
-    "UpdatePatientNote": "notes",
-    "InvalidatePatientNote": "notes",
-    "RecordPatientMeasurement": "measurements",
-    "CorrectPatientMeasurement": "measurements",
-    "InvalidatePatientMeasurement": "measurements",
-    "RecordPatientImmunization": "immunizations",
-    "UpdatePatientImmunization": "immunizations",
-    "InvalidatePatientImmunization": "immunizations",
-    "CreatePatientAntecedent": "antecedents",
-    "UpdatePatientAntecedent": "antecedents",
-    "InvalidatePatientAntecedent": "antecedents",
-}
-
-
 def clinical_result_section(
     action: str, payload: BaseModel | None
 ) -> ClinicalSection | None:
-    routine_section = CLINICAL_ROUTINE_SECTIONS.get(action)
-
-    if routine_section is not None:
-        return routine_section
-
-    if action == "SetPatientSexAtBirth":
-        return "profile"
-
-    if action in (
-        "CreatePatientCondition",
-        "UpdatePatientCondition",
-        "InvalidatePatientCondition",
-    ):
-        return "conditions"
-
-    if action in (
-        "CreatePatientAllergyIntolerance",
-        "UpdatePatientAllergyIntolerance",
-        "InvalidatePatientAllergyIntolerance",
-    ):
-        return "allergies"
-
-    if action == "SetPatientClinicalSectionReview" and isinstance(
-        payload, SetPatientClinicalSectionReviewPayload
-    ):
-        return payload.section
-
-    return None
+    section = payload.section if isinstance(payload, SetPatientClinicalSectionReviewPayload) else None
+    return clinical_section_for_action(action, section)
 
 
 def clinical_result_allowed(
     context: AccountContext, section: ClinicalSection | None
 ) -> bool:
-    return section is not None and (
-        context.owner or context.clinical_permissions.level(section) == "read_write"
-    )
+    return clinical_level_allows(context, section, "read_write")
 
 
 async def clinical_read_scope(
@@ -101,7 +55,7 @@ async def clinical_read_scope(
 
     if (
         scope.value.account.status != "active"
-        or scope.value.clinical_permissions.level(section) == "none"
+        or not clinical_level_allows(scope.value, section, "read")
     ):
         return Err(AccessDenied())
 
