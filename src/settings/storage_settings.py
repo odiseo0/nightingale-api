@@ -9,6 +9,7 @@ class StorageSettings(BaseSettings):
     STORAGE_ENDPOINT: str | None = None
     STORAGE_BUCKET: str | None = None
     STORAGE_REGION: str | None = None
+    STORAGE_ROOT: str = ".tmp/attachments"
 
     model_config: ClassVar[SettingsConfigDict] = {"env_file": ".env", "extra": "ignore"}
 
