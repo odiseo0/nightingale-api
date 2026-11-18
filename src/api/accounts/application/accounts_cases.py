@@ -25,6 +25,11 @@ from src.api.accounts.domain.errors import (
     ProfessionalNotFound,
     UnknownTimeZone,
 )
+from src.api.accounts.domain.policies import (
+    catalog_clinical_sections,
+    clinical_level_allows,
+    published_actions,
+)
 from src.api.accounts.repository.dao import (
     dao_account_devices,
     dao_account_professionals,
@@ -286,6 +291,10 @@ async def account_context(
                 measurements=membership.measurements_access,
                 immunizations=membership.immunizations_access,
                 antecedents=membership.antecedents_access,
+                declared_medications=membership.declared_medications_access,
+                care_plans=membership.care_plans_access,
+                diagnostic_reports=membership.diagnostic_reports_access,
+                specialty_templates=membership.specialty_templates_access,
             ),
         )
     )
@@ -399,148 +408,7 @@ async def get_access(
             status=state,
             permission_epoch=epoch.value,
             clinical_permissions=context.clinical_permissions,
-            allowed_actions=(
-                (
-                    ["RegisterAccountDevice"]
-                    if state in ("active", "registration_required")
-                    else []
-                )
-                + (
-                    [
-                        "RegisterPatient",
-                        "UpdatePatientProfile",
-                        "SetPatientProfileStatus",
-                        "SetPatientCompletion",
-                        "AddPatientIdentifier",
-                        "CreateContactPerson",
-                        "UpdateContactPerson",
-                        "SetContactPersonStatus",
-                        "CreatePatientContactRelationship",
-                        "UpdatePatientContactRelationship",
-                        "SetPatientContactRelationshipStatus",
-                        "CreateScheduleRule",
-                        "UpdateScheduleRule",
-                        "SetScheduleRuleStatus",
-                        "CreateScheduleException",
-                        "UpdateScheduleException",
-                        "SetScheduleExceptionStatus",
-                        "CreateScheduleBlock",
-                        "UpdateScheduleBlock",
-                        "SetScheduleBlockStatus",
-                        "CreateAppointment",
-                        "ConfirmAppointment",
-                        "RescheduleAppointment",
-                        "CancelAppointment",
-                        "CompleteAppointment",
-                        "MarkAppointmentNoShow",
-                    ]
-                    if state == "active"
-                    else []
-                )
-                + (
-                    ["SetPatientSexAtBirth"]
-                    if state == "active"
-                    and context.clinical_permissions.clinical_profile == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "CreatePatientCondition",
-                        "UpdatePatientCondition",
-                        "InvalidatePatientCondition",
-                        "SetPatientClinicalSectionReview",
-                    ]
-                    if state == "active"
-                    and context.clinical_permissions.conditions == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "CreatePatientAllergyIntolerance",
-                        "UpdatePatientAllergyIntolerance",
-                        "InvalidatePatientAllergyIntolerance",
-                        "SetPatientClinicalSectionReview",
-                    ]
-                    if state == "active"
-                    and context.clinical_permissions.allergies == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "CreatePatientEncounter",
-                        "UpdatePatientEncounter",
-                        "InvalidatePatientEncounter",
-                    ]
-                    if state == "active"
-                    and context.clinical_permissions.encounters == "read_write"
-                    else []
-                )
-                + (
-                    ["CreatePatientNote", "UpdatePatientNote", "InvalidatePatientNote"]
-                    if state == "active"
-                    and context.clinical_permissions.notes == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "RecordPatientMeasurement",
-                        "CorrectPatientMeasurement",
-                        "InvalidatePatientMeasurement",
-                    ]
-                    if state == "active"
-                    and context.clinical_permissions.measurements == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "RecordPatientImmunization",
-                        "UpdatePatientImmunization",
-                        "InvalidatePatientImmunization",
-                    ]
-                    if state == "active"
-                    and context.clinical_permissions.immunizations == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "CreatePatientAntecedent",
-                        "UpdatePatientAntecedent",
-                        "InvalidatePatientAntecedent",
-                    ]
-                    if state == "active"
-                    and context.clinical_permissions.antecedents == "read_write"
-                    else []
-                )
-                + (
-                    [
-                        "CreateInvitation",
-                        "RevokeInvitation",
-                        "SetMembershipStatus",
-                        "SetMemberClinicalPermissions",
-                        "UpdateAccountDetails",
-                        "UpdateAccountPolicy",
-                        "SetAccountStatus",
-                        "RevokeAccountDevice",
-                        "RestoreAccountDevice",
-                        "UpdateProfessionalProfile",
-                        "CreateService",
-                        "UpdateService",
-                        "SetServiceStatus",
-                        "OfferService",
-                        "UpdateServiceOffer",
-                        "SetServiceOfferStatus",
-                    ]
-                    if state == "active" and context.owner
-                    else []
-                )
-                + (
-                    ["SetAccountStatus"]
-                    if state == "inactive"
-                    and context.owner
-                    and context.device_status == "active"
-                    else []
-                )
-            ),
+            allowed_actions=published_actions(context),
         )
 
     return Ok(response)
@@ -567,21 +435,10 @@ async def encounter_participants(
 
 
 def readable_clinical_sections(context: AccountContext) -> list[ClinicalSection]:
-    sections: list[ClinicalSection] = [
-        "profile",
-        "conditions",
-        "allergies",
-        "encounters",
-        "notes",
-        "measurements",
-        "immunizations",
-        "antecedents",
-    ]
-
     return [
         section
-        for section in sections
-        if context.clinical_permissions.level(section) != "none"
+        for section in catalog_clinical_sections()
+        if clinical_level_allows(context, section, "read")
     ]
 
 

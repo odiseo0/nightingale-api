@@ -42,6 +42,12 @@ class AccountMembership(Base):
     measurements_access: Mapped[str] = mapped_column(Text, server_default="read_write")
     immunizations_access: Mapped[str] = mapped_column(Text, server_default="read_write")
     antecedents_access: Mapped[str] = mapped_column(Text, server_default="read_write")
+    declared_medications_access: Mapped[str] = mapped_column(
+        Text, server_default="read_write"
+    )
+    care_plans_access: Mapped[str] = mapped_column(Text, server_default="read_write")
+    diagnostic_reports_access: Mapped[str] = mapped_column(Text, server_default="read_write")
+    specialty_templates_access: Mapped[str] = mapped_column(Text, server_default="read_write")
 
 
 class Professional(Base):

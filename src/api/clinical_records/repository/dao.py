@@ -408,6 +408,24 @@ class PatientNoteHistoryDAO(DAO[PatientNoteHistory, BaseModel, BaseModel]):
 
 
 class PatientMeasurementDAO(DAO[PatientMeasurement, BaseModel, BaseModel]):
+    async def series_for_kind(
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        patient_id: UUID,
+        kind: str,
+    ) -> list[PatientMeasurement]:
+        rows = await db.scalars(
+            select(self.model).where(
+                self.model.account_id == account_id,
+                self.model.patient_id == patient_id,
+                self.model.kind == kind,
+            )
+        )
+
+        return list(rows)
+
+
     async def scoped(
         self,
         db: AsyncSession,
@@ -836,6 +854,60 @@ class PatientClinicalTimelineDAO(DAO[PatientClinicalTimeline, BaseModel, BaseMod
             for name, value in values.items():
                 setattr(row, name, value)
 
+            await self.flush(db)
+
+        return row
+
+    async def project_generic(
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        *,
+        patient_id: UUID,
+        entry_type: str,
+        entry_id: UUID,
+        source_section: str,
+        occurrence_date: str | None,
+        occurred_at,
+        date_precision: str,
+        accepted_at,
+        entity_version: int,
+        record_status: str,
+    ) -> PatientClinicalTimeline:
+        sort_key = occurrence_date or occurred_at.isoformat()
+        row = await self.get_by(
+            db,
+            where={
+                "account_id": account_id,
+                "patient_id": patient_id,
+                "entry_type": entry_type,
+                "entry_id": entry_id,
+            },
+            execution_options={"populate_existing": True},
+        )
+        values = {
+            "occurred_at": occurred_at if occurrence_date is None else None,
+            "occurrence_date": occurrence_date,
+            "date_precision": date_precision,
+            "sort_key": sort_key,
+            "accepted_at": accepted_at,
+            "entity_version": entity_version,
+            "record_status": record_status,
+        }
+
+        if row is Empty:
+            row = PatientClinicalTimeline(
+                account_id=account_id,
+                patient_id=patient_id,
+                entry_type=entry_type,
+                entry_id=entry_id,
+                source_section=source_section,
+                **values,
+            )
+            await self.add(db, row)
+        else:
+            for name, value in values.items():
+                setattr(row, name, value)
             await self.flush(db)
 
         return row

@@ -77,8 +77,78 @@ from src.api.clinical_records.domain.notes import (
     CreatePatientNotePayload,
     InvalidatePatientNotePayload,
     PatientNoteResponse,
-    UpdatePatientNotePayload,
+    UpdatePatientNotePayload,)
+from src.api.care_plans.domain.goals import (
+    AddCarePlanActionPayload,
+    AddCarePlanGoalPayload,
+    AddCarePlanReviewPayload,
+    CarePlanActionResponse,
+    CarePlanGoalResponse,
+    CarePlanReviewResponse,
+    CompleteCarePlanActionPayload,
+    EvaluateCarePlanGoalPayload,
+    InvalidateCarePlanActionPayload,
+    InvalidateCarePlanGoalPayload,
+    InvalidateCarePlanReviewPayload,
+    UpdateCarePlanActionPayload,
+    UpdateCarePlanGoalPayload,
 )
+from src.api.care_plans.domain.plans import (
+    CarePlanResponse,
+    CreatePatientCarePlanPayload,
+    InvalidatePatientCarePlanPayload,
+    UpdatePatientCarePlanPayload,
+)
+from src.api.diagnostic_results.domain.reports import (
+    CorrectDiagnosticReportPayload,
+    CreateDiagnosticReportPayload,
+    DiagnosticReportHistoryResponse,
+    DiagnosticReportResponse,
+    UpdateDiagnosticReportPayload,
+)
+from src.api.diagnostic_results.domain.results import (
+    AddDiagnosticReportResultPayload,
+    DiagnosticReportResultResponse,
+    InvalidateDiagnosticReportResultPayload,
+    InvalidateReportAttachmentPayload,
+    ReportAttachmentResponse,
+    UpdateDiagnosticReportResultPayload,
+    UploadReportAttachmentPayload,
+)
+from src.api.specialties.domain.records import (
+    CaptureSpecialtyRecordPayload,
+    InvalidateSpecialtyRecordPayload,
+    SpecialtyRecordHistoryResponse,
+    SpecialtyRecordResponse,
+    UpdateSpecialtyRecordPayload,
+)
+from src.api.specialties.domain.templates import (
+    CreateSpecialtyTemplatePayload,
+    RetireSpecialtyTemplatePayload,
+    SpecialtyTemplateHistoryResponse,
+    SpecialtyTemplateResponse,
+    UpdateSpecialtyTemplatePayload,
+)
+from src.api.specialties.domain.odontogram import (
+    AddDentalTreatmentPayload,
+    DentalFindingHistoryResponse,
+    DentalFindingResponse,
+    DentalTreatmentHistoryResponse,
+    DentalTreatmentResponse,
+    InvalidateDentalFindingPayload,
+    InvalidateDentalTreatmentPayload,
+    RecordDentalFindingPayload,
+    ResolveDentalFindingPayload,
+    UpdateDentalFindingPayload,
+    UpdateDentalTreatmentPayload,
+)
+from src.api.medications.domain.medications import (
+    DeclaredMedicationResponse,
+    DeclarePatientMedicationPayload,
+    InvalidatePatientDeclaredMedicationPayload,
+    UpdatePatientDeclaredMedicationPayload,
+)
+from src.api.medications.domain.reviews import ReviewPatientDeclaredMedicationPayload
 from src.api.encounters.domain.encounters import (
     CreatePatientEncounterPayload,
     InvalidatePatientEncounterPayload,
@@ -179,6 +249,64 @@ IMMUNIZATION_SCHEMAS: dict[str, type[BaseModel]] = {
 }
 
 
+CARE_PLAN_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientCarePlan": CreatePatientCarePlanPayload,
+    "UpdatePatientCarePlan": UpdatePatientCarePlanPayload,
+    "InvalidatePatientCarePlan": InvalidatePatientCarePlanPayload,
+    "AddCarePlanGoal": AddCarePlanGoalPayload,
+    "UpdateCarePlanGoal": UpdateCarePlanGoalPayload,
+    "EvaluateCarePlanGoal": EvaluateCarePlanGoalPayload,
+    "InvalidateCarePlanGoal": InvalidateCarePlanGoalPayload,
+    "AddCarePlanAction": AddCarePlanActionPayload,
+    "UpdateCarePlanAction": UpdateCarePlanActionPayload,
+    "CompleteCarePlanAction": CompleteCarePlanActionPayload,
+    "InvalidateCarePlanAction": InvalidateCarePlanActionPayload,
+    "AddCarePlanReview": AddCarePlanReviewPayload,
+    "InvalidateCarePlanReview": InvalidateCarePlanReviewPayload,
+}
+
+
+DIAGNOSTIC_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateDiagnosticReport": CreateDiagnosticReportPayload,
+    "UpdateDiagnosticReport": UpdateDiagnosticReportPayload,
+    "CorrectDiagnosticReport": CorrectDiagnosticReportPayload,
+    "AddDiagnosticReportResult": AddDiagnosticReportResultPayload,
+    "UpdateDiagnosticReportResult": UpdateDiagnosticReportResultPayload,
+    "InvalidateDiagnosticReportResult": InvalidateDiagnosticReportResultPayload,
+    "UploadReportAttachment": UploadReportAttachmentPayload,
+    "InvalidateReportAttachment": InvalidateReportAttachmentPayload,
+}
+
+
+SPECIALTY_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreateSpecialtyTemplate": CreateSpecialtyTemplatePayload,
+    "UpdateSpecialtyTemplate": UpdateSpecialtyTemplatePayload,
+    "RetireSpecialtyTemplate": RetireSpecialtyTemplatePayload,
+    "CaptureSpecialtyRecord": CaptureSpecialtyRecordPayload,
+    "UpdateSpecialtyRecord": UpdateSpecialtyRecordPayload,
+    "InvalidateSpecialtyRecord": InvalidateSpecialtyRecordPayload,
+}
+
+
+DENTAL_SCHEMAS: dict[str, type[BaseModel]] = {
+    "RecordDentalFinding": RecordDentalFindingPayload,
+    "UpdateDentalFinding": UpdateDentalFindingPayload,
+    "ResolveDentalFinding": ResolveDentalFindingPayload,
+    "InvalidateDentalFinding": InvalidateDentalFindingPayload,
+    "AddDentalTreatment": AddDentalTreatmentPayload,
+    "UpdateDentalTreatment": UpdateDentalTreatmentPayload,
+    "InvalidateDentalTreatment": InvalidateDentalTreatmentPayload,
+}
+
+
+MEDICATION_SCHEMAS: dict[str, type[BaseModel]] = {
+    "DeclarePatientMedication": DeclarePatientMedicationPayload,
+    "UpdatePatientDeclaredMedication": UpdatePatientDeclaredMedicationPayload,
+    "ReviewPatientDeclaredMedication": ReviewPatientDeclaredMedicationPayload,
+    "InvalidatePatientDeclaredMedication": InvalidatePatientDeclaredMedicationPayload,
+}
+
+
 MEASUREMENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "RecordPatientMeasurement": RecordPatientMeasurementPayload,
     "CorrectPatientMeasurement": CorrectPatientMeasurementPayload,
@@ -230,6 +358,11 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     **MEASUREMENT_SCHEMAS,
     **IMMUNIZATION_SCHEMAS,
     **ANTECEDENT_SCHEMAS,
+    **MEDICATION_SCHEMAS,
+    **CARE_PLAN_SCHEMAS,
+    **DIAGNOSTIC_SCHEMAS,
+    **SPECIALTY_SCHEMAS,
+    **DENTAL_SCHEMAS,
     **CONTACT_SCHEMAS,
     **SERVICE_SCHEMAS,
     **OFFER_SCHEMAS,
@@ -358,6 +491,18 @@ type OperationState = (
     | PatientMeasurementResponse
     | PatientImmunizationResponse
     | PatientAntecedentResponse
+    | DeclaredMedicationResponse
+    | CarePlanResponse
+    | CarePlanGoalResponse
+    | CarePlanActionResponse
+    | CarePlanReviewResponse
+    | DiagnosticReportResponse
+    | DiagnosticReportResultResponse
+    | ReportAttachmentResponse
+    | SpecialtyTemplateResponse
+    | SpecialtyRecordResponse
+    | DentalFindingResponse
+    | DentalTreatmentResponse
 )
 
 

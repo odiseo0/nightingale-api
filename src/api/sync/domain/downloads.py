@@ -21,6 +21,24 @@ from src.api.clinical_records.domain.conditions import (
     PatientConditionResponse,
 )
 from src.api.clinical_records.domain.immunizations import PatientImmunizationResponse
+from src.api.care_plans.domain.goals import (
+    CarePlanActionResponse,
+    CarePlanGoalResponse,
+    CarePlanReviewResponse,
+)
+from src.api.care_plans.domain.plans import CarePlanResponse
+from src.api.diagnostic_results.domain.reports import DiagnosticReportResponse
+from src.api.diagnostic_results.domain.results import (
+    DiagnosticReportResultResponse,
+    ReportAttachmentResponse,
+)
+from src.api.specialties.domain.odontogram import (
+    DentalFindingResponse,
+    DentalTreatmentResponse,
+)
+from src.api.specialties.domain.records import SpecialtyRecordResponse
+from src.api.specialties.domain.templates import SpecialtyTemplateResponse
+from src.api.medications.domain.medications import DeclaredMedicationResponse
 from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
 from src.api.clinical_records.domain.notes import PatientNoteResponse
 from src.api.encounters.domain.encounters import PatientEncounterResponse
@@ -56,6 +74,18 @@ PROJECTION_SCHEMAS: dict[str, type[BaseModel]] = {
     "patient_measurement": PatientMeasurementResponse,
     "patient_immunization": PatientImmunizationResponse,
     "patient_antecedent": PatientAntecedentResponse,
+    "declared_medication": DeclaredMedicationResponse,
+    "care_plan": CarePlanResponse,
+    "care_plan_goal": CarePlanGoalResponse,
+    "care_plan_action": CarePlanActionResponse,
+    "care_plan_review": CarePlanReviewResponse,
+    "diagnostic_report": DiagnosticReportResponse,
+    "diagnostic_report_result": DiagnosticReportResultResponse,
+    "report_attachment": ReportAttachmentResponse,
+    "specialty_template": SpecialtyTemplateResponse,
+    "specialty_record": SpecialtyRecordResponse,
+    "dental_finding": DentalFindingResponse,
+    "dental_treatment": DentalTreatmentResponse,
 }
 
 

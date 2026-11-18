@@ -11,6 +11,7 @@ from src.api.accounts.application.accounts_cases import readable_clinical_sectio
 from src.api.accounts.application.snapshot_cases import snapshot_accounts
 from src.api.accounts.domain.accounts import AccountContext, ProfessionalResponse
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
+from src.api.accounts.domain.policies import projection_allowed, sync_scope_matches
 from src.api.appointments.application.snapshot_cases import snapshot_appointments
 from src.api.appointments.domain.appointments import (
     AppointmentHistoryProjection,
@@ -28,9 +29,37 @@ from src.api.clinical_records.domain.conditions import (
     PatientConditionResponse,
 )
 from src.api.clinical_records.domain.immunizations import PatientImmunizationResponse
+from src.api.care_plans.domain.goals import (
+    CarePlanActionResponse,
+    CarePlanGoalResponse,
+    CarePlanReviewResponse,
+)
+from src.api.care_plans.domain.plans import CarePlanResponse
+from src.api.diagnostic_results.domain.reports import DiagnosticReportResponse
+from src.api.diagnostic_results.domain.results import (
+    DiagnosticReportResultResponse,
+    ReportAttachmentResponse,
+)
+from src.api.specialties.domain.odontogram import (
+    DentalFindingResponse,
+    DentalTreatmentResponse,
+)
+from src.api.specialties.domain.records import SpecialtyRecordResponse
+from src.api.specialties.domain.templates import SpecialtyTemplateResponse
+from src.api.medications.domain.medications import DeclaredMedicationResponse
 from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
 from src.api.clinical_records.domain.notes import PatientNoteResponse
 from src.api.encounters.application.snapshot_cases import snapshot_encounters
+from src.api.care_plans.application.snapshot_cases import snapshot_care_plans
+from src.api.diagnostic_results.application.snapshot_cases import (
+    snapshot_diagnostic_reports,
+)
+from src.api.specialties.application.snapshot_cases import (
+    snapshot_specialty_templates,
+)
+from src.api.medications.application.snapshot_cases import (
+    snapshot_declared_medications,
+)
 from src.api.encounters.domain.encounters import PatientEncounterResponse
 from src.api.patients.application.snapshot_cases import snapshot_patients
 from src.api.schedule.application.snapshot_cases import snapshot_schedule
@@ -156,6 +185,18 @@ async def create_snapshot(
         if "encounters" in clinical_sections:
             clinical_items.extend(await snapshot_encounters(db, account_id))
 
+        if "declared_medications" in clinical_sections:
+            clinical_items.extend(await snapshot_declared_medications(db, context))
+
+        if "care_plans" in clinical_sections:
+            clinical_items.extend(await snapshot_care_plans(db, context))
+
+        if "diagnostic_reports" in clinical_sections:
+            clinical_items.extend(await snapshot_diagnostic_reports(db, context))
+
+        if "specialty_templates" in clinical_sections:
+            clinical_items.extend(await snapshot_specialty_templates(db, context))
+
         states = [
             item.state
             for item in appointments
@@ -202,6 +243,13 @@ async def create_snapshot(
         items.extend(await snapshot_schedule(db, context, window))
         items.extend(appointments)
         items.extend(clinical_items)
+        items = [
+            item for item in items
+            if projection_allowed(
+                item.entity_type, None, context.owner, clinical_sections,
+                item.state.section if isinstance(item.state, ClinicalSectionReviewResponse) else None,
+            )
+        ]
         items.sort(
             key=lambda item: (
                 item.entity_type,
@@ -299,10 +347,9 @@ async def snapshot_context(
 
     if not release:
         if (
-            row.permission_epoch != head.permission_epoch
-            or row.audience != ("owner" if context.owner else "members")
-            or not set(row.clinical_sections).issubset(
-                readable_clinical_sections(context)
+            not sync_scope_matches(
+                context, row.audience, row.clinical_sections,
+                row.permission_epoch, head.permission_epoch,
             )
         ):
             return Err(SyncReadError("SNAPSHOT_SCOPE_CHANGED"))

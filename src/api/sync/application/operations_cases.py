@@ -25,6 +25,7 @@ from src.api.accounts.application.management_cases import (
 from src.api.accounts.domain.accounts import (
     AccountChange,
     AccountContext,
+    ClinicalPermissionsPayload,
     InvitationAcceptanceResult,
 )
 from src.api.accounts.domain.errors import (
@@ -34,6 +35,7 @@ from src.api.accounts.domain.errors import (
     DeviceAlreadyRegistered,
     DeviceVersionConflict,
 )
+from src.api.accounts.domain.policies import operation_policies
 from src.api.appointments.application.appointments_cases import (
     apply_appointment_operation,
 )
@@ -56,6 +58,13 @@ from src.api.clinical_records.application.conditions_cases import (
 )
 from src.api.clinical_records.application.immunizations_cases import (
     apply_immunization_operation,
+)
+from src.api.care_plans.application.plan_cases import apply_care_plan_operation
+from src.api.diagnostic_results.application.report_cases import apply_diagnostic_operation
+from src.api.specialties.application.odontogram_cases import apply_dental_operation
+from src.api.specialties.application.template_cases import apply_specialty_operation
+from src.api.medications.application.medication_cases import (
+    apply_declared_medication_operation,
 )
 from src.api.clinical_records.application.measurements_cases import (
     apply_measurement_operation,
@@ -95,6 +104,11 @@ from src.api.sync.domain.operations import (
     ENCOUNTER_SCHEMAS,
     EXCEPTION_SCHEMAS,
     IMMUNIZATION_SCHEMAS,
+    MEDICATION_SCHEMAS,
+    CARE_PLAN_SCHEMAS,
+    DIAGNOSTIC_SCHEMAS,
+    SPECIALTY_SCHEMAS,
+    DENTAL_SCHEMAS,
     MEASUREMENT_SCHEMAS,
     NOTE_SCHEMAS,
     OFFER_SCHEMAS,
@@ -249,10 +263,21 @@ async def accept_operation(
     payload = operation.validated_payload()
 
     if payload is not None:
+        # Keep pre-medication/pre-care-plan receipts and explicit/default read_write equivalent.
+        legacy_permissions = (
+            isinstance(payload, ClinicalPermissionsPayload)
+            and payload.clinical_permissions.declared_medications == "read_write"
+            and payload.clinical_permissions.care_plans == "read_write"
+            and payload.clinical_permissions.diagnostic_reports == "read_write"
+            and payload.clinical_permissions.specialty_templates == "read_write"
+            and payload.clinical_permissions.specialty_templates == "read_write"
+        )
         canonical["payload"] = payload.model_dump(
             mode="json",
             by_alias=True,
             exclude_unset=operation.action.startswith("Update"),
+            exclude={"clinical_permissions": {"declared_medications", "care_plans", "diagnostic_reports", "specialty_templates"}}
+            if legacy_permissions else None,
         )
 
     fingerprint = hashlib.sha256(
@@ -266,6 +291,8 @@ async def accept_operation(
     ).digest()
 
     async with transaction(db):
+        policy = operation_policies().get(operation.action)
+        object_rule = None if policy is None else policy.object_rule
         scope = await authorized_context(
             db,
             credential,
@@ -280,14 +307,13 @@ async def accept_operation(
             professional=operation.action in RULE_SCHEMAS
             or operation.action in APPOINTMENT_SCHEMAS
             or operation.action in EXCEPTION_SCHEMAS
-            or operation.action in OFFER_SCHEMAS
-            or operation.action
-            in ("UpdateAccountDetails", "UpdateProfessionalProfile"),
-            catalog=operation.action in SERVICE_SCHEMAS,
+            or object_rule == "own_offer"
+            or operation.action == "UpdateAccountDetails"
+            or object_rule == "own_professional",
+            catalog=object_rule == "own_catalog",
             entity_key=operation.entity_key,
-            own_service=operation.action in SERVICE_SCHEMAS
-            or operation.action in OFFER_SCHEMAS,
-            blocks=operation.action in BLOCK_SCHEMAS,
+            own_service=object_rule in ("own_catalog", "own_offer"),
+            blocks=object_rule == "block",
         )
 
         match scope:
@@ -305,29 +331,13 @@ async def accept_operation(
         ):
             return Err(AccessDenied())
 
-        if operation.action in BLOCK_SCHEMAS and isinstance(operation.entity_key, UUID):
+        if object_rule == "block" and isinstance(operation.entity_key, UUID):
             permission = await block_permission(db, context, operation.entity_key)
 
             if isinstance(permission, Err):
                 return permission
 
-        if (
-            operation.action in SERVICE_SCHEMAS
-            or operation.action in OFFER_SCHEMAS
-            or operation.action
-            in (
-                "CreateInvitation",
-                "RevokeInvitation",
-                "SetMembershipStatus",
-                "SetMemberClinicalPermissions",
-                "UpdateAccountDetails",
-                "UpdateAccountPolicy",
-                "SetAccountStatus",
-                "RevokeAccountDevice",
-                "RestoreAccountDevice",
-                "UpdateProfessionalProfile",
-            )
-        ) and not context.owner:
+        if policy is not None and policy.owner_only and not context.owner:
             return Err(AccessDenied())
 
         if (
@@ -455,9 +465,47 @@ async def accept_operation(
             "CreatePatientAntecedent": "patient_antecedent",
             "UpdatePatientAntecedent": "patient_antecedent",
             "InvalidatePatientAntecedent": "patient_antecedent",
+            "DeclarePatientMedication": "declared_medication",
+            "CreatePatientCarePlan": "care_plan",
+            "UpdatePatientCarePlan": "care_plan",
+            "InvalidatePatientCarePlan": "care_plan",
+            "AddCarePlanGoal": "care_plan_goal",
+            "UpdateCarePlanGoal": "care_plan_goal",
+            "EvaluateCarePlanGoal": "care_plan_goal",
+            "InvalidateCarePlanGoal": "care_plan_goal",
+            "AddCarePlanAction": "care_plan_action",
+            "UpdateCarePlanAction": "care_plan_action",
+            "CompleteCarePlanAction": "care_plan_action",
+            "InvalidateCarePlanAction": "care_plan_action",
+            "AddCarePlanReview": "care_plan_review",
+            "InvalidateCarePlanReview": "care_plan_review",
+            "CreateDiagnosticReport": "diagnostic_report",
+            "UpdateDiagnosticReport": "diagnostic_report",
+            "CorrectDiagnosticReport": "diagnostic_report",
+            "AddDiagnosticReportResult": "diagnostic_report_result",
+            "UpdateDiagnosticReportResult": "diagnostic_report_result",
+            "InvalidateDiagnosticReportResult": "diagnostic_report_result",
+            "UploadReportAttachment": "report_attachment",
+            "InvalidateReportAttachment": "report_attachment",
+            "CreateSpecialtyTemplate": "specialty_template",
+            "UpdateSpecialtyTemplate": "specialty_template",
+            "RetireSpecialtyTemplate": "specialty_template",
+            "CaptureSpecialtyRecord": "specialty_record",
+            "UpdateSpecialtyRecord": "specialty_record",
+            "InvalidateSpecialtyRecord": "specialty_record",
+            "RecordDentalFinding": "dental_finding",
+            "UpdateDentalFinding": "dental_finding",
+            "ResolveDentalFinding": "dental_finding",
+            "InvalidateDentalFinding": "dental_finding",
+            "AddDentalTreatment": "dental_treatment",
+            "UpdateDentalTreatment": "dental_treatment",
+            "InvalidateDentalTreatment": "dental_treatment",
+            "UpdatePatientDeclaredMedication": "declared_medication",
+            "ReviewPatientDeclaredMedication": "declared_medication",
+            "InvalidatePatientDeclaredMedication": "declared_medication",
         }.get(operation.action, "invitation" if internal_invitation else "unknown")
         changes = []
-        permission_changed = True
+        permission_changed = policy is not None and policy.changes_scope
 
         if operation.action in CONTACT_SCHEMAS:
             entity_type = (
@@ -497,6 +545,11 @@ async def accept_operation(
                 or operation.action in MEASUREMENT_SCHEMAS
                 or operation.action in IMMUNIZATION_SCHEMAS
                 or operation.action in ANTECEDENT_SCHEMAS
+                or operation.action in MEDICATION_SCHEMAS
+                or operation.action in CARE_PLAN_SCHEMAS
+                or operation.action in DIAGNOSTIC_SCHEMAS
+                or operation.action in SPECIALTY_SCHEMAS
+                or operation.action in DENTAL_SCHEMAS
                 or operation.action in OFFER_SCHEMAS
                 or operation.action in SERVICE_SCHEMAS
                 or operation.action in CONTACT_SCHEMAS
@@ -614,6 +667,66 @@ async def accept_operation(
                     (
                         IMMUNIZATION_SCHEMAS,
                         lambda: apply_immunization_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        DENTAL_SCHEMAS,
+                        lambda: apply_dental_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        SPECIALTY_SCHEMAS,
+                        lambda: apply_specialty_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        DIAGNOSTIC_SCHEMAS,
+                        lambda: apply_diagnostic_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        CARE_PLAN_SCHEMAS,
+                        lambda: apply_care_plan_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                            operation.operation_id,
+                        ),
+                    ),
+                    (
+                        MEDICATION_SCHEMAS,
+                        lambda: apply_declared_medication_operation(
                             db,
                             context,
                             operation.action,
@@ -1085,6 +1198,11 @@ async def get_operation(
         if context.account.status != "active" and action != "SetAccountStatus":
             return Err(AccessDenied())
 
+        # Old clinical receipts need explicit scope before result lookup.
+        policy = operation_policies().get(action)
+        if policy is not None and policy.sections and clinical_section is None:
+            return Err(AccessDenied())
+
         if clinical_section is not None and not clinical_result_allowed(
             context, clinical_section
         ):
@@ -1097,13 +1215,14 @@ async def get_operation(
         if receipt is Empty:
             return Err(OperationNotFound())
 
-        if receipt.action in SERVICE_SCHEMAS or receipt.action in OFFER_SCHEMAS:
+        object_rule = None if policy is None else policy.object_rule
+        if object_rule in ("own_catalog", "own_offer"):
             permission = await service_permission(db, context)
 
             if isinstance(permission, Err):
                 return permission
 
-        if receipt.action in BLOCK_SCHEMAS and isinstance(receipt.entity_key, str):
+        if object_rule == "block" and isinstance(receipt.entity_key, str):
             permission = await block_permission(db, context, UUID(receipt.entity_key))
 
             if isinstance(permission, Err):
