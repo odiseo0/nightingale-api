@@ -113,6 +113,431 @@
       "title": "AccountPolicyPayload",
       "type": "object"
     },
+    "AddCarePlanActionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "dueDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "goalId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Goalid"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "planId": {
+          "format": "uuid7",
+          "title": "Planid",
+          "type": "string"
+        },
+        "responsibleUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Responsibleuserid"
+        }
+      },
+      "required": [
+        "description",
+        "planId",
+        "patientId"
+      ],
+      "title": "AddCarePlanActionPayload",
+      "type": "object"
+    },
+    "AddCarePlanGoalPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "dueDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expectedResult": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expectedresult"
+        },
+        "goalKind": {
+          "enum": [
+            "narrative",
+            "measurable"
+          ],
+          "title": "Goalkind",
+          "type": "string"
+        },
+        "measurementKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "weight",
+                "temperature",
+                "oxygen_saturation",
+                "heart_rate",
+                "blood_pressure"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Measurementkind"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "planId": {
+          "format": "uuid7",
+          "title": "Planid",
+          "type": "string"
+        },
+        "referenceDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencedescription"
+        },
+        "targetValue": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targetvalue"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "description",
+        "goalKind",
+        "planId",
+        "patientId"
+      ],
+      "title": "AddCarePlanGoalPayload",
+      "type": "object"
+    },
+    "AddCarePlanReviewPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "findings": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Findings"
+        },
+        "nextReviewDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "planId": {
+          "format": "uuid7",
+          "title": "Planid",
+          "type": "string"
+        },
+        "reviewedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewedat"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "planId",
+        "patientId",
+        "summary"
+      ],
+      "title": "AddCarePlanReviewPayload",
+      "type": "object"
+    },
+    "AddDentalTreatmentPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "findingId": {
+          "format": "uuid7",
+          "title": "Findingid",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "performedDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "treatmentKind": {
+          "enum": [
+            "cleaning",
+            "filling",
+            "crown",
+            "extraction",
+            "other"
+          ],
+          "title": "Treatmentkind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "treatmentKind",
+        "findingId",
+        "patientId"
+      ],
+      "title": "AddDentalTreatmentPayload",
+      "type": "object"
+    },
+    "AddDiagnosticReportResultPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "analyteName": {
+          "minLength": 1,
+          "title": "Analytename",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "referenceHigh": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencehigh"
+        },
+        "referenceLow": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencelow"
+        },
+        "referenceText": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencetext"
+        },
+        "reportId": {
+          "format": "uuid7",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "resultKind": {
+          "enum": [
+            "numeric",
+            "text"
+          ],
+          "title": "Resultkind",
+          "type": "string"
+        },
+        "textValue": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Textvalue"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "analyteName",
+        "resultKind",
+        "reportId",
+        "patientId"
+      ],
+      "title": "AddDiagnosticReportResultPayload",
+      "type": "object"
+    },
     "AddPatientIdentifierPayload": {
       "additionalProperties": false,
       "properties": {
@@ -224,6 +649,61 @@
       "title": "AppointmentReasonPayload",
       "type": "object"
     },
+    "CaptureSpecialtyRecordPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounterid"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recordedat"
+        },
+        "templateId": {
+          "format": "uuid7",
+          "title": "Templateid",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/SpecialtyRecordValue"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "templateId",
+        "values",
+        "patientId"
+      ],
+      "title": "CaptureSpecialtyRecordPayload",
+      "type": "object"
+    },
     "ClinicalDate": {
       "type": "string"
     },
@@ -245,11 +725,23 @@
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         },
+        "carePlans": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
         "clinicalProfile": {
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         },
         "conditions": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "declaredMedications": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "diagnosticReports": {
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         },
@@ -266,6 +758,10 @@
           "default": "read_write"
         },
         "notes": {
+          "$ref": "#/$defs/ClinicalLevel",
+          "default": "read_write"
+        },
+        "specialtyTemplates": {
           "$ref": "#/$defs/ClinicalLevel",
           "default": "read_write"
         }
@@ -295,6 +791,39 @@
         "unknown"
       ],
       "type": "string"
+    },
+    "CompleteCarePlanActionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "completedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completedat"
+        },
+        "completionNote": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completionnote"
+        }
+      },
+      "title": "CompleteCarePlanActionPayload",
+      "type": "object"
     },
     "ConditionClinicalStatus": {
       "enum": [
@@ -490,6 +1019,20 @@
       "title": "ContactPatch",
       "type": "object"
     },
+    "CorrectDiagnosticReportPayload": {
+      "properties": {
+        "correctionReason": {
+          "minLength": 1,
+          "title": "Correctionreason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "correctionReason"
+      ],
+      "title": "CorrectDiagnosticReportPayload",
+      "type": "object"
+    },
     "CorrectPatientMeasurementPayload": {
       "additionalProperties": false,
       "properties": {
@@ -657,6 +1200,125 @@
         "serviceId"
       ],
       "title": "CreateAppointmentPayload",
+      "type": "object"
+    },
+    "CreateDiagnosticReportPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attachmentId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attachmentid"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "clinicalSummary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clinicalsummary"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounterid"
+        },
+        "issuedDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "reportKind": {
+          "enum": [
+            "laboratory",
+            "imaging",
+            "pathology",
+            "other"
+          ],
+          "title": "Reportkind",
+          "type": "string"
+        },
+        "reportStatus": {
+          "enum": [
+            "preliminary",
+            "final"
+          ],
+          "title": "Reportstatus",
+          "type": "string"
+        },
+        "sampleDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceName": {
+          "minLength": 1,
+          "title": "Sourcename",
+          "type": "string"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        }
+      },
+      "required": [
+        "sourceName",
+        "reportKind",
+        "reportStatus",
+        "patientId"
+      ],
+      "title": "CreateDiagnosticReportPayload",
       "type": "object"
     },
     "CreateInvitationPayload": {
@@ -836,6 +1498,101 @@
         "patientId"
       ],
       "title": "CreatePatientAntecedentPayload",
+      "type": "object"
+    },
+    "CreatePatientCarePlanPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "conditionId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conditionid"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounterid"
+        },
+        "expectedEndDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
+        },
+        "startDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "patientId"
+      ],
+      "title": "CreatePatientCarePlanPayload",
       "type": "object"
     },
     "CreatePatientConditionPayload": {
@@ -1299,10 +2056,216 @@
       "title": "CreateServicePayload",
       "type": "object"
     },
+    "CreateSpecialtyTemplatePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "changeNote": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Changenote"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/SpecialtyTemplateField"
+          },
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "specialty": {
+          "const": "dentistry",
+          "default": "dentistry",
+          "title": "Specialty",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "fields"
+      ],
+      "title": "CreateSpecialtyTemplatePayload",
+      "type": "object"
+    },
+    "DeclarePatientMedicationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "doseDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dosedescription"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounterid"
+        },
+        "endDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frequencyDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequencydescription"
+        },
+        "medicationName": {
+          "minLength": 1,
+          "title": "Medicationname",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "prescriberName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prescribername"
+        },
+        "routeDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Routedescription"
+        },
+        "sourceType": {
+          "enum": [
+            "patient",
+            "caregiver",
+            "other_professional",
+            "document"
+          ],
+          "title": "Sourcetype",
+          "type": "string"
+        },
+        "startDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "medicationName",
+        "sourceType",
+        "patientId"
+      ],
+      "title": "DeclarePatientMedicationPayload",
+      "type": "object"
+    },
     "EmptyAppointmentPayload": {
       "additionalProperties": false,
       "properties": {},
       "title": "EmptyAppointmentPayload",
+      "type": "object"
+    },
+    "EvaluateCarePlanGoalPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "evaluationStatus": {
+          "enum": [
+            "achieved",
+            "not_achieved"
+          ],
+          "title": "Evaluationstatus",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "evaluationStatus"
+      ],
+      "title": "EvaluateCarePlanGoalPayload",
       "type": "object"
     },
     "IdentifierInput": {
@@ -1339,6 +2302,126 @@
         "id"
       ],
       "title": "IdentifierInput",
+      "type": "object"
+    },
+    "InvalidateCarePlanActionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateCarePlanActionPayload",
+      "type": "object"
+    },
+    "InvalidateCarePlanGoalPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateCarePlanGoalPayload",
+      "type": "object"
+    },
+    "InvalidateCarePlanReviewPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateCarePlanReviewPayload",
+      "type": "object"
+    },
+    "InvalidateDentalFindingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateDentalFindingPayload",
+      "type": "object"
+    },
+    "InvalidateDentalTreatmentPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateDentalTreatmentPayload",
+      "type": "object"
+    },
+    "InvalidateDiagnosticReportResultPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateDiagnosticReportResultPayload",
       "type": "object"
     },
     "InvalidatePatientAllergyIntolerancePayload": {
@@ -1381,6 +2464,26 @@
       "title": "InvalidatePatientAntecedentPayload",
       "type": "object"
     },
+    "InvalidatePatientCarePlanPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidatePatientCarePlanPayload",
+      "type": "object"
+    },
     "InvalidatePatientConditionPayload": {
       "additionalProperties": false,
       "properties": {
@@ -1399,6 +2502,26 @@
         }
       },
       "title": "InvalidatePatientConditionPayload",
+      "type": "object"
+    },
+    "InvalidatePatientDeclaredMedicationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidatePatientDeclaredMedicationPayload",
       "type": "object"
     },
     "InvalidatePatientEncounterPayload": {
@@ -1479,6 +2602,46 @@
         }
       },
       "title": "InvalidatePatientNotePayload",
+      "type": "object"
+    },
+    "InvalidateReportAttachmentPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateReportAttachmentPayload",
+      "type": "object"
+    },
+    "InvalidateSpecialtyRecordPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "InvalidateSpecialtyRecordPayload",
       "type": "object"
     },
     "JsonValue": {},
@@ -1736,6 +2899,112 @@
         "publicName"
       ],
       "title": "ProfessionalPayload",
+      "type": "object"
+    },
+    "RecordDentalFindingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounterid"
+        },
+        "findingKind": {
+          "enum": [
+            "healthy",
+            "caries",
+            "missing",
+            "filling",
+            "crown",
+            "fracture",
+            "other"
+          ],
+          "title": "Findingkind",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "recordedDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "surface": {
+          "anyOf": [
+            {
+              "enum": [
+                "vestibular",
+                "palatina",
+                "lingual",
+                "mesial",
+                "distal",
+                "oclusal",
+                "incisal",
+                "cervical"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Surface"
+        },
+        "toothFdi": {
+          "title": "Toothfdi",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "toothFdi",
+        "findingKind",
+        "patientId"
+      ],
+      "title": "RecordDentalFindingPayload",
       "type": "object"
     },
     "RecordKind": {
@@ -2220,6 +3489,38 @@
       "title": "RelationshipPatch",
       "type": "object"
     },
+    "ResolveDentalFindingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        }
+      },
+      "title": "ResolveDentalFindingPayload",
+      "type": "object"
+    },
+    "RetireSpecialtyTemplatePayload": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "RetireSpecialtyTemplatePayload",
+      "type": "object"
+    },
+    "ReviewPatientDeclaredMedicationPayload": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "ReviewPatientDeclaredMedicationPayload",
+      "type": "object"
+    },
     "ScheduleBlockPatch": {
       "additionalProperties": false,
       "properties": {
@@ -2545,6 +3846,769 @@
       ],
       "type": "string"
     },
+    "SpecialtyRecordValue": {
+      "additionalProperties": false,
+      "properties": {
+        "fieldKey": {
+          "minLength": 1,
+          "title": "Fieldkey",
+          "type": "string"
+        },
+        "valueBoolean": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valueboolean"
+        },
+        "valueDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "valueNumber": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valuenumber"
+        },
+        "valueText": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valuetext"
+        }
+      },
+      "required": [
+        "fieldKey"
+      ],
+      "title": "SpecialtyRecordValue",
+      "type": "object"
+    },
+    "SpecialtyTemplateField": {
+      "additionalProperties": false,
+      "properties": {
+        "displayOrder": {
+          "minimum": 1,
+          "title": "Displayorder",
+          "type": "integer"
+        },
+        "fieldKey": {
+          "minLength": 1,
+          "title": "Fieldkey",
+          "type": "string"
+        },
+        "fieldKind": {
+          "enum": [
+            "text",
+            "number",
+            "boolean",
+            "date_partial"
+          ],
+          "title": "Fieldkind",
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "options": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Options"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "fieldKey",
+        "label",
+        "fieldKind",
+        "displayOrder"
+      ],
+      "title": "SpecialtyTemplateField",
+      "type": "object"
+    },
+    "UpdateCarePlanActionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dueDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "responsibleUserId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Responsibleuserid"
+        }
+      },
+      "title": "UpdateCarePlanActionPayload",
+      "type": "object"
+    },
+    "UpdateCarePlanGoalPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dueDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "expectedResult": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expectedresult"
+        },
+        "goalKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "narrative",
+                "measurable"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Goalkind"
+        },
+        "measurementKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "weight",
+                "temperature",
+                "oxygen_saturation",
+                "heart_rate",
+                "blood_pressure"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Measurementkind"
+        },
+        "referenceDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencedescription"
+        },
+        "targetValue": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Targetvalue"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        }
+      },
+      "title": "UpdateCarePlanGoalPayload",
+      "type": "object"
+    },
+    "UpdateDentalFindingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "findingKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "healthy",
+                "caries",
+                "missing",
+                "filling",
+                "crown",
+                "fracture",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Findingkind"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "recordedDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "surface": {
+          "anyOf": [
+            {
+              "enum": [
+                "vestibular",
+                "palatina",
+                "lingual",
+                "mesial",
+                "distal",
+                "oclusal",
+                "incisal",
+                "cervical"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Surface"
+        },
+        "toothFdi": {
+          "title": "Toothfdi",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "toothFdi"
+      ],
+      "title": "UpdateDentalFindingPayload",
+      "type": "object"
+    },
+    "UpdateDentalTreatmentPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "performedDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "treatmentKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "cleaning",
+                "filling",
+                "crown",
+                "extraction",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Treatmentkind"
+        },
+        "treatmentStatus": {
+          "anyOf": [
+            {
+              "enum": [
+                "planned",
+                "performed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Treatmentstatus"
+        }
+      },
+      "title": "UpdateDentalTreatmentPayload",
+      "type": "object"
+    },
+    "UpdateDiagnosticReportPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "attachmentId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attachmentid"
+        },
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "clinicalSummary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clinicalsummary"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "issuedDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reportKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "laboratory",
+                "imaging",
+                "pathology",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reportkind"
+        },
+        "reportStatus": {
+          "anyOf": [
+            {
+              "enum": [
+                "preliminary",
+                "final"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reportstatus"
+        },
+        "sampleDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcename"
+        },
+        "sourceType": {
+          "$ref": "#/$defs/ClinicalSourceType",
+          "default": "unknown"
+        }
+      },
+      "title": "UpdateDiagnosticReportPayload",
+      "type": "object"
+    },
+    "UpdateDiagnosticReportResultPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "analyteName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Analytename"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "referenceHigh": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencehigh"
+        },
+        "referenceLow": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencelow"
+        },
+        "referenceText": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencetext"
+        },
+        "resultKind": {
+          "anyOf": [
+            {
+              "enum": [
+                "numeric",
+                "text"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resultkind"
+        },
+        "textValue": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Textvalue"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "UpdateDiagnosticReportResultPayload",
+      "type": "object"
+    },
     "UpdatePatientAllergyIntolerancePayload": {
       "additionalProperties": false,
       "properties": {
@@ -2749,6 +4813,118 @@
       "title": "UpdatePatientAntecedentPayload",
       "type": "object"
     },
+    "UpdatePatientCarePlanPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "expectedEndDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "planStatus": {
+          "anyOf": [
+            {
+              "enum": [
+                "active",
+                "suspended",
+                "closed",
+                "cancelled"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Planstatus"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
+        },
+        "startDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "statusReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Statusreason"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "UpdatePatientCarePlanPayload",
+      "type": "object"
+    },
     "UpdatePatientConditionPayload": {
       "additionalProperties": false,
       "properties": {
@@ -2835,6 +5011,144 @@
         }
       },
       "title": "UpdatePatientConditionPayload",
+      "type": "object"
+    },
+    "UpdatePatientDeclaredMedicationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "capturedAtLocal": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capturedatlocal"
+        },
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "doseDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dosedescription"
+        },
+        "endDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frequencyDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequencydescription"
+        },
+        "medicationName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Medicationname"
+        },
+        "prescriberName": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prescribername"
+        },
+        "routeDescription": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Routedescription"
+        },
+        "sourceType": {
+          "anyOf": [
+            {
+              "enum": [
+                "patient",
+                "caregiver",
+                "other_professional",
+                "document"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcetype"
+        },
+        "startDate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClinicalDate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "UpdatePatientDeclaredMedicationPayload",
       "type": "object"
     },
     "UpdatePatientEncounterPayload": {
@@ -3210,6 +5524,163 @@
       ],
       "title": "UpdateServiceOfferPayload",
       "type": "object"
+    },
+    "UpdateSpecialtyRecordPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "correctionReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correctionreason"
+        },
+        "recordedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recordedat"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/SpecialtyRecordValue"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        }
+      },
+      "title": "UpdateSpecialtyRecordPayload",
+      "type": "object"
+    },
+    "UpdateSpecialtyTemplatePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "changeNote": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Changenote"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/SpecialtyTemplateField"
+          },
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "specialty": {
+          "const": "dentistry",
+          "default": "dentistry",
+          "title": "Specialty",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "UpdateSpecialtyTemplatePayload",
+      "type": "object"
+    },
+    "UploadReportAttachmentPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "byteSize": {
+          "minimum": 1,
+          "title": "Bytesize",
+          "type": "integer"
+        },
+        "contentBase64": {
+          "minLength": 1,
+          "title": "Contentbase64",
+          "type": "string"
+        },
+        "contentType": {
+          "minLength": 1,
+          "title": "Contenttype",
+          "type": "string"
+        },
+        "fileName": {
+          "minLength": 1,
+          "title": "Filename",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid7",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "reportId": {
+          "anyOf": [
+            {
+              "format": "uuid7",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reportid"
+        },
+        "sha256": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "patientId",
+        "fileName",
+        "contentType",
+        "byteSize",
+        "sha256",
+        "contentBase64"
+      ],
+      "title": "UploadReportAttachmentPayload",
+      "type": "object"
     }
   },
   "$id": "urn:nightingale:accepted-operations:1.3",
@@ -3220,6 +5691,81 @@
     },
     {
       "oneOf": [
+        {
+          "properties": {
+            "action": {
+              "const": "AddCarePlanAction"
+            },
+            "payload": {
+              "$ref": "#/$defs/AddCarePlanActionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "AddCarePlanGoal"
+            },
+            "payload": {
+              "$ref": "#/$defs/AddCarePlanGoalPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "AddCarePlanReview"
+            },
+            "payload": {
+              "$ref": "#/$defs/AddCarePlanReviewPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "AddDentalTreatment"
+            },
+            "payload": {
+              "$ref": "#/$defs/AddDentalTreatmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "AddDiagnosticReportResult"
+            },
+            "payload": {
+              "$ref": "#/$defs/AddDiagnosticReportResultPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
         {
           "properties": {
             "action": {
@@ -3253,6 +5799,21 @@
         {
           "properties": {
             "action": {
+              "const": "CaptureSpecialtyRecord"
+            },
+            "payload": {
+              "$ref": "#/$defs/CaptureSpecialtyRecordPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "CompleteAppointment"
             },
             "payload": {
@@ -3268,10 +5829,40 @@
         {
           "properties": {
             "action": {
+              "const": "CompleteCarePlanAction"
+            },
+            "payload": {
+              "$ref": "#/$defs/CompleteCarePlanActionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "ConfirmAppointment"
             },
             "payload": {
               "$ref": "#/$defs/EmptyAppointmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CorrectDiagnosticReport"
+            },
+            "payload": {
+              "$ref": "#/$defs/CorrectDiagnosticReportPayload"
             }
           },
           "required": [
@@ -3328,6 +5919,21 @@
         {
           "properties": {
             "action": {
+              "const": "CreateDiagnosticReport"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateDiagnosticReportPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "CreateInvitation"
             },
             "payload": {
@@ -3362,6 +5968,21 @@
             },
             "payload": {
               "$ref": "#/$defs/CreatePatientAntecedentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreatePatientCarePlan"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreatePatientCarePlanPayload"
             }
           },
           "required": [
@@ -3493,6 +6114,141 @@
         {
           "properties": {
             "action": {
+              "const": "CreateSpecialtyTemplate"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreateSpecialtyTemplatePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "DeclarePatientMedication"
+            },
+            "payload": {
+              "$ref": "#/$defs/DeclarePatientMedicationPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "EvaluateCarePlanGoal"
+            },
+            "payload": {
+              "$ref": "#/$defs/EvaluateCarePlanGoalPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateCarePlanAction"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateCarePlanActionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateCarePlanGoal"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateCarePlanGoalPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateCarePlanReview"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateCarePlanReviewPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateDentalFinding"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateDentalFindingPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateDentalTreatment"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateDentalTreatmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateDiagnosticReportResult"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateDiagnosticReportResultPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "InvalidatePatientAllergyIntolerance"
             },
             "payload": {
@@ -3523,10 +6279,40 @@
         {
           "properties": {
             "action": {
+              "const": "InvalidatePatientCarePlan"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidatePatientCarePlanPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "InvalidatePatientCondition"
             },
             "payload": {
               "$ref": "#/$defs/InvalidatePatientConditionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidatePatientDeclaredMedication"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidatePatientDeclaredMedicationPayload"
             }
           },
           "required": [
@@ -3598,6 +6384,36 @@
         {
           "properties": {
             "action": {
+              "const": "InvalidateReportAttachment"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateReportAttachmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "InvalidateSpecialtyRecord"
+            },
+            "payload": {
+              "$ref": "#/$defs/InvalidateSpecialtyRecordPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "MarkAppointmentNoShow"
             },
             "payload": {
@@ -3617,6 +6433,21 @@
             },
             "payload": {
               "$ref": "#/$defs/OfferServicePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RecordDentalFinding"
+            },
+            "payload": {
+              "$ref": "#/$defs/RecordDentalFindingPayload"
             }
           },
           "required": [
@@ -3704,11 +6535,56 @@
         {
           "properties": {
             "action": {
+              "const": "ResolveDentalFinding"
+            },
+            "payload": {
+              "$ref": "#/$defs/ResolveDentalFindingPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "RestoreAccountDevice"
             },
             "payload": {
               "maxProperties": 0,
               "type": "object"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RetireSpecialtyTemplate"
+            },
+            "payload": {
+              "$ref": "#/$defs/RetireSpecialtyTemplatePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "ReviewPatientDeclaredMedication"
+            },
+            "payload": {
+              "$ref": "#/$defs/ReviewPatientDeclaredMedicationPayload"
             }
           },
           "required": [
@@ -3992,10 +6868,100 @@
         {
           "properties": {
             "action": {
+              "const": "UpdateCarePlanAction"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateCarePlanActionPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateCarePlanGoal"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateCarePlanGoalPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "UpdateContactPerson"
             },
             "payload": {
               "$ref": "#/$defs/ContactPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateDentalFinding"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateDentalFindingPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateDentalTreatment"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateDentalTreatmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateDiagnosticReport"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateDiagnosticReportPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateDiagnosticReportResult"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateDiagnosticReportResultPayload"
             }
           },
           "required": [
@@ -4037,6 +7003,21 @@
         {
           "properties": {
             "action": {
+              "const": "UpdatePatientCarePlan"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdatePatientCarePlanPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "UpdatePatientCondition"
             },
             "payload": {
@@ -4056,6 +7037,21 @@
             },
             "payload": {
               "$ref": "#/$defs/RelationshipPatch"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdatePatientDeclaredMedication"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdatePatientDeclaredMedicationPayload"
             }
           },
           "required": [
@@ -4213,6 +7209,51 @@
             "payload"
           ],
           "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateSpecialtyRecord"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateSpecialtyRecordPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdateSpecialtyTemplate"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdateSpecialtyTemplatePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UploadReportAttachment"
+            },
+            "payload": {
+              "$ref": "#/$defs/UploadReportAttachmentPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
         }
       ]
     }
@@ -4230,7 +7271,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "de3bbcbcca3f3d26a6ac27e071d8f226630f7eb3",
-    "sourceSha256": "a575a52c4f692a24cdf526ecdbd3310fc05c4b9f6b99c416c2294d0e7968fddd"
+    "sourceHead": "8f30a5a96288f5614289b2319a5652dc4151fe75",
+    "sourceSha256": "851b35fba95ee84dfe86044d0de3408c955e892cb67fd9ea6fb72efee80cf659"
   }
 }
