@@ -32,7 +32,16 @@ def source_metadata():
     for path in sorted(paths):
         content = path.read_text(encoding="utf-8").replace("\r\n", "\n").encode("utf-8")
         digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + content + b"\0")
-    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
+    head = subprocess.run(
+        [
+            "git", "log", "-1", "--format=%H", "--",
+            "src", "pyproject.toml", "uv.lock", "scripts/export_contracts.py",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
     return {"origin": "src.application:app and src/api/*/domain", "generator": "scripts/export_contracts.py",
             "contractVersion": 1, "modelRevision": "api-v1.3", "sourceHead": head, "sourceSha256": digest.hexdigest(),
             "packages": {name: version(name) for name in ("nightingale-api", "fastapi", "pydantic", "sqlalchemy", "asyncpg")}}

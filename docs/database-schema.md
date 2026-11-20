@@ -95,7 +95,7 @@ Cada diccionario declara obligatoriedad y valor por defecto por separado. **Sin 
 
 Todos los campos `date` y `timestamptz` de este diccionario exigen valores finitos cuando no son nulos, incluidos nacimiento, creación, actualización, verificación, confirmación, cambios y extremos de vigencia. Cada campo lleva un CHECK de finitud: no se admite `infinity` ni `-infinity` como fecha o instante. Los finales abiertos usan exclusivamente el nulo que ya permita la columna; no se añade otra forma de indicar ausencia de fin. Fuente: [PostgreSQL: isfinite](https://www.postgresql.org/docs/18/functions-datetime.html).
 
-Las marcas `created_at` y `updated_at`, cuando figuren, son obligatorias y no tienen valor por defecto en este diseño. La segunda no puede ser anterior a la primera. No se afirma que PostgreSQL actualice esas marcas automáticamente ni se prescribe código para hacerlo.
+Las marcas `created_at` y `updated_at`, cuando figuren, son obligatorias y tienen `DEFAULT CURRENT_TIMESTAMP` como fallback físico de alta; `device_tokens`, `sync_snapshots` y `analytics.etl_state` aplican ese default solo a su sello presente. La segunda no puede ser anterior a la primera cuando ambas existen. En ORM, los modelos con ambos sellos heredan `Date`; los de un solo sello usan `CreatedDate` o `UpdatedDate`. Los atributos Python son `date_added`/`date_updated`, mapeados a las columnas físicas anteriores. `insert_default` genera los sellos con `datetime_now()` y reutiliza el otro valor del mismo INSERT para mantener su orden; `onupdate=datetime_now` cubre modificaciones ORM/Core sin valor explícito. No se usan triggers de UPDATE. Las historias reciben valores explícitos para conservar su correspondencia con la versión del estado. Los instantes de negocio, hecho, aceptación, caducidad o revocación no reciben estos defaults automáticos. Las consultas de hora necesarias para reglas, caducidad, recibos, auditoría o journal usan `src.core.utils.utils.datetime_now()` y no ejecutan SQL.
 
 ### 2.3 Claves, restricciones e índices
 
@@ -156,8 +156,8 @@ Una fila por persona que accede al sistema. No se crea una fila por clínica. M�
 | `oidc_subject` | `text` | Sí | Sin valor por defecto | UQ con `oidc_issuer` | Sujeto dentro de ese emisor. |
 | `display_name` | `text` | Sí | Sin valor por defecto | Ninguna | Nombre para identificar a la persona dentro del equipo. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`; estado de esta identidad. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Instante de creación de la identidad. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Instante del último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante de creación de la identidad. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Instante del último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK en `id`; UQ en `(oidc_issuer, oidc_subject)`. Los dos valores OIDC se comparan exactamente y con distinción de mayúsculas, sin cambiar su contenido para deduplicar. Se propone intercalación determinista `C` para esas columnas. Un correo o nombre coincidente no une identidades. No hay contraseña ni correo obligatorio en esta propuesta. Un vínculo OIDC por usuario es una propuesta de esta versión, no una prohibición de admitir varios mediante una relación futura.
@@ -183,8 +183,8 @@ Una fila por espacio administrativo. La consulta independiente y la clínica usa
 | `location_state` | `text` | Sí | Sin valor por defecto | CHECK de texto | Estado o división equivalente; por ejemplo, Lara. |
 | `location_city` | `text` | Sí | Sin valor por defecto | CHECK de texto | Ciudad; por ejemplo, Barquisimeto. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`; actividad de la cuenta. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Instante de creación. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Instante del último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante de creación. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Instante del último cambio. |
 | `no_show_grace_minutes` | `integer` | Sí | 15 | CHECK 0–1440 | Margen administrativo desde inicio para registrar ausencia manual; no recalcula citas. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
@@ -211,8 +211,8 @@ Una fila por pareja cuenta/persona. La pertenencia expresa vínculo administrati
 | `account_id` | `uuid` | Sí | Sin valor por defecto | PK compuesta; FK | Cuenta a la que pertenece la persona. |
 | `user_id` | `uuid` | Sí | Sin valor por defecto | PK compuesta; FK | Persona que pertenece a la cuenta. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`; estado del vínculo. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Instante en que se registra el vínculo. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Instante del último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante en que se registra el vínculo. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Instante del último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `(account_id, user_id)`; FK de cada extremo a su entidad. Se conserva una sola fila por pareja, aunque se desactive y reactive. No se añade un `id` que permita duplicar la misma pertenencia.
@@ -231,8 +231,8 @@ Una fila por profesional. Su identidad permanece al atender en otra clínica o a
 | `user_id` | `uuid` | Sí | Sin valor por defecto | FK; UQ; parte de UQ de referencia | Usuario propio y obligatorio del profesional. |
 | `public_name` | `text` | Sí | Sin valor por defecto | Ninguna | Nombre profesional que se usa al presentar sus citas. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`; actividad del perfil. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Instante de creación del perfil. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Instante del último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante de creación del perfil. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Instante del último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; FK `user_id` a `app_users.id`; UQ `user_id`, que permite como máximo un perfil por persona; UQ `(id, user_id)` para que §3.5 pueda comprobar los dos valores en una FK compuesta. Esta última unicidad ya se deduce de la PK, pero su declaración explícita sirve como destino de esa FK.
@@ -253,8 +253,8 @@ Una fila por profesional y cuenta donde atiende. Se distingue de la pertenencia 
 | `professional_id` | `uuid` | Sí | Sin valor por defecto | PK compuesta; parte de FK | Identidad común del profesional. |
 | `user_id` | `uuid` | Sí | Sin valor por defecto | Parte de UQ/FK | Usuario del perfil, necesario para comprobar pertenencia. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`; actividad de esta vinculación profesional. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Instante de creación del vínculo. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Instante del último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante de creación del vínculo. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Instante del último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `(account_id, professional_id)`; UQ `(account_id, user_id)`; FK `(professional_id, user_id)` a `professionals.(id, user_id)`; FK `(account_id, user_id)` a `account_memberships.(account_id, user_id)`.
@@ -409,8 +409,8 @@ El esquema de este grupo no contiene un historial de cambios de propietario, ni 
 | Columna | Tipo | Obligatoria | Por defecto | Clave | Significado |
 |---|---|---|---|---|---|
 | `id` | `uuid` | Sí | Sin valor por defecto | PK; CHECK UUIDv7 | Identidad interna, también para menores sin documento. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación de la identidad. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio de esta fila. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación de la identidad. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio de esta fila. |
 
 **Claves y restricciones:** PK `id`; regla temporal de §2.2. No hay unicidad por nombre, nacimiento, teléfono o representante. La fila no contiene esos datos ni un estado global de actividad: cada consulta administra la actividad de su propia ficha.
 
@@ -432,8 +432,8 @@ El esquema de este grupo no contiene un historial de cambios de propietario, ni 
 | `verification_status` | `text` | Sí | `declared` | CHECK | `declared`, `verified` o `invalidated`; comprobación independiente de la posibilidad de agendar. |
 | `verified_at` | `timestamptz` | No | Nulo | CHECK de pareja; CHECK finito | Instante de la comprobación, si la hubo. |
 | `verified_by_user_id` | `uuid` | No | Nulo | FK; CHECK de pareja | Persona que dejó constancia de la comprobación. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación del registro. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación del registro. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; FK `patient_id` a `patients.id`; FK opcional `verified_by_user_id` a `app_users.id`. UQ parcial `(issuing_country, document_type, document_number)` solo para `verified`. Una fila declarada no se convierte en una asociación fiable solo porque otro registro tenga el mismo número. La colisión entre dos identidades al verificar exige revisión, no una unión automática.
@@ -469,8 +469,8 @@ La invalidación y la incorporación del documento corregido respetan juntas la 
 | `identification_basis` | `text` | No | Nulo | CHECK condicional | `own_document` para documento propio registrado o `minor_without_document`; permite nulo en borrador. |
 | `completion_status` | `text` | Sí | `draft` | CHECK | `draft` o `complete`. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`, separado de completitud. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación de la ficha en esta cuenta. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio de la ficha. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación de la ficha en esta cuenta. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio de la ficha. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `(account_id, patient_id)`; FK a `accounts.id` y a `patients.id`. No hay otro `id` ni otra ficha de esa identidad en la misma cuenta. Los textos presentes no son vacíos. La pareja `phone_code`/`phone` cumple §2.6 aunque la ficha sea borrador. Para `complete`, `full_name` e `identification_basis` son obligatorios; `minor_without_document` exige además `birth_date`. Borrador admite esos campos nulos y conserva el identificador para volver a completarlos.
@@ -496,8 +496,8 @@ Las condiciones dependientes de documento, contacto y fecha no se dan por cubier
 | `document_type` | `text` | No | Nulo | CHECK de conjunto | `national_id` o `passport` propios del adulto, según el país emisor. |
 | `document_number` | `text` | No | Nulo | CHECK de conjunto | Número propio, no el identificador del menor. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación del contacto. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación del contacto. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; UQ `(account_id, id)` como destino de FK que impide cruzar cuentas; FK `account_id` a `accounts.id`. `issuing_country`, `document_type` y `document_number` son todos nulos o todos presentes; tipo y número usan la comparación exacta de §4.2. La pareja telefónica cumple §2.6. El país del documento no se toma del teléfono ni de la cuenta. No se impone unicidad global a los documentos, nombres o teléfonos del contacto: no se usa esta tabla como registro global de identidad.
@@ -523,8 +523,8 @@ Las condiciones dependientes de documento, contacto y fecha no se dan por cubier
 | `valid_from` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Inicio de vigencia declarado para el vínculo. |
 | `valid_until` | `timestamptz` | No | Nulo | CHECK temporal; CHECK finito | Fin exclusivo; nulo significa sin fin definido. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`; conserva la fila al terminar el vínculo. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación del registro. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación del registro. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `(account_id, patient_id, contact_person_id)`; FK `(account_id, patient_id)` a `account_patients`; FK `(account_id, contact_person_id)` a `contact_people.(account_id, id)`; FK opcional `(account_id, verified_by_user_id)` a `account_memberships`. La última usa la nulabilidad deliberada del verificador: sin comprobación no exige verificador; con valor debe pertenecer a la cuenta correcta.
@@ -700,8 +700,8 @@ En C02 se revisaron y aceptaron para esta primera versión las propuestas de sep
 | `name` | `text` | Sí | Sin valor por defecto | Ninguna | Nombre administrativo del servicio del profesional. |
 | `default_duration_minutes` | `integer` | Sí | Sin valor por defecto | CHECK 1–1440 | Duración base en minutos enteros según D09, usada cuando la oferta no fija otra. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive` para el servicio del profesional. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación del servicio. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio del catálogo. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación del servicio. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio del catálogo. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; UQ `(professional_id, id)` para comprobar propiedad en las ofertas; FK `professional_id` a `professionals.id`. La UQ también se deduce de la PK, pero se declara como destino compuesto de F18. Duración entera mayor que cero. D09 y §9.1 fijan para esta etapa 1–1440 minutos enteros; no es un límite clínico ni una regla de tratamiento. El nombre no es un identificador único: dos profesionales pueden llamar igual a sus servicios sin compartir su propiedad.
@@ -721,8 +721,8 @@ En C02 se revisaron y aceptaron para esta primera versión las propuestas de sep
 | `service_id` | `uuid` | Sí | Sin valor por defecto | PK compuesta; parte de FK | Servicio del catálogo de ese mismo profesional. |
 | `duration_minutes_override` | `integer` | No | Nulo | CHECK 1–1440 si presente | Duración habitual de esta oferta; nulo usa la duración base del servicio. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive` solo para esta oferta. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación de la oferta. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio de la oferta. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación de la oferta. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio de la oferta. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `(account_id, professional_id, service_id)`; FK `(account_id, professional_id)` a `account_professionals`; FK `(professional_id, service_id)` a `services.(professional_id, id)`. Juntas exigen que quien ofrece el servicio pertenezca a la cuenta y sea su propietario. No basta con que existan por separado profesional y servicio. Las columnas obligatorias no dejan una referencia compuesta parcialmente nula. Si existe `duration_minutes_override`, es un entero entre 1 y 1440 según D09; cero no significa usar la base.
@@ -748,8 +748,8 @@ En C02 se revisaron y aceptaron para esta primera versión las propuestas de sep
 | `valid_from` | `date` | Sí | Sin valor por defecto | CHECK; parte de UQ; CHECK finito | Primer día incluido de vigencia. |
 | `valid_until` | `date` | No | Nulo | CHECK; parte de UQ; CHECK finito | Último día incluido; nulo si no se define fin. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación de la regla. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación de la regla. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; FK `(account_id, professional_id)` a `account_professionals`. Día entre 1 y 7; inicio entre 0 y 1439, fin entre 1 y 1440 e inicio menor que fin; si hay `valid_until`, no precede a `valid_from`. Las fechas de vigencia son finitas; no se usa un valor infinito como segundo modo de expresar fin abierto.
@@ -774,8 +774,8 @@ Se propone UQ `(account_id, professional_id, iso_weekday, local_start_minute, lo
 | `local_start_minute` | `smallint` | No | Nulo | CHECK condicional | Inicio local del reemplazo en minutos desde medianoche, entre 0 y 1439. |
 | `local_end_minute` | `smallint` | No | Nulo | CHECK condicional | Fin local exclusivo entre 1 y 1440; 1440 es medianoche del día siguiente. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación de la excepción. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación de la excepción. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; UQ `(account_id, professional_id, local_date)`; FK `(account_id, professional_id)` a `account_professionals`. `closed` exige ambos extremos nulos; `replacement` exige ambos no nulos, inicio entre 0 y 1439, fin entre 1 y 1440 e inicio menor que fin. Su precisión es de minutos. Una fila inactiva no reemplaza el horario y se reutiliza si se revisa esa misma fecha.
@@ -799,8 +799,8 @@ La primera propuesta admite un solo intervalo de reemplazo por día. Una pausa d
 | `ends_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Fin absoluto exclusivo y finito, posterior al inicio. |
 | `reason_code` | `text` | Sí | Sin valor por defecto | CHECK | `vacation`, `administrative` u `unavailable`; sin notas clínicas. |
 | `status` | `text` | Sí | `active` | CHECK | `active` o `inactive`. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación del bloqueo. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación del bloqueo. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio. |
 | `version` | `integer` | Sí | 1 | CHECK positivo | Versión autoritativa de esta fila para aceptación optimista; no se deriva de updated_at. |
 
 **Claves y restricciones:** PK `id`; FK obligatoria `professional_id` a `professionals.id`; FK opcional `(account_id, professional_id)` a `account_professionals`. La nulabilidad de cuenta es intencional: con cuenta nula no se comprueba esa FK compuesta, pero la FK al profesional sigue siendo obligatoria. Con cuenta presente se exige su vinculación a ese mismo profesional. Inicio anterior al fin; no se permiten intervalos vacíos.
@@ -1032,8 +1032,8 @@ En C02 se revisaron y aceptaron para esta primera versión la separación entre 
 | `location_state_snapshot` | `text` | Sí | Sin valor por defecto | CHECK de texto | Estado o división equivalente del lugar comunicado. |
 | `location_city_snapshot` | `text` | Sí | Sin valor por defecto | CHECK de texto | Ciudad del lugar comunicado. |
 | `time_zone_snapshot` | `text` | Sí | Sin valor por defecto | Regla de zona | Zona de presentación de la cita, conservada como dato administrativo. |
-| `created_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK finito | Creación de la cita; coincide con la primera entrada de historial. |
-| `updated_at` | `timestamptz` | Sí | Sin valor por defecto | CHECK temporal; CHECK finito | Último cambio; coincide con la entrada de su versión actual. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación de la cita; coincide con la primera entrada de historial. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal; CHECK finito | Último cambio; coincide con la entrada de su versión actual. |
 
 **Claves y restricciones:** PK `id`; UQ `(account_id, id)` para referencias históricas con cuenta; FK `(account_id, patient_id)` a `account_patients`; FK `(account_id, professional_id, service_id)` a `professional_services`; FK opcional `(account_id, patient_id, responsible_contact_id)` a `patient_contact_relationships`. Una cita no combina una ficha y una oferta de cuentas distintas ni usa el servicio de otro profesional. Las referencias obligatorias son NN; la del responsable admite nulo de forma deliberada.
 
@@ -1387,8 +1387,8 @@ Todas las FK nuevas usan mismo tipo que destino, identidades estables y RESTRICT
 | client_version | text | Sí | Sin valor | Texto no vacío | Versión reportada; evidencia, no permiso. |
 | local_schema_version | integer | Sí | Sin valor | CHECK positivo | Esquema local reportado; no versión de contrato API. |
 | last_seen_at | timestamptz | No | Nulo | CHECK finito | Actividad observada en servidor, no fecha declarada. |
-| created_at | timestamptz | Sí | Sin valor | CHECK finito | Creación. |
-| updated_at | timestamptz | Sí | Sin valor | CHECK temporal/finito | Cambio de datos autoritativos. |
+| created_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación. |
+| updated_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Cambio de datos autoritativos. |
 | version | integer | Sí | 1 | CHECK positivo | Versión de nombre/actividad; last_seen y reportes técnicos no son cambios de negocio. |
 
 PK id; UQ (id,user_id) para F32 y F34. Índice (user_id,id) para listar propios. Usuario/id estables. Revocar actualiza estado/versión y todas sus credenciales en una transacción. No se elimina un dispositivo referenciado; reportes técnicos no conceden permisos.
@@ -1403,7 +1403,7 @@ PK id; UQ (id,user_id) para F32 y F34. Índice (user_id,id) para listar propios.
 | device_id | uuid | Sí | Sin valor | Parte de FK/UQ | Dispositivo inmutable. |
 | user_id | uuid | Sí | Sin valor | Parte de FK/UQ | Debe coincidir con usuario de instalación. |
 | secret_hash | bytea | Sí | Sin valor | UQ; CHECK 32 octetos | SHA-256 de 32 bytes aleatorios; nunca secreto o token completo. |
-| created_at | timestamptz | Sí | Sin valor | CHECK finito | Instante de emisión. |
+| created_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante de emisión. |
 | revoked_at | timestamptz | No | Nulo | CHECK temporal/finito | Nulo significa vigente hasta revocación, no vencimiento. |
 | replaced_by_token_id | uuid | No | Nulo | Parte de FK compuesta | Sucesor de rotación en la misma instalación/usuario. |
 
@@ -1421,8 +1421,8 @@ PK id; UQ (id,device_id,user_id) para sucesor; UQ secret_hash; índices (device_
 | status | text | Sí | active | CHECK active/revoked | Autorización solo en esta cuenta. |
 | created_by_user_id | uuid | Sí | Sin valor | Parte de FK | Autor de alta; registro inicial corresponde al usuario de instalación. |
 | changed_by_user_id | uuid | Sí | Sin valor | Parte de FK | Autor del último cambio autorizado en la cuenta. |
-| created_at | timestamptz | Sí | Sin valor | CHECK finito | Alta. |
-| updated_at | timestamptz | Sí | Sin valor | CHECK temporal/finito | Cambio. |
+| created_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK finito | Alta. |
+| updated_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Cambio. |
 | version | integer | Sí | 1 | CHECK positivo | Control optimista de autorización. |
 
 PK (account_id,device_id). F34 impide usar dispositivo de otro usuario; F35 exige pertenencia en la misma cuenta; F36/F37 autores de esa cuenta. Índices (device_id,user_id), (account_id,user_id), (account_id,created_by_user_id), (account_id,changed_by_user_id). Existencia no prueba actividad: validar cuenta/usuario/dispositivo/pertenencia y estado. Inicialmente registrar solo dispositivo propio; restaurar tras revocación exige propietario. Cambios incrementan época de acceso y journal en la misma transacción. No se traslada fila de cuenta/persona.
@@ -1438,8 +1438,8 @@ PK (account_id,device_id). F34 impide usar dispositivo de otro usuario; F35 exig
 | invitee_user_id | uuid | Sí | Sin valor | FK app_users | Identidad OIDC ya vinculada; no correo coincidente. |
 | created_by_user_id | uuid | Sí | Sin valor | Parte de FK | Propietario emisor. |
 | status | text | Sí | pending | CHECK pending/accepted/revoked | Expired se deriva de reloj al leer pending vencida, sin estado que dependa del reloj en un CHECK. |
-| created_at | timestamptz | Sí | Sin valor | CHECK finito | Creación desde reloj servidor. |
-| updated_at | timestamptz | Sí | Sin valor | CHECK temporal/finito | Último cambio. |
+| created_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación desde reloj servidor. |
+| updated_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Último cambio. |
 | expires_at | timestamptz | Sí | Sin valor | CHECK finito/72 horas | Exactamente 72 horas desde creación; no dato cliente. |
 | accepted_at | timestamptz | No | Nulo | CHECK temporal/finito | Instante de consumo único. |
 | accepted_operation_id | uuid | No | Nulo | Parte de FK; CHECK UUIDv7 | Recibo de aceptación del mismo destinatario y cuenta. |
@@ -1482,8 +1482,8 @@ PK (account_id,actor_user_id,operation_id), F41 pertenencia y F42 instalación/a
 | last_sequence | bigint | Sí | 0 | CHECK >=0 | Último grupo confirmado de esa cuenta. |
 | retained_from_sequence | bigint | Sí | 1 | CHECK de frontera | Primer grupo que aún puede descargarse; <= last_sequence+1. |
 | permission_epoch | bigint | Sí | 1 | CHECK positivo | Revisión de alcance que invalida cursores/capturas anteriores. |
-| created_at | timestamptz | Sí | Sin valor | CHECK finito | Creación con la cuenta. |
-| updated_at | timestamptz | Sí | Sin valor | CHECK temporal/finito | Último cambio de control. |
+| created_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK finito | Creación con la cuenta. |
+| updated_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Último cambio de control. |
 
 PK/F43. Fila creada junto a cuenta y conservada. Todo escritor de proyección de la cuenta bloquea esta fila antes de escribir; aumenta last_sequence en la transacción, nunca secuencia SQL precommit. permission_epoch no retrocede y cambia junto a permisos/dispositivos. Frontera de retención avanza solo al retirar grupos completos de al menos 90 días; un cursor en frontera-1 aún puede continuar. No otro índice ni permiso para clientes SQL. Cuenta activa requiere este control; comprobar integridad diferida al bootstrap.
 
@@ -1534,7 +1534,7 @@ PK (account_id,sequence,ordinal), F44 cuenta destino, F45 recibo origen (source_
 | permission_epoch | bigint | Sí | Sin valor | CHECK positivo | Época capturada; revalidar antes de cada página. |
 | audience | text | Sí | Sin valor | CHECK members/owner | Proyección permitida al crear, revalidada al leer. |
 | item_count | bigint | Sí | Sin valor | CHECK >=0 | Total permitido de elementos materializados. |
-| created_at | timestamptz | Sí | Sin valor | CHECK finito | Instante servidor de creación. |
+| created_at | timestamptz | Sí | CURRENT_TIMESTAMP | CHECK finito | Instante servidor de creación. |
 | expires_at | timestamptz | Sí | Sin valor | CHECK finito/15 minutos | created_at + 15 minutos; TTL no renueva autoridad. |
 
 PK id; F46 pertenencia (account_id,user_id), F47 dispositivo (device_id,user_id), F48 autorización (account_id,device_id). Índices (account_id,user_id,id), (device_id,user_id), (account_id,device_id) y expires_at para mantenimiento. Una transacción REPEATABLE READ materializa datos y base_sequence; solo confirma captura completa, sin estado pending ni red. Control diferido de item_count y orden completo de hijos; inmutable hasta liberar/vencer. Lectura vuelve a validar identidad/dispositivo/época/cuenta; no prolonga transacción entre páginas. Snapshot antiguo no extiende permisos.
@@ -1706,8 +1706,8 @@ Convenciones clínicas:
 | `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Origen declarado, no autor. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor del primer registro. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor del cambio vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptación vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 PK `(account_id,patient_id)`. F57 a `account_patients`; F58/F59 de `(account_id,created_by_user_id)` y `(account_id,updated_by_user_id)` a `account_memberships`. F60 diferida `(account_id,patient_id,version)` a su historia. No se crea una fila al migrar o leer. La primera acción exige un valor no nulo; una corrección posterior puede dejarlo nulo conservando historia.
@@ -1744,8 +1744,8 @@ PK `(account_id,patient_id,version)`. F61 a perfil; F62 `(account_id,actor_user_
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional del cambio vigente. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor de alta. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Alta aceptada. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Cambio vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Alta aceptada. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Cambio vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 PK `id`; UQ `(account_id,id)`; F63 `(account_id,patient_id)` a ficha; F64/F65 autores a pertenencias; F66 diferida `(account_id,id,version)` a historia. Índices `(account_id,patient_id,id)`, `(account_id,created_by_user_id)` y `(account_id,updated_by_user_id)`. `entered-in-error` solo se alcanza por anulación y es terminal. Los registros no `refuted` ni `entered-in-error` son pertinentes para `has_entries`; activos para resumen son `active`,`recurrence`,`relapse` con certeza distinta de esos dos valores.
@@ -1774,8 +1774,8 @@ PK `(account_id,id,version)`. `account_id`, `id`, `patient_id`, `action`, `actor
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional del cambio vigente. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor de alta. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Alta aceptada. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Cambio vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Alta aceptada. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Cambio vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 PK `id`; UQ `(account_id,id)`; F69 a ficha; F70/F71 autores; F72 diferida a historia. Índices equivalentes a condiciones. F73, en §10.7, vincula historia con estado actual; F74, con recibo. Anulación terminal por `entered-in-error`. Registros pertinentes y activos para resumen siguen las exclusiones de §10.4, pero estados clínicos activos solo `active`.
@@ -1799,8 +1799,8 @@ Una fila por sección revisada o derivada de una ficha; `section` vale `conditio
 | `source_type` | `text` | Sí | `unknown` | CHECK de fuente | Origen declarado. |
 | `reviewed_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor de revisión o derivación. |
 | `reviewed_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Aceptación vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera revisión. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Cambio vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Primera revisión. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Cambio vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 PK `(account_id,patient_id,section)`; F75 a ficha; F76 a pertenencia; F77 diferida a historia. No se permite persistir `not_recorded`: se representa sin fila. Un control diferido exige `has_entries` si existe al menos un registro pertinente y lo prohíbe si no existe; `none_known`,`not_asked` solo sin pertinentes. Al retirar el último se deriva `unknown`, nunca `none_known`.
@@ -1913,8 +1913,8 @@ Las once tablas nuevas son cinco pares de estado actual/historia y `patient_clin
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptación vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 PK `id`; UQ `(account_id,id)` para la historia y UQ `(account_id,id,patient_id)` para notas/mediciones/vacunas/antecedentes. F82 a ficha; F83 opcional `(account_id,appointment_id,patient_id)` a `appointments`; F84 `(account_id,attending_professional_id)` a `account_professionals`; F85 opcional `(account_id,assistant_user_id)` a `account_memberships`; F86/F87 autores; F88 diferida a historia. No hay UQ por `appointment_id`.
@@ -1941,7 +1941,7 @@ PK `(account_id,id,version)`; F109 a `(account_id,id)` actual y F110 a recibo. �
 | `record_status` | `text` | Sí | `valid` | CHECK común |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
 
 F89 ficha; F90 atención; F91/F92 autores; F93 diferida a historia. Índices `(account_id,patient_id,record_status,id)`, vínculo de atención y autores. No hay firma/cierre ni efecto clínico automático. Paciente y atención no se reasignan por edición.
@@ -1969,7 +1969,7 @@ Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`body`,`captured_at_local
 | `record_status` | `text` | Sí | `valid` | CHECK común |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
 
 F94 ficha; F95 atención; F96/F97 autores; F98 diferida a historia. Índices `(account_id,patient_id,kind,record_status,measured_at,id)`, vínculo y autores. `kind`, paciente y unidad son inmutables por corrección.
@@ -2006,7 +2006,7 @@ Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`kind`,`measured_at`,`cap
 | `record_status` | `text` | Sí | `valid` | CHECK común |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
 
 F99 ficha; F100 atención; F101/F102 autores; F103 diferida a historia. Índices `(account_id,patient_id,record_status,occurrence_date,id)`, vínculo y autores. `administered_here` exige `encounter_id` y atención válida en la aceptación; `reported`/`unknown` no afirman administración actual. No hay catálogo, recomendación, reacción o alergia automática.
@@ -2033,7 +2033,7 @@ Columnas `account_id`,`id`,`patient_id`,`encounter_id`,`vaccine_name`,`occurrenc
 | `record_status` | `text` | Sí | `valid` | CHECK común |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo |
 
 F104 ficha; F105 atención; F106/F107 autores; F108 diferida a historia. Índices `(account_id,patient_id,category,record_status,id)`, vínculo y autores. `family` no atribuye el relato como condición del paciente. Categoría y ficha no se reasignan por corrección.
@@ -2120,8 +2120,8 @@ Reglas propias de este bloque:
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptación vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 CHECK de coherencia: `review_status='reviewed'` exige `reviewed_at` y `reviewed_by_user_id`; `declared` los exige nulos. F120 a ficha; F121 opcional `(account_id,encounter_id,patient_id)` a `clinical_encounters`; F122/F123 autores; F124 revisión a pertenencia; F125 diferida a historia. Índices B-tree `(account_id,patient_id,record_status,id)` para listas y `(account_id,patient_id,review_status,id)` para revisión pendiente; vínculo de atención y autores para sus FK.
@@ -2156,8 +2156,8 @@ PK `(account_id,id,version)`; F126 a `(account_id,id)` actual y F127 a recibo. �
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Primera aceptación. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptación vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 CHECK de coherencia: `plan_status` distinto de `active` exige `status_reason`. F128 a ficha; F129 opcional a atención; F130 opcional `(account_id,condition_id,patient_id)` a `patient_conditions`; F131/F132 autores; F133 diferida a historia. Índices `(account_id,patient_id,plan_status,record_status,id)` y `(account_id,patient_id,record_status,id)`; vínculos y autores para sus FK. Paciente, condición y atención no se reasignan por corrección.
@@ -2186,17 +2186,18 @@ Contiene `account_id`,`id`,`patient_id`,`encounter_id`,`condition_id`,`title`,`p
 | `evaluation_status` | `text` | Sí | `pending` | CHECK `pending`,`achieved`,`not_achieved` | Evaluación profesional del objetivo. |
 | `evaluated_at` | `timestamptz` | No | Nulo | CHECK finito | Momento de la evaluación. |
 | `evaluated_by_user_id` | `uuid` | No | Nulo | FK a pertenencia | Evaluador. |
+| `evaluation_note` | `text` | No | Nulo | Texto no vacío | Nota opcional de la evaluación; nula en filas anteriores a 20261118_05. |
 | `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 CHECK de coherencia: `goal_kind='measurable'` exige al menos una de `target_value`,`unit`,`measurement_kind`; `evaluation_status` distinto de `pending` exige `evaluated_at` y `evaluated_by_user_id`. F136 a plan; F137/F138 autores; F139 evaluador a pertenencia; F140 diferida a historia. Índices `(account_id,plan_id,record_status,id)` y `(account_id,patient_id,record_status,id)`; autores para sus FK. La evaluación nunca se deriva de acciones completadas.
 
 ### 12.7 `care_plan_goal_histories`
 
-Contiene `account_id`,`id`,`patient_id`,`plan_id`,`description`,`goal_kind`,`measurement_kind`,`reference_description`,`expected_result`,`target_value`,`unit`,`due_date`,`evaluation_status`,`evaluated_at`,`evaluated_by_user_id`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §12.6. PK `(account_id,id,version)`; F141 actual y F142 recibo; índice de recibo; append-only.
+Contiene `account_id`,`id`,`patient_id`,`plan_id`,`description`,`goal_kind`,`measurement_kind`,`reference_description`,`expected_result`,`target_value`,`unit`,`due_date`,`evaluation_status`,`evaluated_at`,`evaluated_by_user_id`,`evaluation_note`,`record_status`,`correction_reason`,`version`,`action`,`actor_user_id`,`operation_id`,`changed_at`, con reglas de §12.6. PK `(account_id,id,version)`; F141 actual y F142 recibo; índice de recibo; append-only.
 
 ### 12.8 `care_plan_actions`
 
@@ -2217,7 +2218,7 @@ Contiene `account_id`,`id`,`patient_id`,`plan_id`,`description`,`goal_kind`,`mea
 | `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 CHECK de coherencia: `completion_status='completed'` exige `completed_at`; `goal_id` debe pertenecer al mismo plan. F143 a plan; F144 a objetivo; F145 responsable y F146/F147 autores a pertenencias; F148 diferida a historia. Índices `(account_id,plan_id,record_status,id)` y `(account_id,patient_id,record_status,id)`. Sustituir una indicación conserva la acción anterior en historia; no se borra.
@@ -2242,7 +2243,7 @@ Contiene `account_id`,`id`,`patient_id`,`plan_id`,`goal_id`,`description`,`respo
 | `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 F151 a plan; F152/F153 autores; F154 diferida a historia. Índices `(account_id,plan_id,record_status,reviewed_at,id)` y `(account_id,patient_id,record_status,id)`. La revisión registra lo comunicado y las mediciones disponibles como texto referenciado; no copia valores de otras tablas ni crea hechos nuevos.
@@ -2303,8 +2304,8 @@ Reglas propias de este bloque:
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo de la corrección vigente. |
 | `created_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor inicial. |
 | `updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencia | Autor vigente. |
-| `created_at` | `timestamptz` | Sí | Sin valor | CHECK finito | Primera aceptación; fecha de carga. |
-| `updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptación vigente. |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito | Primera aceptación; fecha de carga. |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptación vigente. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual; la corrección la incrementa. |
 
 F157 a ficha; F158 opcional a atención; F159 opcional a adjunto; F160/F161 autores; F162 diferida a historia. Índices `(account_id,patient_id,record_status,sample_date,id)` y `(account_id,patient_id,record_status,id)`; vínculos y autores para sus FK. Corregir no cambia paciente ni fuente; `report_status` final puede pasar a una nueva versión solo por corrección. La fecha de carga (`created_at`) no se presenta como fecha clínica.
@@ -2332,7 +2333,7 @@ Contiene las columnas de §13.2 más `action`,`actor_user_id`,`operation_id`,`ch
 | `record_status` | `text` | Sí | `valid` | CHECK común | Validez; la corrección anula la versión anterior. |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 CHECK de coherencia: `result_kind='numeric'` exige `value` y `unit` y prohíbe `text_value`; `text` exige `text_value` y prohíbe `value`,`unit`. Exactamente una referencia por fila: intervalo (`reference_low`/`reference_high`, al menos uno presente y ordenado) o `reference_text`; la aceptación verifica que proceden del informe. No hay CHECK de rango por analyte ni banderas: eso sería interpretación. F165 a informe; F166/F167 autores; F168 diferida a historia. Índices `(account_id,report_id,record_status,id)` y `(account_id,patient_id,record_status,id)`.
@@ -2358,7 +2359,7 @@ Contiene las columnas de §13.4 más `action`,`actor_user_id`,`operation_id`,`ch
 | `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión actual. |
 
 F171 a ficha; F172/F173 autores; F174 diferida a historia. Índices `(account_id,patient_id,record_status,id)` y único de huella por cuenta. La carga confirma bytes y huella fuera de la aceptación del informe; el borrado de bytes huérfanos es operación posterior, no transaccional. Conocer `storage_key` no concede acceso: la descarga exige autorización vigente y entrega los bytes por una vuelta reautorizada.
@@ -2409,7 +2410,7 @@ Reglas propias de este bloque:
 | `template_status` | `text` | Sí | `active` | CHECK `active`,`retired` | Retirar no borra versiones ni registros. |
 | `change_note` | `text` | No | Nulo | Texto no vacío | Qué cambia en esta versión. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión vigente de la plantilla. |
 
 F177 a cuenta; F178/F179 autores; F180 diferida a historia. Índices `(account_id,template_status,id)` y autores. Publicar una versión nueva incrementa `version` y copia los campos vigentes a filas de la nueva versión en la misma aceptación; no modifica versiones anteriores.
@@ -2453,7 +2454,7 @@ UQ `(account_id,template_id,template_version,field_key)`. F183 a plantilla; la a
 | `record_status` | `text` | Sí | `valid` | CHECK común | Validez. |
 | `correction_reason` | `text` | No | Nulo | Texto no vacío | Motivo opcional vigente. |
 | `created_by_user_id`,`updated_by_user_id` | `uuid` | Sí | Sin valor | FK a pertenencias | Autores. |
-| `created_at`,`updated_at` | `timestamptz` | Sí | Sin valor | CHECK temporal/finito | Aceptaciones. |
+| `created_at`,`updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK temporal/finito | Aceptaciones. |
 | `version` | `integer` | Sí | 1 | FK diferida; CHECK positivo | Versión del registro. |
 
 F184 a ficha; F185 opcional a atención; F186 a plantilla; F187/F188 autores; F189 diferida a `specialty_record_histories`. Índices `(account_id,patient_id,record_status,id)` y `(account_id,template_id,template_version,id)`. Corregir no cambia plantilla ni versión aplicada.
@@ -2505,7 +2506,7 @@ UQ `(account_id,patient_id,measurement_kind,measured_at,source_measurement_id,so
 |---|---|---|
 | `account_id` | `uuid` | PK parcial. |
 | `last_change_seq` | `bigint` | Frontera consumida del journal. |
-| `updated_at` | `timestamptz` | Último avance confirmado. |
+| `updated_at` | `timestamptz` | Último avance confirmado; `DEFAULT CURRENT_TIMESTAMP` y `UpdatedDate.onupdate` en ORM/Core. |
 
 El ETL reclama, procesa y confirma avance con los efectos; una caída reanuda desde `last_change_seq` sin duplicar puntos por la UQ de origen/versión. La reconstrucción borra proyecciones y vuelve a correr desde cero con el mismo resultado.
 

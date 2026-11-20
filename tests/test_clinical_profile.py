@@ -38,8 +38,8 @@ class ClinicalProfileTests(unittest.TestCase):
             sex_at_birth="unknown",
             source_type="patient",
             version=2,
-            created_at=None,
-            updated_at=None,
+            date_added=None,
+            date_updated=None,
         )
         self.assertEqual(clinical_profile_response(profile, patient, date(2026, 2, 28)).age_years, 25)
         response = clinical_profile_response(profile, patient, date(2026, 3, 1))
@@ -49,7 +49,7 @@ class ClinicalProfileTests(unittest.TestCase):
 
     def test_missing_birth_date_produces_no_age(self):
         patient = SimpleNamespace(patient_id=uuid7(), birth_date=None, version=1)
-        profile = SimpleNamespace(sex_at_birth=None, source_type="unknown", version=1, created_at=None, updated_at=None)
+        profile = SimpleNamespace(sex_at_birth=None, source_type="unknown", version=1, date_added=None, date_updated=None)
         self.assertIsNone(clinical_profile_response(profile, patient, date(2026, 11, 15)).age_years)
 
 

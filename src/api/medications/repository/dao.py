@@ -6,31 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.medications.domain.medications import DeclaredMedicationQuery
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
 
 from .models import DeclaredMedication, DeclaredMedicationHistory
 
 
 class DeclaredMedicationDAO(DAO[DeclaredMedication, BaseModel, BaseModel]):
-    async def scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        medication_id: UUID,
-        *,
-        lock: bool = False,
-    ) -> DeclaredMedication | EmptyType:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == medication_id
-        )
-
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
-
     async def page(
         self,
         db: AsyncSession,
@@ -57,7 +37,7 @@ class DeclaredMedicationDAO(DAO[DeclaredMedication, BaseModel, BaseModel]):
 
         total = await self.count(db, statement)
         rows = await db.scalars(
-            statement.order_by(self.model.created_at, self.model.id)
+            statement.order_by(self.model.date_added, self.model.id)
             .offset((query.page - 1) * query.shows)
             .limit(query.shows)
         )
@@ -76,34 +56,5 @@ class DeclaredMedicationDAO(DAO[DeclaredMedication, BaseModel, BaseModel]):
         return list(rows)
 
 
-class DeclaredMedicationHistoryDAO(
-    DAO[DeclaredMedicationHistory, BaseModel, BaseModel]
-):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        medication_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[DeclaredMedicationHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == medication_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
 dao_declared_medications = DeclaredMedicationDAO(DeclaredMedication)
-dao_declared_medication_histories = DeclaredMedicationHistoryDAO(
-    DeclaredMedicationHistory
-)
+dao_declared_medication_histories = DAO(DeclaredMedicationHistory)

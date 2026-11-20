@@ -25,6 +25,7 @@ class SpecialtyTemplateField(BaseModel):
 
         if self.options is not None:
             choices = [choice for choice in self.options.split("|") if choice.strip()]
+
             if len(choices) < 2 or len(choices) != len(self.options.split("|")):
                 raise ValueError("Las opciones deben ser una lista cerrada no vacía")
 
@@ -42,10 +43,12 @@ class SpecialtyTemplateFields(BaseModel):
     @model_validator(mode="after")
     def unique_fields(self) -> Self:
         keys = [field.field_key for field in self.fields]
+
         if len(keys) != len(set(keys)):
             raise ValueError("Las claves de campo deben ser únicas")
 
         orders = [field.display_order for field in self.fields]
+
         if len(orders) != len(set(orders)):
             raise ValueError("El orden de campos debe ser único")
 
@@ -64,6 +67,7 @@ class UpdateSpecialtyTemplatePayload(SpecialtyTemplateFields):
     def present_fields(self) -> Self:
         if not self.model_fields_set:
             raise ValueError("El cambio requiere al menos un campo")
+
         return self
 
 
@@ -98,18 +102,3 @@ class SpecialtyTemplateHistoryResponse(SpecialtyTemplateResponse):
 
 class SpecialtyTemplateQuery(PageQuery):
     template_status: TemplateStatus | None = None
-
-
-__all__ = [
-    "CreateSpecialtyTemplatePayload",
-    "FieldKind",
-    "RetireSpecialtyTemplatePayload",
-    "SpecialtyTemplateField",
-    "SpecialtyTemplateFieldResponse",
-    "SpecialtyTemplateFields",
-    "SpecialtyTemplateHistoryResponse",
-    "SpecialtyTemplateQuery",
-    "SpecialtyTemplateResponse",
-    "TemplateStatus",
-    "UpdateSpecialtyTemplatePayload",
-]

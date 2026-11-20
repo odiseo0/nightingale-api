@@ -27,26 +27,21 @@ class UsersStructureTests(structure.AuthorizationStructureTests):
 class ClinicalRecordsStructureTests(structure.AuthorizationStructureTests):
     component = structure.ROOT / "src/api/clinical_records"
     dao_names = {
-        "PatientClinicalProfileDAO", "PatientClinicalProfileHistoryDAO",
-        "PatientConditionDAO", "PatientConditionHistoryDAO",
-        "PatientClinicalSectionReviewDAO", "PatientClinicalSectionReviewHistoryDAO",
-        "PatientAllergyIntoleranceDAO", "PatientAllergyIntoleranceHistoryDAO",
-        "ClinicalEntryDAO", "ClinicalHistoryDAO", "PatientClinicalTimelineDAO",
-        "PatientNoteDAO", "PatientNoteHistoryDAO",
-        "PatientMeasurementDAO", "PatientMeasurementHistoryDAO",
-        "PatientImmunizationDAO", "PatientImmunizationHistoryDAO",
-        "PatientAntecedentDAO", "PatientAntecedentHistoryDAO",
+        "PatientConditionDAO", "PatientAllergyIntoleranceDAO",
+        "ClinicalEntryDAO", "PatientClinicalTimelineDAO",
+        "PatientNoteDAO", "PatientMeasurementDAO",
+        "PatientImmunizationDAO", "PatientAntecedentDAO",
     }
 
 
 class EncountersStructureTests(structure.AuthorizationStructureTests):
     component = structure.ROOT / "src/api/encounters"
-    dao_names = {"ClinicalEncounterDAO", "ClinicalEncounterHistoryDAO"}
+    dao_names = {"ClinicalEncounterDAO"}
 
 
 class PatientsStructureTests(structure.AuthorizationStructureTests):
     component = structure.ROOT / "src/api/patients"
-    dao_names = {"PatientDAO", "AccountPatientDAO", "PatientIdentifierDAO", "PatientBirthDateChangeDAO", "ContactPersonDAO", "PatientContactRelationshipDAO"}
+    dao_names = {"PatientDAO", "AccountPatientDAO", "PatientIdentifierDAO", "ContactPersonDAO", "PatientContactRelationshipDAO"}
 
 
 class ServicesStructureTests(structure.AuthorizationStructureTests):

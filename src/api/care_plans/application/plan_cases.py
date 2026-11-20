@@ -86,8 +86,8 @@ def plan_response(row: CarePlan) -> CarePlanResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -108,10 +108,11 @@ def goal_response(row: CarePlanGoal) -> CarePlanGoalResponse:
         evaluation_status=row.evaluation_status,
         evaluated_at=row.evaluated_at,
         evaluated_by_user_id=row.evaluated_by_user_id,
+        evaluation_note=row.evaluation_note,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -130,8 +131,8 @@ def action_response(row: CarePlanAction) -> CarePlanActionResponse:
         completion_note=row.completion_note,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -147,8 +148,8 @@ def review_response(row: CarePlanReview) -> CarePlanReviewResponse:
         next_review_date=row.next_review_date,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -246,7 +247,7 @@ async def apply_care_plan_operation(
 async def _plan_for_write(
     db: AsyncSession, context: AccountContext, plan_id: UUID, patient_id: UUID
 ) -> CarePlan | EmptyType:
-    plan = await dao_care_plans.scoped(db, context.account.id, plan_id)
+    plan = await dao_care_plans.get_by(db, where={"account_id": context.account.id, "id": plan_id}, execution_options={"populate_existing": True})
 
     if plan is Empty or plan.patient_id != patient_id:
         return Empty
@@ -264,7 +265,7 @@ async def _apply_plan(
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
-        if await dao_care_plans.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_care_plans.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
 
         if (
@@ -294,14 +295,14 @@ async def _apply_plan(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_care_plans.add(db, row)
         event = "created"
     else:
-        row = await dao_care_plans.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_care_plans.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
 
         if row is Empty:
             return Err(AccountObjectNotFound())
@@ -342,7 +343,7 @@ async def _apply_plan(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_care_plans.flush(db)
 
@@ -356,13 +357,13 @@ async def _apply_plan(
             ),
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = plan_response(row)
@@ -380,9 +381,9 @@ async def _apply_plan(
         entry_id=row.id,
         source_section="care_plans",
         occurrence_date=occurrence_date,
-        occurred_at=row.updated_at,
+        occurred_at=row.date_updated,
         date_precision=date_precision,
-        accepted_at=row.updated_at,
+        accepted_at=row.date_updated,
         entity_version=row.version,
         record_status=row.record_status,
     )
@@ -416,7 +417,7 @@ async def _apply_goal(
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
         if (
-            await dao_care_plan_goals.scoped(db, context.account.id, entity_key)
+            await dao_care_plan_goals.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True})
             is not Empty
         ):
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
@@ -437,19 +438,21 @@ async def _apply_goal(
             evaluation_status="pending",
             evaluated_at=None,
             evaluated_by_user_id=None,
+            evaluation_note=None,
             record_status="valid",
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_care_plan_goals.add(db, row)
         event = "created"
     else:
-        row = await dao_care_plan_goals.scoped(
-            db, context.account.id, entity_key, lock=True
+        row = await dao_care_plan_goals.get_by(
+            db, where={"account_id": context.account.id, "id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if row is Empty:
@@ -479,6 +482,7 @@ async def _apply_goal(
             row.evaluation_status = payload.evaluation_status
             row.evaluated_at = evaluated_at
             row.evaluated_by_user_id = context.actor.user_id
+            row.evaluation_note = payload.note
             event = "updated"
         elif action == "UpdateCarePlanGoal":
             if not isinstance(payload, UpdateCarePlanGoalPayload):
@@ -497,7 +501,7 @@ async def _apply_goal(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_care_plan_goals.flush(db)
 
@@ -511,13 +515,13 @@ async def _apply_goal(
             ),
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = goal_response(row)
@@ -551,7 +555,7 @@ async def _apply_action(
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
         if (
-            await dao_care_plan_actions.scoped(db, context.account.id, entity_key)
+            await dao_care_plan_actions.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True})
             is not Empty
         ):
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
@@ -563,8 +567,9 @@ async def _apply_action(
             return Err(AccountObjectNotFound())
 
         if payload.goal_id is not None:
-            goal = await dao_care_plan_goals.scoped(
-                db, context.account.id, payload.goal_id
+            goal = await dao_care_plan_goals.get_by(
+                db, where={"account_id": context.account.id, "id": payload.goal_id},
+                execution_options={"populate_existing": True}
             )
             if goal is Empty or goal.plan_id != payload.plan_id:
                 return Err(AccountObjectNotFound())
@@ -584,15 +589,16 @@ async def _apply_action(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_care_plan_actions.add(db, row)
         event = "created"
     else:
-        row = await dao_care_plan_actions.scoped(
-            db, context.account.id, entity_key, lock=True
+        row = await dao_care_plan_actions.get_by(
+            db, where={"account_id": context.account.id, "id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if row is Empty:
@@ -640,7 +646,7 @@ async def _apply_action(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_care_plan_actions.flush(db)
 
@@ -654,13 +660,13 @@ async def _apply_action(
             ),
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = action_response(row)
@@ -694,7 +700,7 @@ async def _apply_review(
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
         if (
-            await dao_care_plan_reviews.scoped(db, context.account.id, entity_key)
+            await dao_care_plan_reviews.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True})
             is not Empty
         ):
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
@@ -719,15 +725,16 @@ async def _apply_review(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_care_plan_reviews.add(db, row)
         event = "created"
     elif action == "InvalidateCarePlanReview":
-        row = await dao_care_plan_reviews.scoped(
-            db, context.account.id, entity_key, lock=True
+        row = await dao_care_plan_reviews.get_by(
+            db, where={"account_id": context.account.id, "id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if row is Empty:
@@ -745,7 +752,7 @@ async def _apply_review(
         row.record_status = "entered-in-error"
         row.correction_reason = payload.correction_reason
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_care_plan_reviews.flush(db)
         event = "invalidated"
@@ -762,13 +769,13 @@ async def _apply_review(
             ),
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = review_response(row)

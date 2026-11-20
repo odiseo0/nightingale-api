@@ -1,23 +1,21 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.appointments.domain.appointments import (
-    AppointmentHistoryQuery,
-    AppointmentQuery,
-)
+from src.api.appointments.domain.appointments import AppointmentQuery
 from src.core.db import DAO
 from src.core.db.dao import catch_sqlalchemy_exception
 from src.core.schema import BaseModel
+from src.core.utils.utils import datetime_now
 
 from .models import Appointment, AppointmentHistory
 
 
 class AppointmentDAO(DAO[Appointment, BaseModel, BaseModel]):
     async def server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        return datetime_now()
 
     async def revise(
         self,
@@ -29,7 +27,7 @@ class AppointmentDAO(DAO[Appointment, BaseModel, BaseModel]):
         return await self.update(
             db,
             row.id,
-            {**values, "version": row.version + 1, "updated_at": now},
+            {**values, "version": row.version + 1, "date_updated": now},
             commit=False,
         )
 
@@ -130,30 +128,6 @@ class AppointmentHistoryDAO(DAO[AppointmentHistory, BaseModel, BaseModel]):
                     insert(self.model).values(**values).returning(self.model)
                 )
             ).one()
-
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        appointment_id: UUID,
-        query: AppointmentHistoryQuery,
-    ) -> tuple[list[AppointmentHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id,
-            self.model.appointment_id == appointment_id,
-        )
-
-        if query.after_version is not None:
-            statement = statement.where(self.model.version > query.after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version)
-            .offset((query.page - 1) * query.shows)
-            .limit(query.shows)
-        )
-
-        return list(rows.all()), total
 
 
 dao_appointments = AppointmentDAO(Appointment)

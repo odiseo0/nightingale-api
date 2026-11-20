@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.analytics.application.clinical_cases import read_series
 from src.api.analytics.application.growth_cases import GrowthResponse, read_growth
-from src.api.analytics.domain.references import Indicator
 from src.api.analytics.domain.queries import SeriesQuery, SeriesResponse
+from src.api.analytics.domain.references import Indicator
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.core import Err, Ok
 from src.core.db import get_db

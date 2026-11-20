@@ -1020,17 +1020,140 @@
       "type": "object"
     },
     "CorrectDiagnosticReportPayload": {
+      "additionalProperties": false,
       "properties": {
         "correctionReason": {
           "minLength": 1,
           "title": "Correctionreason",
           "type": "string"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/$defs/CorrectDiagnosticReportResultPayload"
+          },
+          "title": "Results",
+          "type": "array"
         }
       },
       "required": [
-        "correctionReason"
+        "correctionReason",
+        "results"
       ],
       "title": "CorrectDiagnosticReportPayload",
+      "type": "object"
+    },
+    "CorrectDiagnosticReportResultPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "analyteName": {
+          "minLength": 1,
+          "title": "Analytename",
+          "type": "string"
+        },
+        "referenceHigh": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencehigh"
+        },
+        "referenceLow": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencelow"
+        },
+        "referenceText": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Referencetext"
+        },
+        "resultId": {
+          "format": "uuid7",
+          "title": "Resultid",
+          "type": "string"
+        },
+        "resultKind": {
+          "enum": [
+            "numeric",
+            "text"
+          ],
+          "title": "Resultkind",
+          "type": "string"
+        },
+        "textValue": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Textvalue"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "analyteName",
+        "resultKind",
+        "resultId"
+      ],
+      "title": "CorrectDiagnosticReportResultPayload",
       "type": "object"
     },
     "CorrectPatientMeasurementPayload": {
@@ -7271,7 +7394,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "8b72ccce2dc0c9fa6164f893e0d7a62434e16e80",
-    "sourceSha256": "851b35fba95ee84dfe86044d0de3408c955e892cb67fd9ea6fb72efee80cf659"
+    "sourceHead": "acb8d3063c06db18ed60af7cfb7d1180f60b5c49",
+    "sourceSha256": "bf39aa784ce08db923639f6f73ba00b8ce03b33358767c1ecbd3c991ec5ae51a"
   }
 }

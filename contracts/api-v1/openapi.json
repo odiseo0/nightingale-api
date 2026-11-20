@@ -1456,6 +1456,17 @@
             ],
             "title": "Evaluatedbyuserid"
           },
+          "evaluationNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluationnote"
+          },
           "evaluationStatus": {
             "enum": [
               "pending",
@@ -1585,6 +1596,7 @@
           "evaluationStatus",
           "evaluatedAt",
           "evaluatedByUserId",
+          "evaluationNote",
           "recordStatus",
           "correctionReason",
           "createdAt",
@@ -1655,6 +1667,17 @@
               }
             ],
             "title": "Evaluatedbyuserid"
+          },
+          "evaluationNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluationnote"
           },
           "evaluationStatus": {
             "enum": [
@@ -1780,6 +1803,7 @@
           "evaluationStatus",
           "evaluatedAt",
           "evaluatedByUserId",
+          "evaluationNote",
           "recordStatus",
           "correctionReason",
           "createdAt",
@@ -9621,6 +9645,11 @@
             "title": "Filename",
             "type": "string"
           },
+          "patientId": {
+            "format": "uuid7",
+            "title": "Patientid",
+            "type": "string"
+          },
           "recordStatus": {
             "enum": [
               "valid",
@@ -9664,6 +9693,7 @@
         },
         "required": [
           "attachmentId",
+          "patientId",
           "reportId",
           "fileName",
           "contentType",
@@ -10077,12 +10107,18 @@
             },
             "title": "Points",
             "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
           }
         },
         "required": [
           "patientId",
           "measurementKind",
-          "points"
+          "points",
+          "total"
         ],
         "title": "SeriesResponse",
         "type": "object"
@@ -19462,6 +19498,49 @@
               "title": "Report Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recordStatus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "valid",
+                    "entered-in-error"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recordstatus"
+            }
           }
         ],
         "responses": {
@@ -25510,7 +25589,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "8b72ccce2dc0c9fa6164f893e0d7a62434e16e80",
-    "sourceSha256": "851b35fba95ee84dfe86044d0de3408c955e892cb67fd9ea6fb72efee80cf659"
+    "sourceHead": "acb8d3063c06db18ed60af7cfb7d1180f60b5c49",
+    "sourceSha256": "bf39aa784ce08db923639f6f73ba00b8ce03b33358767c1ecbd3c991ec5ae51a"
   }
 }

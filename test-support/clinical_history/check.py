@@ -66,7 +66,13 @@ async def check_clinical_history(runtime, administrative, client, tokens):
     await operation("CreatePatientCondition", condition, {"patientId": str(patient), "name": "PRIV-CONDITION", "onsetDate": "2010"})
     await operation("CreatePatientAllergyIntolerance", allergy, {"patientId": str(patient), "substance": "PRIV-ALLERGY", "onsetDate": "2011-02"})
 
-    history = await get(f"/patients/{patient}/clinical-history?shows=100", actor=assistant)
+    history_response = await client.get(
+        base + f"/patients/{patient}/clinical-history?shows=100",
+        headers=access.authorization(assistant),
+    )
+    access.expect(history_response, 200)
+    correlation_id = UUID(history_response.headers["X-Correlation-ID"])
+    history = history_response.json()
     assert history["total"] == 7
     assert {item["entryType"] for item in history["items"]} == {
         "encounter", "note", "measurement", "immunization", "antecedent", "condition", "allergy_intolerance"
@@ -111,7 +117,12 @@ async def check_clinical_history(runtime, administrative, client, tokens):
         await get(f"/patients/{patient}/clinical-history", status=503)
     async with administrative() as db:
         assert await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE object_key::text LIKE '%PRIV-%'")) == 0
-    print("Clinical history checks passed: all sources, permissions, precision, snapshot, delta, invalidation and audit rollback.")
+        assert await db.scalar(text("""
+            SELECT count(*) FROM nightingale.audit_events
+            WHERE correlation_id=:correlation AND action='ReadPatientClinicalHistory'
+                AND object_key=to_jsonb(CAST(:patient AS text))
+        """), {"correlation": correlation_id, "patient": str(patient)}) == 1
+    print("Clinical history checks passed: all sources, permissions, precision, snapshot, delta, invalidation, audit rollback and correlation.")
 
 
 if __name__ == "__main__":

@@ -1,16 +1,36 @@
 from typing import Annotated, Literal, Self
 
-from pydantic import UUID7, AfterValidator, AwareDatetime, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    UUID7,
+    AfterValidator,
+    AwareDatetime,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from src.api.clinical_records.domain.conditions import ClinicalDate
 from src.core.schema import BaseModel, PageQuery
 
 Surface = Literal[
-    "vestibular", "palatina", "lingual", "mesial", "distal",
-    "oclusal", "incisal", "cervical",
+    "vestibular",
+    "palatina",
+    "lingual",
+    "mesial",
+    "distal",
+    "oclusal",
+    "incisal",
+    "cervical",
 ]
 FindingKind = Literal[
-    "healthy", "caries", "missing", "filling", "crown", "fracture", "other",
+    "healthy",
+    "caries",
+    "missing",
+    "filling",
+    "crown",
+    "fracture",
+    "other",
 ]
 TreatmentKind = Literal["cleaning", "filling", "crown", "extraction", "other"]
 FindingStatus = Literal["active", "resolved"]
@@ -20,16 +40,20 @@ TreatmentStatus = Literal["planned", "performed"]
 def _valid_fdi(value: int) -> bool:
     tooth = value % 10
     quadrant = value // 10
+
     if 1 <= quadrant <= 4:
         return 1 <= tooth <= 8
+
     if 5 <= quadrant <= 8:
         return 1 <= tooth <= 5
+
     return False
 
 
 def _validate_fdi(value: int) -> int:
     if not _valid_fdi(value):
         raise ValueError("La pieza debe usar numeración FDI válida")
+
     return value
 
 
@@ -124,8 +148,10 @@ class UpdateDentalTreatmentPayload(DentalTreatmentFields):
     def performed_needs_date(self) -> Self:
         if self.treatment_status == "performed" and self.performed_date is None:
             raise ValueError("La actuación realizada requiere fecha")
+
         if not self.model_fields_set:
             raise ValueError("El cambio requiere al menos un campo")
+
         return self
 
 
@@ -165,28 +191,5 @@ class DentalFindingQuery(PageQuery):
     def fdi_valid(cls, value: int | None) -> int | None:
         if value is not None and not _valid_fdi(value):
             raise ValueError("La pieza debe usar numeración FDI válida")
+
         return value
-
-
-__all__ = [
-    "AddDentalTreatmentPayload",
-    "DentalFindingFields",
-    "DentalFindingHistoryResponse",
-    "DentalFindingQuery",
-    "DentalFindingResponse",
-    "DentalTreatmentFields",
-    "DentalTreatmentHistoryResponse",
-    "DentalTreatmentResponse",
-    "FindingKind",
-    "FindingStatus",
-    "InvalidateDentalFindingPayload",
-    "InvalidateDentalTreatmentPayload",
-    "RecordDentalFindingPayload",
-    "ResolveDentalFindingPayload",
-    "Surface",
-    "ToothFdi",
-    "TreatmentKind",
-    "TreatmentStatus",
-    "UpdateDentalFindingPayload",
-    "UpdateDentalTreatmentPayload",
-]

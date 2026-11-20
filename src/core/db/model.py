@@ -5,11 +5,11 @@ from datetime import datetime
 from typing import Any, TypeVar
 
 from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy.engine.default import DefaultExecutionContext
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
-    MappedAsDataclass,
     declarative_mixin,
     mapped_column,
 )
@@ -65,16 +65,59 @@ class Base(AwaitAttrs, DeclarativeBase):
         return pluralize(to_snake(cls.__name__))
 
 
+def _datetime_added(context: DefaultExecutionContext) -> datetime:
+    updated = context.get_current_parameters().get("updated_at")
+
+    return updated if isinstance(updated, datetime) else datetime_now()
+
+
+def _datetime_updated(context: DefaultExecutionContext) -> datetime:
+    # Reuse the creation stamp in Core INSERTs so updated_at >= created_at.
+    # https://docs.sqlalchemy.org/en/21/core/defaults.html#context-sensitive-default-functions
+    created = context.get_current_parameters().get("created_at")
+
+    return created if isinstance(created, datetime) else datetime_now()
+
+
 @declarative_mixin
-class Date(MappedAsDataclass):
+class CreatedDate:
     date_added: Mapped[datetime] = mapped_column(
+        "created_at",
         DateTime(timezone=True),
-        default_factory=datetime_now,
+        insert_default=_datetime_added,
         server_default=func.now(),
     )
-    date_updated: Mapped[datetime | None] = mapped_column(
+
+    @property
+    def created_at(self) -> datetime:
+        return self.date_added
+
+
+@declarative_mixin
+class UpdatedDate:
+    date_updated: Mapped[datetime] = mapped_column(
+        "updated_at",
         DateTime(timezone=True),
-        default=None,
-        nullable=True,
+        insert_default=_datetime_updated,
+        server_default=func.now(),
         onupdate=datetime_now,
     )
+
+    @property
+    def updated_at(self) -> datetime:
+        return self.date_updated
+
+
+@declarative_mixin
+class Date(CreatedDate):
+    date_updated: Mapped[datetime] = mapped_column(
+        "updated_at",
+        DateTime(timezone=True),
+        insert_default=_datetime_updated,
+        server_default=func.now(),
+        onupdate=datetime_now,
+    )
+
+    @property
+    def updated_at(self) -> datetime:
+        return self.date_updated

@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Numeric, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import BigInteger, Numeric, Text, and_
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class DiagnosticReport(Base):
+class DiagnosticReport(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -26,12 +28,18 @@ class DiagnosticReport(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
+    attachment: Mapped[ReportAttachment | None] = relationship(
+        primaryjoin=lambda: and_(
+            foreign(DiagnosticReport.account_id) == ReportAttachment.account_id,
+            foreign(DiagnosticReport.attachment_id) == ReportAttachment.id,
+            foreign(DiagnosticReport.patient_id) == ReportAttachment.patient_id,
+        ),
+        viewonly=True,
+    )
 
 
-class DiagnosticReportHistory(Base):
+class DiagnosticReportHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -50,15 +58,13 @@ class DiagnosticReportHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
     changed_at: Mapped[datetime]
 
 
-class DiagnosticReportResult(Base):
+class DiagnosticReportResult(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -75,12 +81,10 @@ class DiagnosticReportResult(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class DiagnosticReportResultHistory(Base):
+class DiagnosticReportResultHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -98,15 +102,13 @@ class DiagnosticReportResultHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
     changed_at: Mapped[datetime]
 
 
-class ReportAttachment(Base):
+class ReportAttachment(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -120,12 +122,10 @@ class ReportAttachment(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class ReportAttachmentHistory(Base):
+class ReportAttachmentHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -140,8 +140,6 @@ class ReportAttachmentHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]

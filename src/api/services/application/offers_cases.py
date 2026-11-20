@@ -53,8 +53,8 @@ def offer_response(
         "status": row.status,
         "service_status": service.status,
         "service_version": service.version,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
+        "created_at": row.date_added,
+        "updated_at": row.date_updated,
         "version": row.version,
     }
 
@@ -143,8 +143,6 @@ async def apply_offer_operation(
     row = await dao_offers.get_by(
         db, where=key, execution_options={"populate_existing": True}
     )
-    now = await dao_services.server_time(db)
-
     if action == "OfferService":
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
@@ -154,7 +152,7 @@ async def apply_offer_operation(
 
         row = await dao_offers.create_offer(
             db,
-            {**key, **data.model_dump(), "created_at": now, "updated_at": now},
+            {**key, **data.model_dump()},
             commit=False,
         )
     else:
@@ -169,7 +167,7 @@ async def apply_offer_operation(
         if all(getattr(row, name) == value for name, value in values.items()):
             return Err(AccountRuleError("NO_CHANGES", row.version))
 
-        row = await dao_offers.revise(db, row, values, now)
+        row = await dao_offers.revise(db, row, values)
 
     state = offer_response(row, service)
     public_key = {name: str(value) for name, value in entity_key.items()}

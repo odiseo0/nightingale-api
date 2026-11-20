@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy import Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class CarePlan(Base):
+class CarePlan(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -25,12 +25,10 @@ class CarePlan(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class CarePlanHistory(Base):
+class CarePlanHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -48,15 +46,13 @@ class CarePlanHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
     changed_at: Mapped[datetime]
 
 
-class CarePlanGoal(Base):
+class CarePlanGoal(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -72,16 +68,15 @@ class CarePlanGoal(Base):
     evaluation_status: Mapped[str] = mapped_column(Text, server_default="pending")
     evaluated_at: Mapped[datetime | None]
     evaluated_by_user_id: Mapped[UUID | None]
+    evaluation_note: Mapped[str | None] = mapped_column(Text)
     record_status: Mapped[str] = mapped_column(Text, server_default="valid")
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class CarePlanGoalHistory(Base):
+class CarePlanGoalHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -97,20 +92,19 @@ class CarePlanGoalHistory(Base):
     evaluation_status: Mapped[str] = mapped_column(Text)
     evaluated_at: Mapped[datetime | None]
     evaluated_by_user_id: Mapped[UUID | None]
+    evaluation_note: Mapped[str | None] = mapped_column(Text)
     record_status: Mapped[str] = mapped_column(Text)
     correction_reason: Mapped[str | None] = mapped_column(Text)
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
     changed_at: Mapped[datetime]
 
 
-class CarePlanAction(Base):
+class CarePlanAction(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -126,12 +120,10 @@ class CarePlanAction(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class CarePlanActionHistory(Base):
+class CarePlanActionHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -148,15 +140,13 @@ class CarePlanActionHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
     changed_at: Mapped[datetime]
 
 
-class CarePlanReview(Base):
+class CarePlanReview(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -169,12 +159,10 @@ class CarePlanReview(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class CarePlanReviewHistory(Base):
+class CarePlanReviewHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -188,8 +176,6 @@ class CarePlanReviewHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]

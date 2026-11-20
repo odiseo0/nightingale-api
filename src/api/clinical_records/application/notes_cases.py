@@ -49,8 +49,8 @@ def note_response(row: PatientNote) -> PatientNoteResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -91,7 +91,7 @@ async def apply_note_operation(
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
-        if await dao_notes.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_notes.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
 
         if (
@@ -117,14 +117,14 @@ async def apply_note_operation(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_notes.add(db, row)
         event = "created"
     else:
-        row = await dao_notes.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_notes.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
 
         if row is Empty:
             return Err(AccountObjectNotFound())
@@ -159,7 +159,7 @@ async def apply_note_operation(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_notes.flush(db)
 
@@ -178,7 +178,7 @@ async def apply_note_operation(
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = note_response(row)
@@ -223,7 +223,7 @@ async def read_notes(
             response = clinical_page(rows, total, note_response)
             action = "ReadPatientNotes"
         else:
-            row = await dao_notes.scoped(db, account_id, note_id)
+            row = await dao_notes.get_by(db, where={"account_id": account_id, "id": note_id}, execution_options={"populate_existing": True})
 
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
@@ -252,18 +252,18 @@ async def read_note_history(
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_notes.scoped(db, account_id, note_id)
+        row = await dao_notes.get_by(db, where={"account_id": account_id, "id": note_id}, execution_options={"populate_existing": True})
 
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_note_histories.page(
+        rows, total = await dao_note_histories.get_multi(
             db,
-            account_id,
-            note_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "id": note_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, history_response)
         await record_clinical_read(

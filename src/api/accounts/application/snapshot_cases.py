@@ -75,8 +75,8 @@ async def snapshot_accounts(
             display_name=users[row.user_id].display_name,
             role="owner" if row.user_id == account.owner_user_id else "assistant",
             status=row.status,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            created_at=row.date_added,
+            updated_at=row.date_updated,
             version=row.version,
         )
         items.append(

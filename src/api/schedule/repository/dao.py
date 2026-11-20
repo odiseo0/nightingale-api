@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schedule.domain.schedule import (
@@ -16,9 +16,6 @@ from .models import ScheduleBlock, ScheduleException, ScheduleRule
 
 
 class ScheduleRuleDAO(DAO[ScheduleRule, BaseModel, BaseModel]):
-    async def server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
-
     async def local_date(
         self, db: AsyncSession, time_zone: str, instant: datetime
     ) -> date:
@@ -113,12 +110,11 @@ class ScheduleRuleDAO(DAO[ScheduleRule, BaseModel, BaseModel]):
         db: AsyncSession,
         row: ScheduleRule,
         values: dict[str, object],
-        now: datetime,
     ) -> ScheduleRule:
         return await self.update(
             db,
             row.id,
-            {**values, "version": row.version + 1, "updated_at": now},
+            {**values, "version": row.version + 1},
             commit=False,
         )
 
@@ -170,12 +166,11 @@ class ScheduleExceptionDAO(DAO[ScheduleException, BaseModel, BaseModel]):
         db: AsyncSession,
         row: ScheduleException,
         values: dict[str, object],
-        now: datetime,
     ) -> ScheduleException:
         return await self.update(
             db,
             row.id,
-            {**values, "version": row.version + 1, "updated_at": now},
+            {**values, "version": row.version + 1},
             commit=False,
         )
 
@@ -266,12 +261,11 @@ class ScheduleBlockDAO(DAO[ScheduleBlock, BaseModel, BaseModel]):
         db: AsyncSession,
         row: ScheduleBlock,
         values: dict[str, object],
-        now: datetime,
     ) -> ScheduleBlock:
         return await self.update(
             db,
             row.id,
-            {**values, "version": row.version + 1, "updated_at": now},
+            {**values, "version": row.version + 1},
             commit=False,
         )
 

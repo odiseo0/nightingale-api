@@ -35,7 +35,7 @@ from src.api.schedule.repository.dao import dao_rules
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty
+from src.core.utils.utils import Empty, datetime_now
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,8 +134,6 @@ async def apply_rule_operation(
     if isinstance(scope, Err):
         return scope
 
-    now = await dao_rules.server_time(db)
-
     if isinstance(data, CreateScheduleRulePayload):
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
@@ -144,6 +142,7 @@ async def apply_rule_operation(
             return Err(AccountRuleError("INVALID_STATE_TRANSITION"))
 
         values = data.model_dump()
+        now = datetime_now()
         proposed = ScheduleRuleResponse(
             **values,
             id=entity_key,
@@ -199,9 +198,13 @@ async def apply_rule_operation(
                 )
 
     if isinstance(data, CreateScheduleRulePayload):
-        row = await dao_rules.create(db, obj_in=proposed.model_dump(), commit=False)
+        row = await dao_rules.create(
+            db,
+            obj_in=proposed.model_dump(exclude={"created_at", "updated_at"}),
+            commit=False,
+        )
     else:
-        row = await dao_rules.revise(db, row, values, now)
+        row = await dao_rules.revise(db, row, values)
 
     state = ScheduleRuleResponse.model_validate(row)
 
@@ -230,8 +233,8 @@ def rule_response(row: ScheduleRule) -> dict[str, object]:
         "valid_from": row.valid_from,
         "valid_until": row.valid_until,
         "status": row.status,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
+        "created_at": row.date_added,
+        "updated_at": row.date_updated,
         "version": row.version,
     }
 

@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
+from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 
 from src.api.api import router
 from src.api.errors import (
@@ -42,6 +43,9 @@ app = FastAPI(
     redoc_url="/redoc" if api_settings.environment != "production" else None,
 )
 app.include_router(router)
+# Starlette 1.9 counts received bytes and enforces Content-Length before parsing.
+# https://www.starlette.dev/middleware/#requestbodylimitmiddleware
+app.add_middleware(RequestBodyLimitMiddleware, max_body_size=1024 * 1024)
 app.middleware("http")(correlate_request)
 app.add_exception_handler(RequestValidationError, validation_error)
 app.add_exception_handler(SQLAlchemyError, database_error)

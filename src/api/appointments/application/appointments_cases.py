@@ -335,7 +335,15 @@ async def apply_appointment_operation(
         "updated_at": now,
     }
     state = AppointmentResponse.model_validate(values)
-    await dao_appointments.create(db, obj_in=values, commit=False)
+    await dao_appointments.create(
+        db,
+        obj_in={
+            **state.model_dump(exclude={"created_at", "updated_at"}),
+            "date_added": now,
+            "date_updated": now,
+        },
+        commit=False,
+    )
     await record_history(db, context, state, "created", now)
 
     return Ok(
@@ -410,8 +418,8 @@ def appointment_response(row: Appointment) -> dict[str, object]:
         "patient_id": row.patient_id,
         "professional_id": row.professional_id,
         "service_id": row.service_id,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
+        "created_at": row.date_added,
+        "updated_at": row.date_updated,
     }
 
 
@@ -492,8 +500,13 @@ async def read_appointments(
             if history_query is None:
                 response = appointment_response(row)
             else:
-                histories, total = await dao_histories.page(
-                    db, account_id, appointment_id, history_query
+                histories, total = await dao_histories.get_multi(
+                    db,
+                    where={"account_id": account_id, "appointment_id": appointment_id},
+                    page=(history_query.page - 1) * history_query.shows,
+                    shows=history_query.shows,
+                    ordering=[("version", False)],
+                    after_version=history_query.after_version,
                 )
                 response = {
                     "items": [history_response(item) for item in histories],

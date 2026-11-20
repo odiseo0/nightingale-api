@@ -9,7 +9,11 @@ from pydantic import ValidationError
 
 from src.api.accounts.domain.accounts import AccountContext, ClinicalSection
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
-from src.api.accounts.domain.policies import clinical_audiences, projection_allowed, sync_scope_matches
+from src.api.accounts.domain.policies import (
+    clinical_audiences,
+    projection_allowed,
+    sync_scope_matches,
+)
 from src.api.appointments.application.appointments_cases import captured_history
 from src.api.appointments.domain.appointments import AppointmentResponse
 from src.api.audit.application.audit_cases import record_control
@@ -49,6 +53,7 @@ def position_for_scope(
     now: datetime,
 ) -> Result[SyncPosition, SyncReadError]:
     body = verify_position(cursor, key)
+
     if body is None:
         return Err(SyncReadError("CURSOR_EXPIRED"))
 
@@ -62,8 +67,11 @@ def position_for_scope(
         or position.user_id != context.actor.user_id
         or position.device_id != context.actor.device_id
         or not sync_scope_matches(
-            context, position.audience, position.clinical_sections,
-            position.permission_epoch, head.permission_epoch,
+            context,
+            position.audience,
+            position.clinical_sections,
+            position.permission_epoch,
+            head.permission_epoch,
         )
         or position.sequence < head.retained_from_sequence - 1
         or position.sequence > head.last_sequence
@@ -82,7 +90,9 @@ CLINICAL_AUDIENCES = clinical_audiences()
 def clinical_change_allowed(audience: str, sections: list[ClinicalSection]) -> bool:
     if audience in ("members", "owner"):
         return True
+
     section = CLINICAL_AUDIENCES.get(audience)
+
     return section is not None and section in sections
 
 
@@ -184,7 +194,10 @@ async def read_changes(
 
             for row in group:
                 if not projection_allowed(
-                    row.entity_type, row.audience, context.owner, position.clinical_sections
+                    row.entity_type,
+                    row.audience,
+                    context.owner,
+                    position.clinical_sections,
                 ):
                     continue
 

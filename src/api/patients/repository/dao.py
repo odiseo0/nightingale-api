@@ -9,7 +9,7 @@ from src.api.patients.domain.contacts import ContactQuery, RelationshipQuery
 from src.api.patients.domain.patients import PatientQuery
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
+from src.core.utils.utils import Empty, EmptyType, datetime_now
 
 from .models import (
     AccountPatient,
@@ -23,14 +23,10 @@ from .models import (
 
 class PatientDAO(DAO[Patient, BaseModel, BaseModel]):
     async def server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        return datetime_now()
 
     async def local_today(self, db: AsyncSession, time_zone: str) -> date:
-        return (
-            await db.execute(
-                select(cast(func.timezone(time_zone, func.clock_timestamp()), Date))
-            )
-        ).scalar_one()
+        return await self.local_date(db, time_zone, datetime_now())
 
     async def local_date(
         self, db: AsyncSession, time_zone: str, instant: datetime
@@ -42,13 +38,14 @@ class PatientDAO(DAO[Patient, BaseModel, BaseModel]):
     async def reserve_id(self, db: AsyncSession, patient_id: UUID) -> bool:
         # Across accounts, reserve only a new identity. A collision reveals no
         # patient data and never attaches an existing global identity.
+        now = datetime_now()
         row = await db.scalar(
             text("""
             INSERT INTO nightingale.patients(id,created_at,updated_at)
-            VALUES (:id,clock_timestamp(),clock_timestamp())
+            VALUES (:id,:now,:now)
             ON CONFLICT (id) DO NOTHING RETURNING id
         """),
-            {"id": patient_id},
+            {"id": patient_id, "now": now},
         )
 
         return row is not None
@@ -60,11 +57,7 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
     ) -> list[AccountPatient]:
         rows = await db.scalars(
             select(self.model)
-            .join(
-                PatientContactRelationship,
-                (PatientContactRelationship.account_id == self.model.account_id)
-                & (PatientContactRelationship.patient_id == self.model.patient_id),
-            )
+            .join(self.model.contact_links)
             .where(
                 self.model.account_id == account_id,
                 self.model.completion_status == "complete",
@@ -85,29 +78,6 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
 
         return row
 
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, patient_id: UUID
-    ) -> AccountPatient | EmptyType:
-        return await self.get_by(
-            db,
-            where={"account_id": account_id, "patient_id": patient_id},
-            execution_options={"populate_existing": True},
-        )
-
-    async def lock_scoped(
-        self, db: AsyncSession, account_id: UUID, patient_id: UUID
-    ) -> AccountPatient | EmptyType:
-        row = await db.scalar(
-            select(self.model)
-            .where(
-                self.model.account_id == account_id, self.model.patient_id == patient_id
-            )
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-
-        return row if row is not None else Empty
-
     async def revise(
         self,
         db: AsyncSession,
@@ -119,7 +89,7 @@ class AccountPatientDAO(DAO[AccountPatient, BaseModel, BaseModel]):
             setattr(row, name, value)
 
         row.version += 1
-        row.updated_at = now
+        row.date_updated = now
         await self.flush(db)
 
         return row
@@ -200,33 +170,6 @@ class PatientIdentifierDAO(DAO[PatientIdentifier, BaseModel, BaseModel]):
         return list(rows), total
 
 
-class PatientBirthDateChangeDAO(DAO[PatientBirthDateChange, BaseModel, BaseModel]):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        patient_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientBirthDateChange], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.patient_id == patient_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.patient_version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.patient_version, self.model.id)
-            .offset(offset)
-            .limit(shows)
-        )
-
-        return list(rows), total
-
-
 class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
     async def lock_new_id(
         self, db: AsyncSession, contact_id: UUID
@@ -238,15 +181,6 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
 
         return await self.get(db, contact_id)
 
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, contact_id: UUID
-    ) -> ContactPerson | EmptyType:
-        return await self.get_by(
-            db,
-            where={"account_id": account_id, "id": contact_id},
-            execution_options={"populate_existing": True},
-        )
-
     async def revise(
         self,
         db: AsyncSession,
@@ -257,7 +191,7 @@ class ContactPersonDAO(DAO[ContactPerson, BaseModel, BaseModel]):
         return await self.update(
             db,
             row.id,
-            obj_in={**changes, "updated_at": now, "version": row.version + 1},
+            obj_in={**changes, "date_updated": now, "version": row.version + 1},
             commit=False,
         )
 
@@ -295,30 +229,13 @@ class PatientContactRelationshipDAO(
     ) -> list[Row[PatientContactRelationship, ContactPerson]]:
         rows = await db.execute(
             select(self.model, ContactPerson)
-            .join(
-                ContactPerson,
-                (ContactPerson.account_id == self.model.account_id)
-                & (ContactPerson.id == self.model.contact_person_id),
-            )
+            .join(self.model.contact)
             .where(
                 self.model.account_id == account_id, self.model.patient_id == patient_id
             )
         )
 
         return list(rows)
-
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, patient_id: UUID, contact_id: UUID
-    ) -> PatientContactRelationship | EmptyType:
-        return await self.get_by(
-            db,
-            where={
-                "account_id": account_id,
-                "patient_id": patient_id,
-                "contact_person_id": contact_id,
-            },
-            execution_options={"populate_existing": True},
-        )
 
     async def create_relationship(
         self, db: AsyncSession, values: dict[str, object], *, commit: bool = True
@@ -340,7 +257,7 @@ class PatientContactRelationshipDAO(
         for name, value in values.items():
             setattr(row, name, value)
 
-        row.updated_at = now
+        row.date_updated = now
         row.version += 1
         await self.flush(db)
 
@@ -356,16 +273,8 @@ class PatientContactRelationshipDAO(
                 ContactPerson.phone,
             )
             .select_from(self.model)
-            .join(
-                AccountPatient,
-                (AccountPatient.account_id == self.model.account_id)
-                & (AccountPatient.patient_id == self.model.patient_id),
-            )
-            .join(
-                ContactPerson,
-                (ContactPerson.account_id == self.model.account_id)
-                & (ContactPerson.id == self.model.contact_person_id),
-            )
+            .join(self.model.patient)
+            .join(self.model.contact)
             .where(self.model.account_id == account_id)
         )
 
@@ -401,7 +310,7 @@ class PatientContactRelationshipDAO(
 
 dao_patients = PatientDAO(Patient)
 dao_profiles = AccountPatientDAO(AccountPatient)
-dao_birth_changes = PatientBirthDateChangeDAO(PatientBirthDateChange)
+dao_birth_changes = DAO(PatientBirthDateChange)
 dao_identifiers = PatientIdentifierDAO(PatientIdentifier)
 dao_contacts = ContactPersonDAO(ContactPerson)
 dao_relationships = PatientContactRelationshipDAO(PatientContactRelationship)

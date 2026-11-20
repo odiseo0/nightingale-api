@@ -5,11 +5,11 @@ from uuid import UUID
 from sqlalchemy import BigInteger, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, UpdatedDate
 
 
 class AnalyticMeasurementPoint(Base):
-    __tablename__ = "measurement_points"
+    __tablename__: str = "measurement_points"
     __table_args__ = {"schema": "analytics"}
 
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
@@ -25,10 +25,9 @@ class AnalyticMeasurementPoint(Base):
     change_seq: Mapped[int] = mapped_column(BigInteger)
 
 
-class AnalyticEtlState(Base):
+class AnalyticEtlState(UpdatedDate, Base):
     __tablename__ = "etl_state"
     __table_args__ = {"schema": "analytics"}
 
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     last_change_seq: Mapped[int] = mapped_column(BigInteger)
-    updated_at: Mapped[datetime]

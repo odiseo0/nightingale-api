@@ -207,7 +207,22 @@ async def check_patients(runtime, administrative, client, tokens):
         assert result["state"]["verifiedAt"] is None and result["state"]["validFrom"].endswith("Z")
     assert (await get(f"/contacts/{contact_id}/patients?shows=1"))["total"] == 2
     assert len((await get(f"/contacts/{contact_id}/patients?shows=1&page=2"))["items"]) == 1
-    assert (await get(f"/patients/{sibling}/contacts"))["items"][0]["contactFullName"] == "Fixture Parent"
+    from sqlalchemy.ext.asyncio import AsyncSession
+    statements = []
+    original_execute = AsyncSession.execute
+
+    async def capture_statement(session, statement, *args, **kwargs):
+        statements.append(str(statement))
+        return await original_execute(session, statement, *args, **kwargs)
+
+    with patch.object(AsyncSession, "execute", new=capture_statement):
+        linked = await get(f"/patients/{sibling}/contacts")
+    assert linked["items"][0]["contactFullName"] == "Fixture Parent"
+    related_statements = [statement for statement in statements
+        if "patient_contact_relationships" in statement or "contact_people" in statement]
+    assert len(related_statements) == 2, "count y página, sin cargas ORM implícitas"
+    assert all("account_patients" in statement and "contact_people" in statement
+        for statement in related_statements)
     assert (await get("/contacts?q=Parent"))["total"] == 1
     await get(f"/contacts/{contact_id}", outsider, other_base, status=404)
     foreign_contact = uuid7()

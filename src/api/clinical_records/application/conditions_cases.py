@@ -65,8 +65,8 @@ def condition_response(condition: PatientCondition) -> PatientConditionResponse:
         abatement_date=condition.abatement_date,
         source_type=condition.source_type,
         correction_reason=condition.correction_reason,
-        created_at=condition.created_at,
-        updated_at=condition.updated_at,
+        created_at=condition.date_added,
+        updated_at=condition.date_updated,
         version=condition.version,
     )
 
@@ -172,7 +172,7 @@ async def record_condition_history(
             action=action,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=condition.updated_at,
+            changed_at=condition.date_updated,
         ),
     )
 
@@ -258,8 +258,8 @@ async def apply_condition_operation(
             correction_reason=data.correction_reason,
             created_by_user_id=ctx.actor.user_id,
             updated_by_user_id=ctx.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_conditions.add(db, condition)
@@ -276,7 +276,7 @@ async def apply_condition_operation(
         payload,
         operation_id,
         EntryAdapter(
-            scoped=lambda key: dao_conditions.scoped(db, context.account.id, key),
+            read=lambda key: dao_conditions.get_by(db, where={"account_id": context.account.id, "id": key}, execution_options={"populate_existing": True}),
             create=create,
             revise=lambda entry, changes, now: dao_conditions.revise(
                 db, entry, changes, now
@@ -333,7 +333,7 @@ async def read_conditions(
         "conditions",
         condition_id,
         query,
-        lambda key: dao_conditions.scoped(db, account_id, key),
+        lambda key: dao_conditions.get_by(db, where={"account_id": account_id, "id": key}, execution_options={"populate_existing": True}),
         lambda filters: dao_conditions.page(db, account_id, patient_id, filters),
         condition_response,
         "ReadPatientConditions",
@@ -357,9 +357,10 @@ async def read_condition_history(
         "conditions",
         condition_id,
         query,
-        lambda key: dao_conditions.scoped(db, account_id, key),
-        lambda offset, shows, after: dao_condition_histories.page(
-            db, account_id, condition_id, offset, shows, after
+        lambda key: dao_conditions.get_by(db, where={"account_id": account_id, "id": key}, execution_options={"populate_existing": True}),
+        lambda offset, shows, after: dao_condition_histories.get_multi(
+            db, where={"account_id": account_id, "id": condition_id},
+            page=offset, shows=shows, ordering=[("version", False)], after_version=after,
         ),
         condition_history_response,
         "ReadPatientConditionHistory",

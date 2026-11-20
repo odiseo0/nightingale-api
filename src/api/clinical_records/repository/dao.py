@@ -53,56 +53,9 @@ from .models import (
 )
 
 
-class PatientClinicalProfileDAO(DAO[PatientClinicalProfile, BaseModel, BaseModel]):
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, patient_id: UUID
-    ) -> PatientClinicalProfile | EmptyType:
-        return await self.get_by(
-            db,
-            where={"account_id": account_id, "patient_id": patient_id},
-            execution_options={"populate_existing": True},
-        )
-
-
-class PatientClinicalProfileHistoryDAO(
-    DAO[PatientClinicalProfileHistory, BaseModel, BaseModel]
-):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        patient_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientClinicalProfileHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.patient_id == patient_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
 class ClinicalEntryDAO[Entry: PatientCondition | PatientAllergyIntolerance](
     DAO[Entry, BaseModel, BaseModel]
 ):
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, entry_id: UUID
-    ) -> Entry | EmptyType:
-        return await self.get_by(
-            db,
-            where={"account_id": account_id, "id": entry_id},
-            execution_options={"populate_existing": True},
-        )
-
     async def revise(
         self, db: AsyncSession, row: Entry, changes: dict[str, object], now: datetime
     ) -> Entry:
@@ -110,7 +63,7 @@ class ClinicalEntryDAO[Entry: PatientCondition | PatientAllergyIntolerance](
             setattr(row, name, value)
 
         row.version += 1
-        row.updated_at = now
+        row.date_updated = now
         await self.flush(db)
 
         return row
@@ -131,33 +84,6 @@ class ClinicalEntryDAO[Entry: PatientCondition | PatientAllergyIntolerance](
                 .exists()
             )
         )
-
-
-class ClinicalHistoryDAO[
-    Entry: PatientConditionHistory | PatientAllergyIntoleranceHistory
-](DAO[Entry, BaseModel, BaseModel]):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        entry_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[Entry], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == entry_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
 
 
 class PatientConditionDAO(ClinicalEntryDAO[PatientCondition]):
@@ -218,57 +144,6 @@ class PatientConditionDAO(ClinicalEntryDAO[PatientCondition]):
         )
 
 
-class PatientConditionHistoryDAO(ClinicalHistoryDAO[PatientConditionHistory]):
-    pass
-
-
-class PatientClinicalSectionReviewDAO(
-    DAO[PatientClinicalSectionReview, BaseModel, BaseModel]
-):
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, patient_id: UUID, section: str
-    ) -> PatientClinicalSectionReview | EmptyType:
-        return await self.get_by(
-            db,
-            where={
-                "account_id": account_id,
-                "patient_id": patient_id,
-                "section": section,
-            },
-            execution_options={"populate_existing": True},
-        )
-
-
-class PatientClinicalSectionReviewHistoryDAO(
-    DAO[PatientClinicalSectionReviewHistory, BaseModel, BaseModel]
-):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        patient_id: UUID,
-        section: str,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientClinicalSectionReviewHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id,
-            self.model.patient_id == patient_id,
-            self.model.section == section,
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
 class PatientAllergyIntoleranceDAO(ClinicalEntryDAO[PatientAllergyIntolerance]):
     async def page(
         self, db: AsyncSession, account_id: UUID, patient_id: UUID, query: AllergyQuery
@@ -326,27 +201,7 @@ class PatientAllergyIntoleranceDAO(ClinicalEntryDAO[PatientAllergyIntolerance]):
         )
 
 
-class PatientAllergyIntoleranceHistoryDAO(
-    ClinicalHistoryDAO[PatientAllergyIntoleranceHistory]
-):
-    pass
-
-
 class PatientNoteDAO(DAO[PatientNote, BaseModel, BaseModel]):
-    async def scoped(
-        self, db: AsyncSession, account_id: UUID, note_id: UUID, *, lock: bool = False
-    ) -> PatientNote | EmptyType:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == note_id
-        )
-
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
-
     async def page(
         self, db: AsyncSession, account_id: UUID, patient_id: UUID, query: NoteQuery
     ) -> tuple[list[PatientNote], int]:
@@ -364,7 +219,7 @@ class PatientNoteDAO(DAO[PatientNote, BaseModel, BaseModel]):
 
         total = await self.count(db, statement)
         rows = await db.scalars(
-            statement.order_by(self.model.created_at, self.model.id)
+            statement.order_by(self.model.date_added, self.model.id)
             .offset((query.page - 1) * query.shows)
             .limit(query.shows)
         )
@@ -381,30 +236,6 @@ class PatientNoteDAO(DAO[PatientNote, BaseModel, BaseModel]):
         )
 
         return list(rows)
-
-
-class PatientNoteHistoryDAO(DAO[PatientNoteHistory, BaseModel, BaseModel]):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        note_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientNoteHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == note_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
 
 
 class PatientMeasurementDAO(DAO[PatientMeasurement, BaseModel, BaseModel]):
@@ -425,25 +256,29 @@ class PatientMeasurementDAO(DAO[PatientMeasurement, BaseModel, BaseModel]):
 
         return list(rows)
 
-
-    async def scoped(
+    async def page_for_kind(
         self,
         db: AsyncSession,
         account_id: UUID,
-        measurement_id: UUID,
-        *,
-        lock: bool = False,
-    ) -> PatientMeasurement | EmptyType:
+        patient_id: UUID,
+        kind: str,
+        offset: int,
+        shows: int,
+    ) -> tuple[list[PatientMeasurement], int]:
         statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == measurement_id
+            self.model.account_id == account_id,
+            self.model.patient_id == patient_id,
+            self.model.kind == kind,
+            self.model.record_status == "valid",
+        )
+        total = await self.count(db, statement)
+        rows = await db.scalars(
+            statement.order_by(self.model.measured_at, self.model.id)
+            .offset(offset)
+            .limit(shows)
         )
 
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
+        return list(rows), total
 
     async def page(
         self,
@@ -490,6 +325,15 @@ class PatientMeasurementDAO(DAO[PatientMeasurement, BaseModel, BaseModel]):
 
         return list(rows)
 
+    async def valid_for_rebuild(self, db: AsyncSession) -> list[PatientMeasurement]:
+        rows = await db.scalars(
+            select(self.model)
+            .where(self.model.record_status == "valid")
+            .order_by(self.model.account_id, self.model.id)
+        )
+
+        return list(rows)
+
     async def latest_by_kind(
         self, db: AsyncSession, account_id: UUID, patient_id: UUID
     ) -> list[PatientMeasurement]:
@@ -512,53 +356,7 @@ class PatientMeasurementDAO(DAO[PatientMeasurement, BaseModel, BaseModel]):
         return list(latest.values())
 
 
-class PatientMeasurementHistoryDAO(
-    DAO[PatientMeasurementHistory, BaseModel, BaseModel]
-):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        measurement_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientMeasurementHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == measurement_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
 class PatientImmunizationDAO(DAO[PatientImmunization, BaseModel, BaseModel]):
-    async def scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        immunization_id: UUID,
-        *,
-        lock: bool = False,
-    ) -> PatientImmunization | EmptyType:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == immunization_id
-        )
-
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
-
     async def page(
         self,
         db: AsyncSession,
@@ -599,53 +397,7 @@ class PatientImmunizationDAO(DAO[PatientImmunization, BaseModel, BaseModel]):
         return list(rows)
 
 
-class PatientImmunizationHistoryDAO(
-    DAO[PatientImmunizationHistory, BaseModel, BaseModel]
-):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        immunization_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientImmunizationHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == immunization_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
 class PatientAntecedentDAO(DAO[PatientAntecedent, BaseModel, BaseModel]):
-    async def scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        antecedent_id: UUID,
-        *,
-        lock: bool = False,
-    ) -> PatientAntecedent | EmptyType:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == antecedent_id
-        )
-
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
-
     async def page(
         self,
         db: AsyncSession,
@@ -667,7 +419,7 @@ class PatientAntecedentDAO(DAO[PatientAntecedent, BaseModel, BaseModel]):
 
         total = await self.count(db, statement)
         rows = await db.scalars(
-            statement.order_by(self.model.created_at, self.model.id)
+            statement.order_by(self.model.date_added, self.model.id)
             .offset((query.page - 1) * query.shows)
             .limit(query.shows)
         )
@@ -684,31 +436,6 @@ class PatientAntecedentDAO(DAO[PatientAntecedent, BaseModel, BaseModel]):
         )
 
         return list(rows)
-
-
-class PatientAntecedentHistoryDAO(DAO[PatientAntecedentHistory, BaseModel, BaseModel]):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        antecedent_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[PatientAntecedentHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == antecedent_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
 
 
 class PatientClinicalTimelineDAO(DAO[PatientClinicalTimeline, BaseModel, BaseModel]):
@@ -1086,25 +813,19 @@ class PatientClinicalTimelineDAO(DAO[PatientClinicalTimeline, BaseModel, BaseMod
 
 
 dao_antecedents = PatientAntecedentDAO(PatientAntecedent)
-dao_antecedent_histories = PatientAntecedentHistoryDAO(PatientAntecedentHistory)
+dao_antecedent_histories = DAO(PatientAntecedentHistory)
 dao_immunizations = PatientImmunizationDAO(PatientImmunization)
-dao_immunization_histories = PatientImmunizationHistoryDAO(PatientImmunizationHistory)
+dao_immunization_histories = DAO(PatientImmunizationHistory)
 dao_measurements = PatientMeasurementDAO(PatientMeasurement)
-dao_measurement_histories = PatientMeasurementHistoryDAO(PatientMeasurementHistory)
+dao_measurement_histories = DAO(PatientMeasurementHistory)
 dao_notes = PatientNoteDAO(PatientNote)
-dao_note_histories = PatientNoteHistoryDAO(PatientNoteHistory)
+dao_note_histories = DAO(PatientNoteHistory)
 dao_clinical_timeline = PatientClinicalTimelineDAO(PatientClinicalTimeline)
 dao_allergies = PatientAllergyIntoleranceDAO(PatientAllergyIntolerance)
-dao_allergy_histories = PatientAllergyIntoleranceHistoryDAO(
-    PatientAllergyIntoleranceHistory
-)
+dao_allergy_histories = DAO(PatientAllergyIntoleranceHistory)
 dao_conditions = PatientConditionDAO(PatientCondition)
-dao_condition_histories = PatientConditionHistoryDAO(PatientConditionHistory)
-dao_section_reviews = PatientClinicalSectionReviewDAO(PatientClinicalSectionReview)
-dao_section_review_histories = PatientClinicalSectionReviewHistoryDAO(
-    PatientClinicalSectionReviewHistory
-)
-dao_clinical_profiles = PatientClinicalProfileDAO(PatientClinicalProfile)
-dao_clinical_profile_histories = PatientClinicalProfileHistoryDAO(
-    PatientClinicalProfileHistory
-)
+dao_condition_histories = DAO(PatientConditionHistory)
+dao_section_reviews = DAO(PatientClinicalSectionReview)
+dao_section_review_histories = DAO(PatientClinicalSectionReviewHistory)
+dao_clinical_profiles = DAO(PatientClinicalProfile)
+dao_clinical_profile_histories = DAO(PatientClinicalProfileHistory)

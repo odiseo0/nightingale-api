@@ -31,14 +31,21 @@ async def read_series(
 ):
     async with transaction(db):
         scope = await clinical_read_scope(db, credential, account_id, "measurements")
+
         if isinstance(scope, Err):
             return scope
 
         if await clinical_patient(db, account_id, patient_id) is Empty:
             return Err(AccountObjectNotFound())
 
-        rows = await dao_measurements.series_for_kind(db, account_id, patient_id, query.kind)
-
+        rows, total = await dao_measurements.page_for_kind(
+            db,
+            account_id,
+            patient_id,
+            query.kind,
+            (query.page - 1) * query.shows,
+            query.shows,
+        )
         entries = [
             SeriesEntry(
                 measurement_id=str(row.id),
@@ -58,6 +65,7 @@ async def read_series(
         response = SeriesResponse(
             patient_id=str(patient_id),
             measurement_kind=query.kind,
+            total=total,
             points=[
                 SeriesPointResponse(
                     measurement_kind=point.measurement_kind,

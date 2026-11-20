@@ -216,7 +216,7 @@ class ClinicalResultTests(unittest.TestCase):
                     audit = AsyncMock(side_effect=RuntimeError('fixture') if audit_failure else None)
                     with patch('src.api.sync.application.operations_cases.authorized_context', new=AsyncMock(return_value=Ok((context(level), SimpleNamespace())))), \
                         patch('src.api.sync.application.operations_cases.dao_heads.get_server_time', new=AsyncMock(return_value=now)), \
-                        patch('src.api.sync.application.operations_cases.dao_receipts.get_scoped', new=AsyncMock(return_value=receipt)) as read, \
+                        patch('src.api.sync.application.operations_cases.dao_receipts.get_by', new=AsyncMock(return_value=receipt)) as read, \
                         patch('src.api.sync.application.operations_cases.record_control', new=audit):
                         async with AsyncSession() as db:
                             try:
@@ -238,7 +238,7 @@ class ClinicalResultTests(unittest.TestCase):
                     with patch('src.api.sync.application.operations_cases.authorized_context', new=AsyncMock(return_value=Ok((context(level), SimpleNamespace())))), \
                         patch('src.api.sync.application.operations_cases.dao_heads.get_server_time', new=AsyncMock(return_value=now)), \
                         patch('src.api.sync.application.operations_cases.dao_receipts.get_scope', new=AsyncMock(return_value=(receipt.action, receipt.clinical_section))), \
-                        patch('src.api.sync.application.operations_cases.dao_receipts.get_scoped', new=AsyncMock(return_value=receipt)) as read, \
+                        patch('src.api.sync.application.operations_cases.dao_receipts.get_by', new=AsyncMock(return_value=receipt)) as read, \
                         patch('src.api.sync.application.operations_cases.record_control', new=AsyncMock()) as audit:
                         async with AsyncSession() as db:
                             outcome = await get_operation(db, None, account_id, operation_id)
@@ -301,7 +301,7 @@ class PayloadReuseTests(unittest.TestCase):
                     fields = dict(permissions)
                     if level is not None: fields['declaredMedications'] = level
                     operation = OperationEnvelope.model_validate({**envelope, 'payload': {'clinicalPermissions': fields}})
-                    with patch.object(cases, 'authorized_context', new=AsyncMock(return_value=Ok((context, SimpleNamespace())))), patch.object(cases.dao_heads, 'get_server_time', new=AsyncMock(return_value=now)), patch.object(cases.dao_receipts, 'get_scoped', new=AsyncMock(return_value=receipt)):
+                    with patch.object(cases, 'authorized_context', new=AsyncMock(return_value=Ok((context, SimpleNamespace())))), patch.object(cases.dao_heads, 'get_server_time', new=AsyncMock(return_value=now)), patch.object(cases.dao_receipts, 'get_by', new=AsyncMock(return_value=receipt)):
                         async with AsyncSession() as db:
                             outcome = await cases.accept_operation(db, None, account, operation, uuid7())
                     assert isinstance(outcome, Ok)
@@ -364,6 +364,90 @@ class PayloadReuseTests(unittest.TestCase):
 
         self.assertEqual(result["compared"], 48)
 
+    def test_correction_fingerprint_preserves_present_absent_and_null(self):
+        result = self.run_python("""
+            import json
+            from src.api.sync.application.operations_cases import _operation_fingerprint
+            from src.api.sync.domain.operations import OperationEnvelope
+
+            base = dict(
+                operationId='019a0000-0000-7000-8000-000000000001', contractVersion=1,
+                action='CorrectPatientMeasurement',
+                entityKey='019a0000-0000-7000-8000-000000000002', expectedVersion=1,
+            )
+            operations = [OperationEnvelope.model_validate({**base, 'payload': payload}) for payload in (
+                {'correctionReason': 'Fixture', 'method': 'manual'},
+                {'correctionReason': 'Fixture'},
+                {'correctionReason': 'Fixture', 'method': None},
+            )]
+            current = [_operation_fingerprint(item, item.validated_payload()) for item in operations]
+            legacy = [_operation_fingerprint(
+                item, item.validated_payload(), legacy_correction=True
+            ) for item in operations]
+            assert len(set(current)) == 3
+            assert len(set(legacy)) == 2
+            assert legacy[1] == legacy[2]
+            print(json.dumps({'current': len(set(current)), 'legacy': len(set(legacy))}))
+        """, self.database_settings())
+        self.assertEqual(result, {'current': 3, 'legacy': 2})
+
+    def test_correction_receipts_keep_legacy_compatibility(self):
+        result = self.run_python("""
+            import asyncio
+            from datetime import UTC, datetime, timedelta
+            from types import SimpleNamespace
+            from unittest.mock import AsyncMock, patch
+            from uuid import uuid7
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from src.api.accounts.domain.accounts import ClinicalPermissions
+            from src.api.sync.application import operations_cases as cases
+            from src.api.sync.domain.operations import OperationEnvelope, OperationResult
+            from src.core import Ok
+
+            async def check():
+                account, user, device, measurement = [uuid7() for _ in range(4)]
+                base = dict(contractVersion=1, action='CorrectPatientMeasurement',
+                    entityKey=str(measurement), expectedVersion=1)
+                omitted = OperationEnvelope.model_validate({**base, 'operationId': str(uuid7()),
+                    'payload': {'correctionReason': 'Fixture'}})
+                null = OperationEnvelope.model_validate({**base, 'operationId': str(omitted.operation_id),
+                    'payload': {'correctionReason': 'Fixture', 'method': None}})
+                original = OperationResult(operation_id=omitted.operation_id,
+                    status='accepted', entity_version=2, state=None, error=None)
+                now = datetime.now(UTC)
+                receipt = SimpleNamespace(request_hash=b'', clinical_section='measurements',
+                    action=omitted.action, entity_key=str(measurement),
+                    result_json=original.model_dump(mode='json', by_alias=True),
+                    result_expires_at=now + timedelta(days=90))
+                context = SimpleNamespace(owner=True, account=SimpleNamespace(id=account, status='active'),
+                    actor=SimpleNamespace(user_id=user, device_id=device),
+                    clinical_permissions=ClinicalPermissions())
+                outcomes = {}
+                with (patch.object(cases, 'authorized_context', new=AsyncMock(return_value=Ok((context, SimpleNamespace())))),
+                      patch.object(cases, 'record_control', new=AsyncMock()),
+                      patch.object(cases, 'apply_measurement_operation', new=AsyncMock()) as effect,
+                      patch.object(cases.dao_heads, 'get_server_time', new=AsyncMock(return_value=now)),
+                      patch.object(cases.dao_receipts, 'get_by', new=AsyncMock(return_value=receipt))):
+                    for label, fingerprint in (
+                        ('legacy', cases._operation_fingerprint(omitted, omitted.validated_payload(), legacy_correction=True)),
+                        ('current', cases._operation_fingerprint(omitted, omitted.validated_payload())),
+                    ):
+                        receipt.request_hash = fingerprint
+                        statuses = []
+                        for operation in (omitted, null):
+                            async with AsyncSession() as db:
+                                result = await cases.accept_operation(db, None, account, operation, uuid7())
+                            assert isinstance(result, Ok)
+                            statuses.append(result.value.status)
+                        outcomes[label] = statuses
+                    effect.assert_not_awaited()
+                return outcomes
+
+            print(json.dumps(asyncio.run(check())))
+        """, self.database_settings())
+        self.assertEqual(result, {'legacy': ['duplicate', 'duplicate'],
+                                  'current': ['duplicate', 'conflict']})
+
     def test_account_cases_reuse_the_validated_instance(self):
         result = self.run_python("""
             import asyncio
@@ -385,7 +469,7 @@ class PayloadReuseTests(unittest.TestCase):
                 context = SimpleNamespace(owner=True, account=SimpleNamespace(id=account_id, owner_user_id=user_id, version=1, no_show_grace_minutes=15), actor=SimpleNamespace(user_id=user_id))
                 for action, schema, payload in [('UpdateAccountPolicy', AccountPolicyPayload, {'noShowGraceMinutes': 15}), ('SetMembershipStatus', MembershipStatusPayload, {'status': 'active'})]:
                     operation = OperationEnvelope(operation_id=uuid7(), contract_version=1, action=action, entity_key=account_id if action == 'UpdateAccountPolicy' else target, expected_version=1, payload=payload)
-                    with patch.object(schema, 'model_validate', wraps=schema.model_validate) as validate, patch('src.api.accounts.application.management_cases.dao_accounts.get_server_time', new=AsyncMock(return_value=datetime.now(UTC))), patch('src.api.accounts.application.invitations_cases.dao_memberships.get_scoped', new=AsyncMock(return_value=Empty)):
+                    with patch.object(schema, 'model_validate', wraps=schema.model_validate) as validate, patch('src.api.accounts.application.management_cases.dao_accounts.get_server_time', new=AsyncMock(return_value=datetime.now(UTC))), patch('src.api.accounts.application.invitations_cases.dao_memberships.get_by', new=AsyncMock(return_value=Empty)):
                         data = operation.validated_payload()
                         if action == 'UpdateAccountPolicy':
                             outcome = await apply_management_operation(None, context, action, account_id, 1, data)
@@ -436,7 +520,7 @@ class AdministrativePolicyTests(unittest.TestCase):
                             action=action, entity_key=uuid7(), expected_version=0, payload={})
                         with patch.object(cases, 'authorized_context', new=AsyncMock(return_value=Ok((context, SimpleNamespace())))), \
                             patch.object(cases.dao_heads, 'get_server_time', new=AsyncMock(return_value=datetime.now(UTC))), \
-                            patch.object(cases.dao_receipts, 'get_scoped', new=AsyncMock(side_effect=ReachedReceipt)) as read:
+                            patch.object(cases.dao_receipts, 'get_by', new=AsyncMock(side_effect=ReachedReceipt)) as read:
                             async with AsyncSession() as db:
                                 try:
                                     outcome = await cases.accept_operation(db, None, account_id, operation, uuid7())

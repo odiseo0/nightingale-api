@@ -36,7 +36,7 @@ from src.api.schedule.repository.dao import dao_exceptions, dao_rules
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty
+from src.core.utils.utils import Empty, datetime_now
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -119,8 +119,6 @@ async def apply_exception_operation(
     if isinstance(scope, Err):
         return scope
 
-    now = await dao_rules.server_time(db)
-
     if isinstance(payload, CreateScheduleExceptionPayload):
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
@@ -129,6 +127,7 @@ async def apply_exception_operation(
             return Err(AccountRuleError("INVALID_STATE_TRANSITION"))
 
         values = payload.model_dump()
+        now = datetime_now()
         proposed = ScheduleExceptionResponse(
             **values,
             id=entity_key,
@@ -210,10 +209,12 @@ async def apply_exception_operation(
 
     if isinstance(payload, CreateScheduleExceptionPayload):
         row = await dao_exceptions.create(
-            db, obj_in=proposed.model_dump(), commit=False
+            db,
+            obj_in=proposed.model_dump(exclude={"created_at", "updated_at"}),
+            commit=False,
         )
     else:
-        row = await dao_exceptions.revise(db, row, values, now)
+        row = await dao_exceptions.revise(db, row, values)
 
     state = ScheduleExceptionResponse.model_validate(exception_response(row))
 
@@ -245,8 +246,8 @@ def exception_response(row: ScheduleException) -> dict[str, object]:
         "local_start_minute": row.local_start_minute,
         "local_end_minute": row.local_end_minute,
         "status": row.status,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
+        "created_at": row.date_added,
+        "updated_at": row.date_updated,
         "version": row.version,
     }
 

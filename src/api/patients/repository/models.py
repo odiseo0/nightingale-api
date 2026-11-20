@@ -1,19 +1,19 @@
+from __future__ import annotations
+
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Text, and_
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class Patient(Base):
+class Patient(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
 
 
-class AccountPatient(Base):
+class AccountPatient(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID] = mapped_column(primary_key=True)
     full_name: Mapped[str | None] = mapped_column(Text)
@@ -23,12 +23,17 @@ class AccountPatient(Base):
     identification_basis: Mapped[str | None] = mapped_column(Text)
     completion_status: Mapped[str] = mapped_column(Text, server_default="draft")
     status: Mapped[str] = mapped_column(Text, server_default="active")
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
+    contact_links: Mapped[list[PatientContactRelationship]] = relationship(
+        primaryjoin=lambda: and_(
+            AccountPatient.account_id == foreign(PatientContactRelationship.account_id),
+            AccountPatient.patient_id == foreign(PatientContactRelationship.patient_id),
+        ),
+        viewonly=True,
+    )
 
 
-class PatientIdentifier(Base):
+class PatientIdentifier(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
     issuing_country: Mapped[str] = mapped_column(Text, server_default="VE")
@@ -37,12 +42,10 @@ class PatientIdentifier(Base):
     verification_status: Mapped[str] = mapped_column(Text, server_default="declared")
     verified_at: Mapped[datetime | None]
     verified_by_user_id: Mapped[UUID | None]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class ContactPerson(Base):
+class ContactPerson(Date, Base):
     __tablename__ = "contact_people"
 
     id: Mapped[UUID] = mapped_column(primary_key=True)
@@ -54,12 +57,10 @@ class ContactPerson(Base):
     document_type: Mapped[str | None] = mapped_column(Text(collation="C"))
     document_number: Mapped[str | None] = mapped_column(Text(collation="C"))
     status: Mapped[str] = mapped_column(Text, server_default="active")
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class PatientContactRelationship(Base):
+class PatientContactRelationship(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID] = mapped_column(primary_key=True)
     contact_person_id: Mapped[UUID] = mapped_column(primary_key=True)
@@ -73,9 +74,21 @@ class PatientContactRelationship(Base):
     valid_from: Mapped[datetime]
     valid_until: Mapped[datetime | None]
     status: Mapped[str] = mapped_column(Text, server_default="active")
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
+    patient: Mapped[AccountPatient] = relationship(
+        primaryjoin=lambda: and_(
+            foreign(PatientContactRelationship.account_id) == AccountPatient.account_id,
+            foreign(PatientContactRelationship.patient_id) == AccountPatient.patient_id,
+        ),
+        viewonly=True,
+    )
+    contact: Mapped[ContactPerson] = relationship(
+        primaryjoin=lambda: and_(
+            foreign(PatientContactRelationship.account_id) == ContactPerson.account_id,
+            foreign(PatientContactRelationship.contact_person_id) == ContactPerson.id,
+        ),
+        viewonly=True,
+    )
 
 
 class PatientBirthDateChange(Base):

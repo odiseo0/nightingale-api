@@ -1,20 +1,21 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import bindparam, func, select
+from sqlalchemy import bindparam, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.audit.domain.audit import AuditQuery
 from src.core.db import DAO
 from src.core.schema import BaseModel
+from src.core.utils.utils import datetime_now
 
 from .models import AuditEvent
 
 
 class AuditEventDAO(DAO[AuditEvent, BaseModel, BaseModel]):
     async def get_server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        return datetime_now()
 
     async def page(
         self, db: AsyncSession, account_id: UUID, query: AuditQuery

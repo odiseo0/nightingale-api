@@ -900,6 +900,6 @@
 
 ## C12 · Después de T34–T36
 
-- [ ] Suite, probes, migraciones, contratos, analítica y build pasan sobre el entregable.
-- [ ] Evidencia y límites están registrados sin aceptar consumidores/uso real/producción.
-- [ ] El usuario revisa y acepta C12.
+- [x] Suite, probes, migraciones, contratos, analítica y build pasan sobre el entregable, incluida la matriz conjunta de críticos en P-20261118-01/C16.
+- [x] Evidencia y límites están registrados sin aceptar consumidores/uso real/producción.
+- [x] El usuario revisa y acepta C12. **Aceptado el 2026-11-18.**

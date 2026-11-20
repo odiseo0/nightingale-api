@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
-from src.api.errors import bounded_body, no_query_parameters, request_correlation_id
+from src.api.errors import no_query_parameters, request_correlation_id
 from src.api.sync.application.operations_cases import get_operation, submit_batch
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
 from src.api.sync.domain.operations import (
@@ -33,7 +33,6 @@ bearer = HTTPBearer(auto_error=False)
 @router.post(
     "/operations",
     operation_id="submitOperations",
-    dependencies=[Depends(bounded_body)],
     response_model_exclude_unset=True,
 )
 async def accept_operations(

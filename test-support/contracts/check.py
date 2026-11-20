@@ -147,6 +147,15 @@ async def check_contracts(runtime, administrative, client, tokens):
     owner_only = (set(capabilities.online_only_actions) | set(SERVICE_SCHEMAS) | set(OFFER_SCHEMAS) | {"UpdateProfessionalProfile"}) - {"RegisterAccountDevice"}
     assert set(response.json()["allowedActions"]) == set(capabilities.operation_catalog) - owner_only
     access.expect(await client.get(base + "/members", headers=access.authorization(assistant)), 403)
+
+    from scripts.export_contracts import source_metadata
+    current = source_metadata()
+    with patch("scripts.export_contracts.subprocess.run") as git_log:
+        git_log.return_value.stdout = "fixture-source-commit"
+        repeated = source_metadata()
+    assert repeated["sourceHead"] == "fixture-source-commit"
+    assert repeated["sourceSha256"] == current["sourceSha256"]
+    assert git_log.call_args.args[0][1] == "log"
     print(f"Contract checks passed: generated HTTP schemas and local references, {expected_actions} actions, owner/assistant access sets, fictional example requests, duplicate/conflict/rejection, snapshot/delta/release and SSE model examples.")
 
 

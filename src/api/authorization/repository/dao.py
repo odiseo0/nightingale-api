@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid7
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +9,7 @@ from src.api.authorization.domain.authorization import ExternalIdentity
 from src.core.db import DAO, DAOError
 from src.core.db.dao import catch_sqlalchemy_exception
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
+from src.core.utils.utils import Empty, EmptyType, datetime_now
 
 from .models import AppUser, Device, DeviceToken
 
@@ -34,7 +34,7 @@ class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
         )
 
     async def get_server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        return datetime_now()
 
     async def get_or_create(
         self,
@@ -51,8 +51,8 @@ class AppUserDAO(DAO[AppUser, BaseModel, BaseModel]):
                 oidc_issuer=identity.issuer,
                 oidc_subject=identity.subject,
                 display_name=identity.display_name,
-                created_at=now,
-                updated_at=now,
+                date_added=now,
+                date_updated=now,
             )
             .on_conflict_do_nothing(
                 index_elements=[self.model.oidc_issuer, self.model.oidc_subject]

@@ -35,7 +35,10 @@ async def snapshot_care_plans(
                 state=state,
             )
         )
-        for goal in await dao_care_plan_goals.valid_for_plan(db, account_id, plan.id):
+        for goal in (await dao_care_plan_goals.get_multi(
+            db, where={"account_id": account_id, "plan_id": plan.id, "record_status": "valid"},
+            shows=None, ordering=[("date_added", False), ("id", False)], include_total=False,
+        ))[0]:
             items.append(
                 SyncItem(
                     entity_type="care_plan_goal",
@@ -44,9 +47,10 @@ async def snapshot_care_plans(
                     state=goal_response(goal),
                 )
             )
-        for action in await dao_care_plan_actions.valid_for_plan(
-            db, account_id, plan.id
-        ):
+        for action in (await dao_care_plan_actions.get_multi(
+            db, where={"account_id": account_id, "plan_id": plan.id, "record_status": "valid"},
+            shows=None, ordering=[("date_added", False), ("id", False)], include_total=False,
+        ))[0]:
             items.append(
                 SyncItem(
                     entity_type="care_plan_action",
@@ -55,9 +59,10 @@ async def snapshot_care_plans(
                     state=action_response(action),
                 )
             )
-        for review in await dao_care_plan_reviews.valid_for_plan(
-            db, account_id, plan.id
-        ):
+        for review in (await dao_care_plan_reviews.get_multi(
+            db, where={"account_id": account_id, "plan_id": plan.id, "record_status": "valid"},
+            shows=None, ordering=[("date_added", False), ("id", False)], include_total=False,
+        ))[0]:
             items.append(
                 SyncItem(
                     entity_type="care_plan_review",

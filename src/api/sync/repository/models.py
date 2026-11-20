@@ -5,16 +5,14 @@ from sqlalchemy import BigInteger, LargeBinary, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, CreatedDate, Date
 
 
-class AccountSyncHead(Base):
+class AccountSyncHead(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     last_sequence: Mapped[int] = mapped_column(BigInteger, server_default="0")
     retained_from_sequence: Mapped[int] = mapped_column(BigInteger, server_default="1")
     permission_epoch: Mapped[int] = mapped_column(BigInteger, server_default="1")
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
 
 
 class OperationReceipt(Base):
@@ -58,7 +56,7 @@ class ChangeLog(Base):
     accepted_at: Mapped[datetime]
 
 
-class SyncSnapshot(Base):
+class SyncSnapshot(CreatedDate, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     user_id: Mapped[UUID]
@@ -75,7 +73,6 @@ class SyncSnapshot(Base):
     audience: Mapped[str] = mapped_column(Text)
     item_count: Mapped[int] = mapped_column(BigInteger)
     clinical_sections: Mapped[list[str]] = mapped_column(JSONB, server_default="[]")
-    created_at: Mapped[datetime]
     expires_at: Mapped[datetime]
 
 

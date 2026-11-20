@@ -65,8 +65,8 @@ def medication_response(row: DeclaredMedication) -> DeclaredMedicationResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -120,8 +120,9 @@ async def apply_declared_medication_operation(
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
         if (
-            await dao_declared_medications.scoped(
-                db, context.account.id, entity_key
+            await dao_declared_medications.get_by(
+                db, where={"account_id": context.account.id, "id": entity_key},
+                execution_options={"populate_existing": True}
             )
             is not Empty
         ):
@@ -152,15 +153,16 @@ async def apply_declared_medication_operation(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_declared_medications.add(db, row)
         event = "created"
     else:
-        row = await dao_declared_medications.scoped(
-            db, context.account.id, entity_key, lock=True
+        row = await dao_declared_medications.get_by(
+            db, where={"account_id": context.account.id, "id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if row is Empty:
@@ -209,7 +211,7 @@ async def apply_declared_medication_operation(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = now
+        row.date_updated = now
         row.version += 1
         await dao_declared_medications.flush(db)
 
@@ -238,7 +240,7 @@ async def apply_declared_medication_operation(
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = medication_response(row)
@@ -256,9 +258,9 @@ async def apply_declared_medication_operation(
         entry_id=row.id,
         source_section="declared_medications",
         occurrence_date=occurrence_date,
-        occurred_at=row.updated_at,
+        occurred_at=row.date_updated,
         date_precision=date_precision,
-        accepted_at=row.updated_at,
+        accepted_at=row.date_updated,
         entity_version=row.version,
         record_status=row.record_status,
     )
@@ -310,8 +312,9 @@ async def read_declared_medications(
             response = clinical_page(rows, total, medication_response)
             action = "ReadPatientDeclaredMedications"
         else:
-            row = await dao_declared_medications.scoped(
-                db, account_id, medication_id
+            row = await dao_declared_medications.get_by(
+                db, where={"account_id": account_id, "id": medication_id},
+                execution_options={"populate_existing": True}
             )
 
             if row is Empty or row.patient_id != patient_id:
@@ -347,18 +350,18 @@ async def read_declared_medication_history(
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_declared_medications.scoped(db, account_id, medication_id)
+        row = await dao_declared_medications.get_by(db, where={"account_id": account_id, "id": medication_id}, execution_options={"populate_existing": True})
 
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_declared_medication_histories.page(
+        rows, total = await dao_declared_medication_histories.get_multi(
             db,
-            account_id,
-            medication_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "id": medication_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, history_response)
         await record_clinical_read(

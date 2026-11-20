@@ -1,11 +1,9 @@
-from datetime import date
 from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import UUID7, AwareDatetime, ConfigDict, Field, model_validator
 
 from src.api.clinical_records.domain.conditions import ClinicalDate
-from src.api.specialties.domain.templates import FieldKind
 from src.core.schema import BaseModel, PageQuery
 
 
@@ -30,8 +28,10 @@ class SpecialtyRecordValue(BaseModel):
             )
             if value is not None
         ]
+
         if len(present) != 1:
             raise ValueError("Cada valor admite exactamente un dato tipado")
+
         return self
 
 
@@ -59,6 +59,7 @@ class UpdateSpecialtyRecordPayload(BaseModel):
     def present_fields(self) -> Self:
         if not self.model_fields_set:
             raise ValueError("El cambio requiere al menos un campo")
+
         return self
 
 
@@ -99,16 +100,3 @@ class SpecialtyRecordHistoryResponse(SpecialtyRecordResponse):
 class SpecialtyRecordQuery(PageQuery):
     template_id: UUID7 | None = None
     record_status: Literal["valid", "entered-in-error"] | None = None
-
-
-__all__ = [
-    "CaptureSpecialtyRecordPayload",
-    "InvalidateSpecialtyRecordPayload",
-    "SpecialtyRecordFields",
-    "SpecialtyRecordHistoryResponse",
-    "SpecialtyRecordQuery",
-    "SpecialtyRecordResponse",
-    "SpecialtyRecordValue",
-    "SpecialtyRecordValueResponse",
-    "UpdateSpecialtyRecordPayload",
-]

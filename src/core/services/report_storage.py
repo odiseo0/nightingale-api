@@ -1,11 +1,3 @@
-"""Private attachment storage backends.
-
-Two interchangeable backends selected by configuration: S3 through aioaws
-(source: https://github.com/odiseo0/aioaws, v0.16) when the bucket and
-credentials are set, and a private server directory for local development.
-Bytes live outside the database and the journal in both backends.
-"""
-
 import base64
 import hashlib
 from pathlib import Path
@@ -27,13 +19,7 @@ def _s3_enabled() -> bool:
     )
 
 
-def _import_s3():
-    import builtins
-    import typing
-
-    builtins.Union = getattr(builtins, "Union", typing.Union)
-    builtins.Optional = getattr(builtins, "Optional", typing.Optional)
-
+def _import_s3(bucket: str | None = None):
     import httpx2
     from aioaws.s3 import S3Client, S3Config
 
@@ -41,35 +27,62 @@ def _import_s3():
         aws_access_key=storage_settings.STORAGE_KEY or "",
         aws_secret_key=storage_settings.STORAGE_SECRET or "",
         aws_region=storage_settings.STORAGE_REGION or "",
-        aws_s3_bucket=storage_settings.STORAGE_BUCKET or "",
+        aws_s3_bucket=bucket or storage_settings.STORAGE_BUCKET or "",
         aws_host=storage_settings.STORAGE_ENDPOINT,
     )
-    return S3Client(httpx2.AsyncClient(), config)
+    http_client = httpx2.AsyncClient()
+
+    return S3Client(http_client, config), http_client
 
 
 def _local_path(account_id: UUID, attachment_id: UUID) -> Path:
-    return Path(storage_settings.STORAGE_ROOT) / str(account_id) / f"{attachment_id}.bin"
+    return (
+        Path(storage_settings.STORAGE_ROOT) / str(account_id) / f"{attachment_id}.bin"
+    )
 
 
 async def save(account_id: UUID, attachment_id: UUID, content: bytes) -> str:
     if _s3_enabled():
-        client = _import_s3()
+        client, http_client = _import_s3()
         key = f"{account_id}/{attachment_id}"
-        await client.upload(key, content)
-        return f"s3://{storage_settings.STORAGE_BUCKET}/{key}"
+
+        try:
+            await client.upload(key, content)
+            return f"s3://{storage_settings.STORAGE_BUCKET}/{key}"
+        finally:
+            await http_client.aclose()
 
     target = _local_path(account_id, attachment_id)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(content)
-    return f"{account_id}/{attachment_id}"
+    temporary = target.with_name(target.name + ".tmp")
+
+    try:
+        temporary.write_bytes(content)
+        temporary.replace(target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+    return str(target.resolve())
 
 
-async def fetch(account_id: UUID, attachment_id: UUID) -> bytes:
-    if _s3_enabled():
-        client = _import_s3()
-        return await client.download(f"{account_id}/{attachment_id}")
+async def fetch(storage_key: str) -> bytes:
+    if storage_key.startswith("s3://"):
+        bucket, separator, key = storage_key.removeprefix("s3://").partition("/")
 
-    target = _local_path(account_id, attachment_id)
+        if not bucket or not separator or not key:
+            raise StorageError("invalid storage key")
+
+        client, http_client = _import_s3(bucket)
+
+        try:
+            return await client.download(key)
+        finally:
+            await http_client.aclose()
+
+    target = Path(storage_key)
+
+    if not target.is_absolute():
+        target = Path(storage_settings.STORAGE_ROOT) / f"{storage_key}.bin"
 
     if not target.is_file():
         raise StorageError("attachment bytes missing")
@@ -87,6 +100,3 @@ def decode_and_verify(content_base64: str, expected_sha256: str) -> bytes:
         raise StorageError("content does not match its digest")
 
     return content
-
-
-__all__ = ["StorageError", "decode_and_verify", "fetch", "save"]

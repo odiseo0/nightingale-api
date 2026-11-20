@@ -59,8 +59,8 @@ def antecedent_response(row: PatientAntecedent) -> PatientAntecedentResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -106,7 +106,7 @@ async def apply_antecedent_operation(
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
         if (
-            await dao_antecedents.scoped(db, context.account.id, entity_key)
+            await dao_antecedents.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True})
             is not Empty
         ):
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
@@ -133,15 +133,16 @@ async def apply_antecedent_operation(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_antecedents.add(db, row)
         event = "created"
     else:
-        row = await dao_antecedents.scoped(
-            db, context.account.id, entity_key, lock=True
+        row = await dao_antecedents.get_by(
+            db, where={"account_id": context.account.id, "id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if row is Empty:
@@ -186,7 +187,7 @@ async def apply_antecedent_operation(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_antecedents.flush(db)
 
@@ -209,7 +210,7 @@ async def apply_antecedent_operation(
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = antecedent_response(row)
@@ -258,7 +259,7 @@ async def read_antecedents(
             response = clinical_page(rows, total, antecedent_response)
             action = "ReadPatientAntecedents"
         else:
-            row = await dao_antecedents.scoped(db, account_id, antecedent_id)
+            row = await dao_antecedents.get_by(db, where={"account_id": account_id, "id": antecedent_id}, execution_options={"populate_existing": True})
 
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
@@ -291,18 +292,18 @@ async def read_antecedent_history(
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_antecedents.scoped(db, account_id, antecedent_id)
+        row = await dao_antecedents.get_by(db, where={"account_id": account_id, "id": antecedent_id}, execution_options={"populate_existing": True})
 
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_antecedent_histories.page(
+        rows, total = await dao_antecedent_histories.get_multi(
             db,
-            account_id,
-            antecedent_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "id": antecedent_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, history_response)
         await record_clinical_read(

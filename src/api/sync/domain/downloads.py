@@ -13,6 +13,12 @@ from pydantic import (
 
 from src.api.accounts.domain.accounts import ClinicalSection
 from src.api.appointments.domain.appointments import AppointmentHistoryProjection
+from src.api.care_plans.domain.goals import (
+    CarePlanActionResponse,
+    CarePlanGoalResponse,
+    CarePlanReviewResponse,
+)
+from src.api.care_plans.domain.plans import CarePlanResponse
 from src.api.clinical_records.domain.allergies import PatientAllergyIntoleranceResponse
 from src.api.clinical_records.domain.antecedents import PatientAntecedentResponse
 from src.api.clinical_records.domain.clinical import ClinicalProfileResponse
@@ -21,28 +27,22 @@ from src.api.clinical_records.domain.conditions import (
     PatientConditionResponse,
 )
 from src.api.clinical_records.domain.immunizations import PatientImmunizationResponse
-from src.api.care_plans.domain.goals import (
-    CarePlanActionResponse,
-    CarePlanGoalResponse,
-    CarePlanReviewResponse,
-)
-from src.api.care_plans.domain.plans import CarePlanResponse
+from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
+from src.api.clinical_records.domain.notes import PatientNoteResponse
 from src.api.diagnostic_results.domain.reports import DiagnosticReportResponse
 from src.api.diagnostic_results.domain.results import (
     DiagnosticReportResultResponse,
     ReportAttachmentResponse,
 )
+from src.api.encounters.domain.encounters import PatientEncounterResponse
+from src.api.medications.domain.medications import DeclaredMedicationResponse
+from src.api.schedule.domain.schedule import AbsoluteInterval, ScheduleRuleFields
 from src.api.specialties.domain.odontogram import (
     DentalFindingResponse,
     DentalTreatmentResponse,
 )
 from src.api.specialties.domain.records import SpecialtyRecordResponse
 from src.api.specialties.domain.templates import SpecialtyTemplateResponse
-from src.api.medications.domain.medications import DeclaredMedicationResponse
-from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
-from src.api.clinical_records.domain.notes import PatientNoteResponse
-from src.api.encounters.domain.encounters import PatientEncounterResponse
-from src.api.schedule.domain.schedule import AbsoluteInterval, ScheduleRuleFields
 from src.api.sync.domain import operations as projections
 from src.api.sync.domain.operations import OperationState
 from src.core.schema import BaseModel

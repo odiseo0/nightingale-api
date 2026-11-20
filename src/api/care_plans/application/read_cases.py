@@ -66,7 +66,7 @@ async def read_care_plans(
             response = clinical_page(rows, total, plan_response)
             action = "ReadPatientCarePlans"
         else:
-            row = await dao_care_plans.scoped(db, account_id, plan_id)
+            row = await dao_care_plans.get_by(db, where={"account_id": account_id, "id": plan_id}, execution_options={"populate_existing": True})
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
             response = plan_response(row)
@@ -87,18 +87,18 @@ async def read_care_plan_history(
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_care_plans.scoped(db, account_id, plan_id)
+        row = await dao_care_plans.get_by(db, where={"account_id": account_id, "id": plan_id}, execution_options={"populate_existing": True})
 
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_care_plan_histories.page(
+        rows, total = await dao_care_plan_histories.get_multi(
             db,
-            account_id,
-            plan_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "id": plan_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, plan_history_response)
         await record_clinical_read(
@@ -151,30 +151,33 @@ async def read_care_plan_children(
         if isinstance(scope, Err):
             return scope
 
-        plan = await dao_care_plans.scoped(db, account_id, plan_id)
+        plan = await dao_care_plans.get_by(db, where={"account_id": account_id, "id": plan_id}, execution_options={"populate_existing": True})
         if plan is Empty or plan.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
         if child_id is None:
-
-            def extra_where(statement):
-                if query_type is not PageQuery and query.record_status is not None:
-                    return statement.where(
-                        dao.model.record_status == query.record_status
-                    )
-                return statement.where(dao.model.record_status == "valid")
-
-            rows, total = await dao.page(
+            where = {
+                "account_id": account_id,
+                "plan_id": plan_id,
+                "record_status": getattr(query, "record_status", None) or "valid",
+            }
+            if isinstance(query, CarePlanGoalQuery):
+                if query.goal_kind is not None:
+                    where["goal_kind"] = query.goal_kind
+                if query.evaluation_status is not None:
+                    where["evaluation_status"] = query.evaluation_status
+            if isinstance(query, CarePlanActionQuery) and query.completion_status is not None:
+                where["completion_status"] = query.completion_status
+            rows, total = await dao.get_multi(
                 db,
-                account_id,
-                plan_id,
-                (query.page - 1) * query.shows,
-                query.shows,
-                extra_where=extra_where,
+                where=where,
+                page=(query.page - 1) * query.shows,
+                shows=query.shows,
+                ordering=[("date_added", False), ("id", False)],
             )
             response = clinical_page(rows, total, to_response)
         else:
-            row = await dao.scoped(db, account_id, child_id)
+            row = await dao.get_by(db, where={"account_id": account_id, "id": child_id}, execution_options={"populate_existing": True})
             if row is Empty or row.plan_id != plan_id:
                 return Err(AccountObjectNotFound())
             response = to_response(row)
@@ -203,21 +206,21 @@ async def read_care_plan_child_history(
         if isinstance(scope, Err):
             return scope
 
-        plan = await dao_care_plans.scoped(db, account_id, plan_id)
+        plan = await dao_care_plans.get_by(db, where={"account_id": account_id, "id": plan_id}, execution_options={"populate_existing": True})
         if plan is Empty or plan.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        row = await dao.scoped(db, account_id, child_id)
+        row = await dao.get_by(db, where={"account_id": account_id, "id": child_id}, execution_options={"populate_existing": True})
         if row is Empty or row.plan_id != plan_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await history_dao.page(
+        rows, total = await history_dao.get_multi(
             db,
-            account_id,
-            child_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "id": child_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, to_history)
         await record_clinical_read(

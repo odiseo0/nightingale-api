@@ -24,8 +24,6 @@ Metric = Literal["median", "sd", "z_scores", "percentiles"]
 
 
 class LmsRow(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
     reference_code: ReferenceCode
     indicator: Indicator
     sex: Sex
@@ -34,10 +32,10 @@ class LmsRow(BaseModel):
     mu: Decimal
     sigma: Decimal
 
-
-class ReferenceValue(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+
+class ReferenceValue(BaseModel):
     reference_code: ReferenceCode
     indicator: Indicator
     sex: Sex
@@ -45,16 +43,26 @@ class ReferenceValue(BaseModel):
     metric: Metric
     value: Decimal
 
+    model_config = ConfigDict(extra="forbid")
+
 
 FIXTURE_LMS_ROWS: list[LmsRow] = [
     LmsRow(
-        reference_code="who2006", indicator="weight_for_age", sex="male",
-        age_months=0, lambda_=Decimal("0.3487"), mu=Decimal("3.3464"),
+        reference_code="who2006",
+        indicator="weight_for_age",
+        sex="male",
+        age_months=0,
+        lambda_=Decimal("0.3487"),
+        mu=Decimal("3.3464"),
         sigma=Decimal("0.14602"),
     ),
     LmsRow(
-        reference_code="who2006", indicator="weight_for_age", sex="male",
-        age_months=5, lambda_=Decimal("0.1395"), mu=Decimal("7.5105"),
+        reference_code="who2006",
+        indicator="weight_for_age",
+        sex="male",
+        age_months=5,
+        lambda_=Decimal("0.1395"),
+        mu=Decimal("7.5105"),
         sigma=Decimal("0.11080"),
     ),
 ]
@@ -68,14 +76,3 @@ INDICATOR_RANGES: dict[tuple[ReferenceCode, Indicator], tuple[int, int]] = {
     ("who2007", "bmi_for_age"): (61, 228),
     ("who2007", "weight_for_age"): (61, 120),
 }
-
-__all__ = [
-    "FIXTURE_LMS_ROWS",
-    "INDICATOR_RANGES",
-    "Indicator",
-    "LmsRow",
-    "Metric",
-    "ReferenceCode",
-    "ReferenceValue",
-    "Sex",
-]

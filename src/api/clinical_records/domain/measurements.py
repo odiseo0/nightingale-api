@@ -112,6 +112,19 @@ class InvalidatePatientMeasurementPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MeasurementSource(BaseModel):
+    measurement_id: UUID7
+    account_id: UUID7
+    patient_id: UUID7
+    kind: MeasurementKind
+    measured_at: AwareDatetime
+    value: Decimal | None
+    systolic_value: Decimal | None
+    diastolic_value: Decimal | None
+    unit: str
+    version: int
+
+
 class PatientMeasurementResponse(BaseModel):
     measurement_id: UUID7
     patient_id: UUID7

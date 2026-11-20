@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Literal, Self
+from typing import Literal
 
 from pydantic import ConfigDict, Field
 
@@ -14,10 +14,6 @@ RecordStatus = Literal["valid", "entered-in-error"]
 
 
 class SeriesEntry(BaseModel):
-    """Una toma candidata a la serie, con su versión identificable."""
-
-    model_config = ConfigDict(extra="forbid")
-
     measurement_id: str
     source_version: int = Field(ge=1)
     kind: MeasurementKind
@@ -28,10 +24,10 @@ class SeriesEntry(BaseModel):
     unit: str
     record_status: RecordStatus
 
-
-class SeriesPoint(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+
+class SeriesPoint(BaseModel):
     measurement_kind: MeasurementKind
     measured_at: date
     value: Decimal | None = None
@@ -41,24 +37,28 @@ class SeriesPoint(BaseModel):
     source_measurement_id: str
     source_version: int
 
+    model_config = ConfigDict(extra="forbid")
+
 
 class SeriesSelection(BaseModel):
-    """Serie válida ordenada por fecha del hecho; las correcciones
-    sustituyen su punto sin borrar la entrada inválida de la entrada."""
+    points: list[SeriesPoint]
 
     model_config = ConfigDict(extra="forbid")
 
-    points: list[SeriesPoint]
 
-
-def select_valid_series(entries: list[SeriesEntry], kind: MeasurementKind) -> SeriesSelection:
+def select_valid_series(
+    entries: list[SeriesEntry], kind: MeasurementKind
+) -> SeriesSelection:
     by_identity: dict[str, SeriesEntry] = {}
     for entry in entries:
         if entry.kind != kind or entry.record_status != "valid":
             continue
         by_identity[entry.measurement_id] = entry
 
-    ordered = sorted(by_identity.values(), key=lambda entry: (entry.measured_at, entry.measurement_id))
+    ordered = sorted(
+        by_identity.values(),
+        key=lambda entry: (entry.measured_at, entry.measurement_id),
+    )
 
     return SeriesSelection(
         points=[
@@ -90,24 +90,16 @@ def age_on(birth_date: date, on: date) -> AgeAtMeasurement | None:
         return None
 
     days = (on - birth_date).days
-    years = on.year - birth_date.year - (
-        (on.month, on.day) < (birth_date.month, birth_date.day)
+    years = (
+        on.year
+        - birth_date.year
+        - ((on.month, on.day) < (birth_date.month, birth_date.day))
     )
     months = (on.year - birth_date.year) * 12 + on.month - birth_date.month
+
     if on.day < birth_date.day:
         months -= 1
+
     months = max(months, 0)
 
     return AgeAtMeasurement(age_days=days, age_months=months, age_years=years)
-
-
-__all__ = [
-    "AgeAtMeasurement",
-    "MeasurementKind",
-    "RecordStatus",
-    "SeriesEntry",
-    "SeriesPoint",
-    "SeriesSelection",
-    "age_on",
-    "select_valid_series",
-]

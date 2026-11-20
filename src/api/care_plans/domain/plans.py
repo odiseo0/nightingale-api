@@ -24,8 +24,10 @@ class CarePlanFields(BaseModel):
     def period_order(self) -> Self:
         if self.start_date is None or self.expected_end_date is None:
             return self
+
         if self.expected_end_date < self.start_date:
             raise ValueError("El fin previsto no puede preceder al inicio")
+
         return self
 
 

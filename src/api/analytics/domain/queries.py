@@ -1,7 +1,4 @@
-from decimal import Decimal
-from typing import Literal
-
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from src.api.analytics.domain.series import MeasurementKind, SeriesPoint
 from src.core.schema import BaseModel, PageQuery
@@ -23,6 +20,4 @@ class SeriesResponse(BaseModel):
     patient_id: str
     measurement_kind: MeasurementKind
     points: list[SeriesPointResponse]
-
-
-__all__ = ["SeriesPointResponse", "SeriesQuery", "SeriesResponse"]
+    total: int = Field(ge=0)

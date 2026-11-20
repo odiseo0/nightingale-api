@@ -37,6 +37,27 @@ from src.api.appointments.domain.appointments import (
     CreateAppointmentPayload,
     EmptyAppointmentPayload,
 )
+from src.api.care_plans.domain.goals import (
+    AddCarePlanActionPayload,
+    AddCarePlanGoalPayload,
+    AddCarePlanReviewPayload,
+    CarePlanActionResponse,
+    CarePlanGoalResponse,
+    CarePlanReviewResponse,
+    CompleteCarePlanActionPayload,
+    EvaluateCarePlanGoalPayload,
+    InvalidateCarePlanActionPayload,
+    InvalidateCarePlanGoalPayload,
+    InvalidateCarePlanReviewPayload,
+    UpdateCarePlanActionPayload,
+    UpdateCarePlanGoalPayload,
+)
+from src.api.care_plans.domain.plans import (
+    CarePlanResponse,
+    CreatePatientCarePlanPayload,
+    InvalidatePatientCarePlanPayload,
+    UpdatePatientCarePlanPayload,
+)
 from src.api.clinical_records.domain.allergies import (
     CreatePatientAllergyIntolerancePayload,
     InvalidatePatientAllergyIntolerancePayload,
@@ -77,32 +98,11 @@ from src.api.clinical_records.domain.notes import (
     CreatePatientNotePayload,
     InvalidatePatientNotePayload,
     PatientNoteResponse,
-    UpdatePatientNotePayload,)
-from src.api.care_plans.domain.goals import (
-    AddCarePlanActionPayload,
-    AddCarePlanGoalPayload,
-    AddCarePlanReviewPayload,
-    CarePlanActionResponse,
-    CarePlanGoalResponse,
-    CarePlanReviewResponse,
-    CompleteCarePlanActionPayload,
-    EvaluateCarePlanGoalPayload,
-    InvalidateCarePlanActionPayload,
-    InvalidateCarePlanGoalPayload,
-    InvalidateCarePlanReviewPayload,
-    UpdateCarePlanActionPayload,
-    UpdateCarePlanGoalPayload,
-)
-from src.api.care_plans.domain.plans import (
-    CarePlanResponse,
-    CreatePatientCarePlanPayload,
-    InvalidatePatientCarePlanPayload,
-    UpdatePatientCarePlanPayload,
+    UpdatePatientNotePayload,
 )
 from src.api.diagnostic_results.domain.reports import (
     CorrectDiagnosticReportPayload,
     CreateDiagnosticReportPayload,
-    DiagnosticReportHistoryResponse,
     DiagnosticReportResponse,
     UpdateDiagnosticReportPayload,
 )
@@ -115,32 +115,11 @@ from src.api.diagnostic_results.domain.results import (
     UpdateDiagnosticReportResultPayload,
     UploadReportAttachmentPayload,
 )
-from src.api.specialties.domain.records import (
-    CaptureSpecialtyRecordPayload,
-    InvalidateSpecialtyRecordPayload,
-    SpecialtyRecordHistoryResponse,
-    SpecialtyRecordResponse,
-    UpdateSpecialtyRecordPayload,
-)
-from src.api.specialties.domain.templates import (
-    CreateSpecialtyTemplatePayload,
-    RetireSpecialtyTemplatePayload,
-    SpecialtyTemplateHistoryResponse,
-    SpecialtyTemplateResponse,
-    UpdateSpecialtyTemplatePayload,
-)
-from src.api.specialties.domain.odontogram import (
-    AddDentalTreatmentPayload,
-    DentalFindingHistoryResponse,
-    DentalFindingResponse,
-    DentalTreatmentHistoryResponse,
-    DentalTreatmentResponse,
-    InvalidateDentalFindingPayload,
-    InvalidateDentalTreatmentPayload,
-    RecordDentalFindingPayload,
-    ResolveDentalFindingPayload,
-    UpdateDentalFindingPayload,
-    UpdateDentalTreatmentPayload,
+from src.api.encounters.domain.encounters import (
+    CreatePatientEncounterPayload,
+    InvalidatePatientEncounterPayload,
+    PatientEncounterResponse,
+    UpdatePatientEncounterPayload,
 )
 from src.api.medications.domain.medications import (
     DeclaredMedicationResponse,
@@ -149,12 +128,6 @@ from src.api.medications.domain.medications import (
     UpdatePatientDeclaredMedicationPayload,
 )
 from src.api.medications.domain.reviews import ReviewPatientDeclaredMedicationPayload
-from src.api.encounters.domain.encounters import (
-    CreatePatientEncounterPayload,
-    InvalidatePatientEncounterPayload,
-    PatientEncounterResponse,
-    UpdatePatientEncounterPayload,
-)
 from src.api.patients.domain.contacts import (
     CONTACT_SCHEMAS,
     ContactResponse,
@@ -191,6 +164,29 @@ from src.api.services.domain.services import (
     ServicePatch,
     ServiceResponse,
     ServiceStatusPayload,
+)
+from src.api.specialties.domain.odontogram import (
+    AddDentalTreatmentPayload,
+    DentalFindingResponse,
+    DentalTreatmentResponse,
+    InvalidateDentalFindingPayload,
+    InvalidateDentalTreatmentPayload,
+    RecordDentalFindingPayload,
+    ResolveDentalFindingPayload,
+    UpdateDentalFindingPayload,
+    UpdateDentalTreatmentPayload,
+)
+from src.api.specialties.domain.records import (
+    CaptureSpecialtyRecordPayload,
+    InvalidateSpecialtyRecordPayload,
+    SpecialtyRecordResponse,
+    UpdateSpecialtyRecordPayload,
+)
+from src.api.specialties.domain.templates import (
+    CreateSpecialtyTemplatePayload,
+    RetireSpecialtyTemplatePayload,
+    SpecialtyTemplateResponse,
+    UpdateSpecialtyTemplatePayload,
 )
 from src.core.schema import ApiError, BaseModel
 from src.core.schema.http import SerializedInstant
@@ -452,6 +448,7 @@ class OperationBatch(BaseModel):
         positions = {
             item.operation_id: index for index, item in enumerate(self.operations)
         }
+
         if len(positions) != len(self.operations):
             raise ValueError("El lote repite una operación")
 

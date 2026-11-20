@@ -1,11 +1,10 @@
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
 
 from .models import (
     SpecialtyRecord,
@@ -17,53 +16,7 @@ from .models import (
 )
 
 
-class _Scoped:
-    async def scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        entity_id: UUID,
-        *,
-        lock: bool = False,
-    ):
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == entity_id
-        )
-
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
-
-
-class _HistoryPage:
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        entity_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ):
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == entity_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
-class SpecialtyTemplateDAO(_Scoped, DAO[SpecialtyTemplate, BaseModel, BaseModel]):
+class SpecialtyTemplateDAO(DAO[SpecialtyTemplate, BaseModel, BaseModel]):
     async def page(self, db, account_id: UUID, query):
         statement = select(self.model).where(self.model.account_id == account_id)
 
@@ -74,28 +27,38 @@ class SpecialtyTemplateDAO(_Scoped, DAO[SpecialtyTemplate, BaseModel, BaseModel]
 
         total = await self.count(db, statement)
         rows = await db.scalars(
-            statement.order_by(self.model.created_at, self.model.id)
+            statement.order_by(self.model.date_added, self.model.id)
             .offset((query.page - 1) * query.shows)
             .limit(query.shows)
         )
 
         return list(rows), total
 
-    async def active_snapshot(self, db, account_id: UUID) -> list[SpecialtyTemplate]:
-        rows = await db.scalars(
+    async def for_snapshot(
+        self,
+        db: AsyncSession,
+        account_id: UUID,
+        required: set[tuple[UUID, int]],
+    ) -> list[SpecialtyTemplate | SpecialtyTemplateHistory]:
+        current = await db.scalars(
             select(self.model).where(
                 self.model.account_id == account_id,
                 self.model.template_status == "active",
             )
         )
+        historical = await db.scalars(
+            select(SpecialtyTemplateHistory).where(
+                SpecialtyTemplateHistory.account_id == account_id,
+                tuple_(SpecialtyTemplateHistory.id, SpecialtyTemplateHistory.version).in_(
+                    required
+                ),
+            )
+        )
+        rows = {
+            (row.id, row.version): row for row in [*current, *historical]
+        }
 
-        return list(rows)
-
-
-class SpecialtyTemplateHistoryDAO(
-    _HistoryPage, DAO[SpecialtyTemplateHistory, BaseModel, BaseModel]
-):
-    pass
+        return [rows[key] for key in sorted(rows)]
 
 
 class SpecialtyTemplateFieldDAO(
@@ -133,7 +96,7 @@ class SpecialtyTemplateFieldDAO(
             await self.add(db, field)
 
 
-class SpecialtyRecordDAO(_Scoped, DAO[SpecialtyRecord, BaseModel, BaseModel]):
+class SpecialtyRecordDAO(DAO[SpecialtyRecord, BaseModel, BaseModel]):
     async def page(self, db, account_id: UUID, patient_id: UUID, query):
         statement = select(self.model).where(
             self.model.account_id == account_id, self.model.patient_id == patient_id
@@ -149,7 +112,7 @@ class SpecialtyRecordDAO(_Scoped, DAO[SpecialtyRecord, BaseModel, BaseModel]):
 
         total = await self.count(db, statement)
         rows = await db.scalars(
-            statement.order_by(self.model.created_at, self.model.id)
+            statement.order_by(self.model.date_added, self.model.id)
             .offset((query.page - 1) * query.shows)
             .limit(query.shows)
         )
@@ -164,12 +127,6 @@ class SpecialtyRecordDAO(_Scoped, DAO[SpecialtyRecord, BaseModel, BaseModel]):
         )
 
         return list(rows)
-
-
-class SpecialtyRecordHistoryDAO(
-    _HistoryPage, DAO[SpecialtyRecordHistory, BaseModel, BaseModel]
-):
-    pass
 
 
 class SpecialtyRecordValueDAO(DAO[SpecialtyRecordValueRow, BaseModel, BaseModel]):
@@ -206,8 +163,8 @@ class SpecialtyRecordValueDAO(DAO[SpecialtyRecordValueRow, BaseModel, BaseModel]
 
 
 dao_templates = SpecialtyTemplateDAO(SpecialtyTemplate)
-dao_template_histories = SpecialtyTemplateHistoryDAO(SpecialtyTemplateHistory)
+dao_template_histories = DAO(SpecialtyTemplateHistory)
 dao_template_fields = SpecialtyTemplateFieldDAO(SpecialtyTemplateFieldRow)
 dao_specialty_records = SpecialtyRecordDAO(SpecialtyRecord)
-dao_specialty_record_histories = SpecialtyRecordHistoryDAO(SpecialtyRecordHistory)
+dao_specialty_record_histories = DAO(SpecialtyRecordHistory)
 dao_specialty_record_values = SpecialtyRecordValueDAO(SpecialtyRecordValueRow)

@@ -124,7 +124,7 @@ from src.api.sync.domain.operations import (
 from src.api.sync.repository.dao import dao_changes, dao_heads, dao_receipts
 from src.core import Err, Ok, Result
 from src.core.db import DAOError, transaction
-from src.core.schema import ApiError
+from src.core.schema import ApiError, BaseModel
 from src.core.utils.utils import Empty
 
 if TYPE_CHECKING:
@@ -242,6 +242,44 @@ async def authorized_context(
     return Ok((context, head))
 
 
+def _operation_fingerprint(
+    operation: OperationEnvelope,
+    payload: BaseModel | None,
+    *,
+    legacy_correction: bool = False,
+) -> bytes:
+    canonical = operation.model_dump(mode="json", by_alias=True)
+
+    if payload is not None:
+        # Keep pre-medication/pre-care-plan receipts and explicit/default read_write equivalent.
+        legacy_permissions = (
+            isinstance(payload, ClinicalPermissionsPayload)
+            and payload.clinical_permissions.declared_medications == "read_write"
+            and payload.clinical_permissions.care_plans == "read_write"
+            and payload.clinical_permissions.diagnostic_reports == "read_write"
+            and payload.clinical_permissions.specialty_templates == "read_write"
+            and payload.clinical_permissions.specialty_templates == "read_write"
+        )
+        partial = operation.action.startswith("Update") or operation.action == "CorrectPatientMeasurement"
+        canonical["payload"] = payload.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_unset=partial and not legacy_correction,
+            exclude={"clinical_permissions": {"declared_medications", "care_plans", "diagnostic_reports", "specialty_templates"}}
+            if legacy_permissions else None,
+        )
+
+    return hashlib.sha256(
+        json.dumps(
+            canonical,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    ).digest()
+
+
 async def accept_operation(
     db: AsyncSession,
     credential: str | None,
@@ -261,34 +299,7 @@ async def accept_operation(
 ]:
     canonical = operation.model_dump(mode="json", by_alias=True)
     payload = operation.validated_payload()
-
-    if payload is not None:
-        # Keep pre-medication/pre-care-plan receipts and explicit/default read_write equivalent.
-        legacy_permissions = (
-            isinstance(payload, ClinicalPermissionsPayload)
-            and payload.clinical_permissions.declared_medications == "read_write"
-            and payload.clinical_permissions.care_plans == "read_write"
-            and payload.clinical_permissions.diagnostic_reports == "read_write"
-            and payload.clinical_permissions.specialty_templates == "read_write"
-            and payload.clinical_permissions.specialty_templates == "read_write"
-        )
-        canonical["payload"] = payload.model_dump(
-            mode="json",
-            by_alias=True,
-            exclude_unset=operation.action.startswith("Update"),
-            exclude={"clinical_permissions": {"declared_medications", "care_plans", "diagnostic_reports", "specialty_templates"}}
-            if legacy_permissions else None,
-        )
-
-    fingerprint = hashlib.sha256(
-        json.dumps(
-            canonical,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=False,
-            allow_nan=False,
-        ).encode("utf-8")
-    ).digest()
+    fingerprint = _operation_fingerprint(operation, payload)
 
     async with transaction(db):
         policy = operation_policies().get(operation.action)
@@ -348,8 +359,9 @@ async def accept_operation(
             return Err(AccessDenied())
 
         now = await dao_heads.get_server_time(db)
-        receipt = await dao_receipts.get_scoped(
-            db, account_id, actor.user_id, operation.operation_id
+        receipt = await dao_receipts.get_by(
+            db, where={"account_id": account_id, "actor_user_id": actor.user_id, "operation_id": operation.operation_id},
+            execution_options={"populate_existing": True}
         )
 
         if receipt is not Empty:
@@ -359,7 +371,17 @@ async def accept_operation(
             ):
                 return Err(AccessDenied())
 
-            if receipt.request_hash != fingerprint:
+            matches = receipt.request_hash == fingerprint
+            if (
+                not matches
+                and operation.action == "CorrectPatientMeasurement"
+                and payload is not None
+            ):
+                matches = receipt.request_hash == _operation_fingerprint(
+                    operation, payload, legacy_correction=True
+                )
+
+            if not matches:
                 return Ok(
                     operation_result(
                         operation.operation_id,
@@ -412,8 +434,9 @@ async def accept_operation(
         result = None
 
         for dependency in operation.depends_on:
-            previous = await dao_receipts.get_scoped(
-                db, account_id, actor.user_id, dependency
+            previous = await dao_receipts.get_by(
+                db, where={"account_id": account_id, "actor_user_id": actor.user_id, "operation_id": dependency},
+                execution_options={"populate_existing": True}
             )
 
             if previous is Empty or previous.status != "accepted":
@@ -1154,6 +1177,16 @@ async def submit_batch(
 
                 if response.status == "retryable_failure":
                     temporary.add(operation.operation_id)
+            case Err(AccountRuleError(code, version)):
+                results.append(
+                    operation_result(
+                        operation.operation_id,
+                        correlation_id,
+                        "rejected",
+                        code,
+                        version=version,
+                    )
+                )
             case Err(error):
                 return Err(error)
 
@@ -1208,8 +1241,9 @@ async def get_operation(
         ):
             return Err(AccessDenied())
 
-        receipt = await dao_receipts.get_scoped(
-            db, account_id, context.actor.user_id, operation_id
+        receipt = await dao_receipts.get_by(
+            db, where={"account_id": account_id, "actor_user_id": context.actor.user_id, "operation_id": operation_id},
+            execution_options={"populate_existing": True}
         )
 
         if receipt is Empty:

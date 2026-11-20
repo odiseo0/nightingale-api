@@ -1,4 +1,5 @@
 from typing import Annotated, assert_never
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -20,6 +21,7 @@ from src.api.diagnostic_results.domain.reports import (
     DiagnosticReportResponse,
 )
 from src.api.diagnostic_results.domain.results import (
+    DiagnosticReportResultQuery,
     DiagnosticReportResultResponse,
     ReportAttachmentResponse,
 )
@@ -120,12 +122,12 @@ async def list_report_history(
 @router.get(
     "/diagnostic-reports/{report_id}/results",
     operation_id="listPatientDiagnosticReportResults",
-    dependencies=[Depends(no_query_parameters)],
 )
 async def list_report_results(
     account_id: UUID7,
     patient_id: UUID7,
     report_id: UUID7,
+    query: Annotated[DiagnosticReportResultQuery, Query()],
     db: Annotated[AsyncSession, Depends(get_db)],
     authorization: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
 ) -> PaginatedResponse[DiagnosticReportResultResponse]:
@@ -136,6 +138,7 @@ async def list_report_results(
             account_id,
             patient_id,
             report_id,
+            query,
         )
     )
 
@@ -157,6 +160,7 @@ async def get_attachment(
             db,
             authorization.credentials if authorization else None,
             account_id,
+            patient_id,
             attachment_id,
         )
     )
@@ -180,11 +184,13 @@ async def download_attachment(
             db,
             authorization.credentials if authorization else None,
             account_id,
+            patient_id,
             attachment_id,
+            load_content=True,
         )
     )
     return Response(
         content=content,
         media_type=state.content_type,
-        headers={"Content-Disposition": f'attachment; filename="{state.file_name}"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(state.file_name)}"},
     )

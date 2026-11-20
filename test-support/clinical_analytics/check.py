@@ -77,31 +77,80 @@ async def check_clinical_analytics(runtime, administrative, client, tokens):
     assert all(point["sourceVersion"] == 1 for point in series["points"] if point["sourceMeasurementId"] != str(wrong))
     corrected = [point for point in series["points"] if point["sourceMeasurementId"] == str(wrong)][0]
     assert corrected["sourceVersion"] == 2
+    first_page = await get(f"/patients/{patient}/analytics/series?kind=weight&page=1&shows=1")
+    second_page = await get(f"/patients/{patient}/analytics/series?kind=weight&page=2&shows=1")
+    empty_page = await get(f"/patients/{patient}/analytics/series?kind=weight&page=3&shows=1")
+    assert first_page["total"] == second_page["total"] == empty_page["total"] == 2
+    assert first_page["points"][0]["value"] == "70" and second_page["points"][0]["value"] == "71"
+    assert empty_page["points"] == []
+
+    async with runtime() as db:
+        async with db.begin():
+            await run_etl(db, account_id)
+            points = await db.scalars(select(AnalyticMeasurementPoint).where(
+                AnalyticMeasurementPoint.account_id == account_id,
+                AnalyticMeasurementPoint.patient_id == patient,
+            ))
+            points = list(points)
+            assert len(points) == 2, "ETL sin duplicados tras corrección"
+            assert {point.value for point in points} == {70, 71}
+            await run_etl(db, account_id)
+            points_after = list((await db.scalars(select(AnalyticMeasurementPoint).where(
+                AnalyticMeasurementPoint.account_id == account_id,
+                AnalyticMeasurementPoint.patient_id == patient,
+            ))).all())
+            assert len(points_after) == 2, "reintento no duplica puntos"
+            await rebuild_analytics(db)
+            points_rebuilt = list((await db.scalars(select(AnalyticMeasurementPoint).where(
+                AnalyticMeasurementPoint.account_id == account_id,
+                AnalyticMeasurementPoint.patient_id == patient,
+            ))).all())
+            assert sorted((p.measured_at, float(p.value)) for p in points_rebuilt) == sorted(
+                (p.measured_at, float(p.value)) for p in points_after
+            ), "la reconstrucción produce la misma proyección"
+            assert await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE object_key::text LIKE '%PRIV-%'")) == 0
+
+    invalidated = await operation("InvalidatePatientMeasurement", wrong, {
+        "correctionReason": "Toma ficticia inválida",
+    }, 2, actor=assistant)
+    assert invalidated["status"] == "accepted"
+    async with runtime() as db:
+        async with db.begin():
+            await run_etl(db, account_id)
+    async with runtime() as observer:
+        remaining = list((await observer.scalars(select(AnalyticMeasurementPoint).where(
+            AnalyticMeasurementPoint.account_id == account_id,
+            AnalyticMeasurementPoint.patient_id == patient,
+        ))).all())
+        assert [point.source_measurement_id for point in remaining] == [old]
+        assert [point["value"] for point in (await get(
+            f"/patients/{patient}/analytics/series?kind=weight"
+        ))["points"]] == ["70"]
 
     async with administrative() as db:
-        await run_etl(db, account_id)
-        points = await db.scalars(select(AnalyticMeasurementPoint).where(
-            AnalyticMeasurementPoint.account_id == account_id,
-            AnalyticMeasurementPoint.patient_id == patient,
-        ))
-        points = list(points)
-        assert len(points) == 2, "ETL sin duplicados tras corrección"
-        assert {point.value for point in points} == {70, 71}
-        await run_etl(db, account_id)
-        points_after = list((await db.scalars(select(AnalyticMeasurementPoint).where(
+        async with db.begin():
+            await db.execute(text("ALTER TABLE nightingale.change_log DISABLE TRIGGER guard_change_retention"))
+            await db.execute(text("DELETE FROM nightingale.change_log WHERE account_id=:account"), {"account": account_id})
+            await db.execute(text("""
+                UPDATE nightingale.account_sync_heads
+                SET retained_from_sequence=last_sequence+1 WHERE account_id=:account
+            """), {"account": account_id})
+            await db.execute(text("SET CONSTRAINTS ALL IMMEDIATE"))
+            await db.execute(text("ALTER TABLE nightingale.change_log ENABLE TRIGGER guard_change_retention"))
+
+    async def rebuild_once():
+        async with runtime() as db:
+            async with db.begin():
+                return await rebuild_analytics(db)
+
+    counts = await asyncio.gather(rebuild_once(), rebuild_once())
+    assert counts == [1, 1]
+    async with runtime() as observer:
+        recovered = list((await observer.scalars(select(AnalyticMeasurementPoint).where(
             AnalyticMeasurementPoint.account_id == account_id,
             AnalyticMeasurementPoint.patient_id == patient,
         ))).all())
-        assert len(points_after) == 2, "reintento no duplica puntos"
-        await rebuild_analytics(db)
-        points_rebuilt = list((await db.scalars(select(AnalyticMeasurementPoint).where(
-            AnalyticMeasurementPoint.account_id == account_id,
-            AnalyticMeasurementPoint.patient_id == patient,
-        ))).all())
-        assert sorted((p.measured_at, float(p.value)) for p in points_rebuilt) == sorted(
-            (p.measured_at, float(p.value)) for p in points_after
-        ), "la reconstrucción produce la misma proyección"
-        assert await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE object_key::text LIKE '%PRIV-%'")) == 0
+        assert len(recovered) == 1 and recovered[0].source_measurement_id == old
 
     # E20/E21: growth with WHO reference limits and birth-change recalculation.
     grown = uuid7()

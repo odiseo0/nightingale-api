@@ -1,8 +1,7 @@
 from collections.abc import Sequence
-from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Row, func, select
+from sqlalchemy import Row, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.services.domain.offers import ServiceOfferQuery
@@ -14,9 +13,6 @@ from .models import ProfessionalService, Service
 
 
 class ServiceDAO(DAO[Service, BaseModel, BaseModel]):
-    async def server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
-
     async def page(self, db: AsyncSession, professional_id: UUID, query: ServiceQuery) -> tuple[list[Service], int]:
         statement = select(self.model).where(
             self.model.professional_id == professional_id
@@ -41,15 +37,11 @@ class ServiceDAO(DAO[Service, BaseModel, BaseModel]):
 
         return list(rows), total
 
-    async def revise(self, db: AsyncSession, row: Service, values: dict[str, object], now: datetime) -> Service:
+    async def revise(self, db: AsyncSession, row: Service, values: dict[str, object]) -> Service:
         return await self.update(
             db,
             row.id,
-            {
-                **values,
-                "version": row.version + 1,
-                "updated_at": now,
-            },
+            {**values, "version": row.version + 1},
             commit=False,
         )
 
@@ -107,12 +99,11 @@ class ProfessionalServiceDAO(DAO[ProfessionalService, BaseModel, BaseModel]):
 
         return rows, total
 
-    async def revise(self, db: AsyncSession, row: ProfessionalService, values: dict[str, object], now: datetime) -> ProfessionalService:
+    async def revise(self, db: AsyncSession, row: ProfessionalService, values: dict[str, object]) -> ProfessionalService:
         for name, value in values.items():
             setattr(row, name, value)
 
         row.version += 1
-        row.updated_at = now
         await self.flush(db)
 
         return row

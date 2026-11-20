@@ -20,6 +20,7 @@ from src.api.clinical_records.domain.measurements import (
     CorrectPatientMeasurementPayload,
     InvalidatePatientMeasurementPayload,
     MeasurementQuery,
+    MeasurementSource,
     MeasurementSummaryResponse,
     MeasurementValues,
     PatientMeasurementHistoryResponse,
@@ -58,6 +59,7 @@ async def measurement_response(
     patient: PatientProfileResponse | None = None,
 ) -> PatientMeasurementResponse:
     patient = patient or await clinical_patient(db, context.account.id, row.patient_id)
+
     if patient is Empty or patient is None:
         raise DAOError("La ficha de la medición no existe")
 
@@ -87,10 +89,30 @@ async def measurement_response(
         age_years=age_years,
         age_as_of=day,
         patient_version=patient.version,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
+
+
+async def current_measurement_sources(db: AsyncSession) -> list[MeasurementSource]:
+    rows = await dao_measurements.valid_for_rebuild(db)
+
+    return [
+        MeasurementSource(
+            measurement_id=row.id,
+            account_id=row.account_id,
+            patient_id=row.patient_id,
+            kind=row.kind,
+            measured_at=row.measured_at,
+            value=row.value,
+            systolic_value=row.systolic_value,
+            diastolic_value=row.diastolic_value,
+            unit=row.unit,
+            version=row.version,
+        )
+        for row in rows
+    ]
 
 
 def history_response(
@@ -140,7 +162,7 @@ async def apply_measurement_operation(
             return Err(AccountRuleError("VERSION_CONFLICT"))
 
         if (
-            await dao_measurements.scoped(db, context.account.id, entity_key)
+            await dao_measurements.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True})
             is not Empty
         ):
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
@@ -181,15 +203,16 @@ async def apply_measurement_operation(
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_measurements.add(db, row)
         event = "created"
     else:
-        row = await dao_measurements.scoped(
-            db, context.account.id, entity_key, lock=True
+        row = await dao_measurements.get_by(
+            db, where={"account_id": context.account.id, "id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if row is Empty:
@@ -219,6 +242,7 @@ async def apply_measurement_operation(
 
             if measured > now:
                 return Err(AccountRuleError("VALIDATION_ERROR"))
+
             try:
                 MeasurementValues(
                     kind=row.kind,
@@ -247,7 +271,7 @@ async def apply_measurement_operation(
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = now
+        row.date_updated = now
         row.version += 1
         await dao_measurements.flush(db)
 
@@ -273,7 +297,7 @@ async def apply_measurement_operation(
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
     state = await measurement_response(db, context, row)
@@ -330,7 +354,7 @@ async def read_measurements(
             )
             action = "ReadPatientMeasurements"
         else:
-            row = await dao_measurements.scoped(db, account_id, measurement_id)
+            row = await dao_measurements.get_by(db, where={"account_id": account_id, "id": measurement_id}, execution_options={"populate_existing": True})
 
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
@@ -363,18 +387,18 @@ async def read_measurement_history(
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_measurements.scoped(db, account_id, measurement_id)
+        row = await dao_measurements.get_by(db, where={"account_id": account_id, "id": measurement_id}, execution_options={"populate_existing": True})
 
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_measurement_histories.page(
+        rows, total = await dao_measurement_histories.get_multi(
             db,
-            account_id,
-            measurement_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "id": measurement_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, history_response)
         await record_clinical_read(

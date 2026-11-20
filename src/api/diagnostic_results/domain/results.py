@@ -3,7 +3,7 @@ from typing import Literal, Self
 
 from pydantic import UUID7, AwareDatetime, ConfigDict, Field, model_validator
 
-from src.core.schema import BaseModel
+from src.core.schema import BaseModel, PageQuery
 
 ResultKind = Literal["numeric", "text"]
 
@@ -44,6 +44,10 @@ class DiagnosticReportResultFields(BaseModel):
         return self
 
 
+class CorrectDiagnosticReportResultPayload(DiagnosticReportResultFields):
+    result_id: UUID7
+
+
 class AddDiagnosticReportResultPayload(DiagnosticReportResultFields):
     report_id: UUID7
     patient_id: UUID7
@@ -67,6 +71,10 @@ class InvalidateDiagnosticReportResultPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class DiagnosticReportResultQuery(PageQuery):
+    record_status: Literal["valid", "entered-in-error"] | None = None
+
+
 class DiagnosticReportResultResponse(DiagnosticReportResultFields):
     result_id: UUID7
     report_id: UUID7
@@ -87,6 +95,7 @@ class DiagnosticReportResultHistoryResponse(DiagnosticReportResultResponse):
 
 class ReportAttachmentResponse(BaseModel):
     attachment_id: UUID7
+    patient_id: UUID7
     report_id: UUID7 | None
     file_name: str
     content_type: str
@@ -122,8 +131,10 @@ class InvalidateReportAttachmentPayload(BaseModel):
 
 __all__ = [
     "AddDiagnosticReportResultPayload",
+    "CorrectDiagnosticReportResultPayload",
     "DiagnosticReportResultFields",
     "DiagnosticReportResultHistoryResponse",
+    "DiagnosticReportResultQuery",
     "DiagnosticReportResultResponse",
     "InvalidateDiagnosticReportResultPayload",
     "InvalidateReportAttachmentPayload",

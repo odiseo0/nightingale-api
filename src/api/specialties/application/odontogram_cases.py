@@ -72,8 +72,8 @@ def finding_response(row: DentalFinding) -> DentalFindingResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -89,8 +89,8 @@ def treatment_response(row: DentalTreatment) -> DentalTreatmentResponse:
         performed_date=row.performed_date,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -132,7 +132,7 @@ async def _apply_finding(db, context, action, entity_key, expected_version, payl
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_dental_findings.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_dental_findings.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
         if await lock_clinical_patient(db, context.account.id, payload.patient_id) is Empty:
             return Err(AccountObjectNotFound())
@@ -157,14 +157,14 @@ async def _apply_finding(db, context, action, entity_key, expected_version, payl
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_dental_findings.add(db, row)
         event = "created"
     else:
-        row = await dao_dental_findings.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_dental_findings.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -210,7 +210,7 @@ async def _apply_finding(db, context, action, entity_key, expected_version, payl
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_dental_findings.flush(db)
 
@@ -224,12 +224,12 @@ async def _apply_finding(db, context, action, entity_key, expected_version, payl
             version=row.version,
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
 
@@ -274,9 +274,9 @@ async def _apply_treatment(db, context, action, entity_key, expected_version, pa
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_dental_treatments.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_dental_treatments.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
-        finding = await dao_dental_findings.scoped(db, context.account.id, payload.finding_id)
+        finding = await dao_dental_findings.get_by(db, where={"account_id": context.account.id, "id": payload.finding_id}, execution_options={"populate_existing": True})
         if finding is Empty or finding.patient_id != payload.patient_id or finding.record_status != "valid":
             return Err(AccountObjectNotFound())
 
@@ -292,14 +292,14 @@ async def _apply_treatment(db, context, action, entity_key, expected_version, pa
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_dental_treatments.add(db, row)
         event = "created"
     else:
-        row = await dao_dental_treatments.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_dental_treatments.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -326,7 +326,7 @@ async def _apply_treatment(db, context, action, entity_key, expected_version, pa
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_dental_treatments.flush(db)
 
@@ -340,12 +340,12 @@ async def _apply_treatment(db, context, action, entity_key, expected_version, pa
             version=row.version,
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
 
@@ -377,7 +377,7 @@ async def read_dental_findings(
             response = clinical_page(rows, total, finding_response)
             action = "ReadDentalFindings"
         else:
-            row = await dao_dental_findings.scoped(db, account_id, finding_id)
+            row = await dao_dental_findings.get_by(db, where={"account_id": account_id, "id": finding_id}, execution_options={"populate_existing": True})
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
             response = finding_response(row)
@@ -394,12 +394,14 @@ async def read_dental_finding_history(db, credential, account_id, patient_id, fi
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_dental_findings.scoped(db, account_id, finding_id)
+        row = await dao_dental_findings.get_by(db, where={"account_id": account_id, "id": finding_id}, execution_options={"populate_existing": True})
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_dental_finding_histories.page(
-            db, account_id, finding_id, (query.page - 1) * query.shows, query.shows, query.after_version
+        rows, total = await dao_dental_finding_histories.get_multi(
+            db, where={"account_id": account_id, "id": finding_id},
+            page=(query.page - 1) * query.shows, shows=query.shows,
+            ordering=[("version", False)], after_version=query.after_version,
         )
         response = clinical_page(rows, total, _finding_history)
         await record_clinical_read(db, scope.value, "ReadDentalFindingHistory", "dental_finding", str(finding_id))
@@ -421,8 +423,8 @@ def _finding_history(row: DentalFindingHistory) -> DentalFindingHistoryResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
         action=row.action,
         actor_user_id=row.actor_user_id,
@@ -437,7 +439,7 @@ async def read_dental_treatments(db, credential, account_id, patient_id, finding
         if isinstance(scope, Err):
             return scope
 
-        finding = await dao_dental_findings.scoped(db, account_id, finding_id)
+        finding = await dao_dental_findings.get_by(db, where={"account_id": account_id, "id": finding_id}, execution_options={"populate_existing": True})
         if finding is Empty or finding.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
@@ -446,7 +448,7 @@ async def read_dental_treatments(db, credential, account_id, patient_id, finding
             response = clinical_page(rows, len(rows), treatment_response)
             action = "ReadDentalTreatments"
         else:
-            row = await dao_dental_treatments.scoped(db, account_id, treatment_id)
+            row = await dao_dental_treatments.get_by(db, where={"account_id": account_id, "id": treatment_id}, execution_options={"populate_existing": True})
             if row is Empty or row.finding_id != finding_id:
                 return Err(AccountObjectNotFound())
             response = treatment_response(row)
@@ -463,12 +465,14 @@ async def read_dental_treatment_history(db, credential, account_id, patient_id, 
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_dental_treatments.scoped(db, account_id, treatment_id)
+        row = await dao_dental_treatments.get_by(db, where={"account_id": account_id, "id": treatment_id}, execution_options={"populate_existing": True})
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_dental_treatment_histories.page(
-            db, account_id, treatment_id, (query.page - 1) * query.shows, query.shows, query.after_version
+        rows, total = await dao_dental_treatment_histories.get_multi(
+            db, where={"account_id": account_id, "id": treatment_id},
+            page=(query.page - 1) * query.shows, shows=query.shows,
+            ordering=[("version", False)], after_version=query.after_version,
         )
         response = clinical_page(rows, total, _treatment_history)
         await record_clinical_read(db, scope.value, "ReadDentalTreatmentHistory", "dental_treatment", str(treatment_id))
@@ -487,8 +491,8 @@ def _treatment_history(row: DentalTreatmentHistory) -> DentalTreatmentHistoryRes
         performed_date=row.performed_date,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
         action=row.action,
         actor_user_id=row.actor_user_id,
@@ -503,7 +507,7 @@ async def read_dental_treatment_for_patient(db, credential, account_id, patient_
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_dental_treatments.scoped(db, account_id, treatment_id)
+        row = await dao_dental_treatments.get_by(db, where={"account_id": account_id, "id": treatment_id}, execution_options={"populate_existing": True})
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 

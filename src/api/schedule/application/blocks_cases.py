@@ -36,7 +36,7 @@ from src.api.schedule.repository.dao import dao_blocks, dao_rules
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty
+from src.core.utils.utils import Empty, datetime_now
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,8 +127,6 @@ async def apply_block_operation(
     if isinstance(scope, Err):
         return scope
 
-    now = await dao_rules.server_time(db)
-
     if isinstance(payload, CreateScheduleBlockPayload):
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
@@ -138,6 +136,7 @@ async def apply_block_operation(
 
         fields = payload
         values = payload.model_dump()
+        now = datetime_now()
         proposed = ScheduleBlockResponse(
             **values,
             id=entity_key,
@@ -173,9 +172,13 @@ async def apply_block_operation(
         )
 
     if isinstance(payload, CreateScheduleBlockPayload):
-        row = await dao_blocks.create(db, obj_in=proposed.model_dump(), commit=False)
+        row = await dao_blocks.create(
+            db,
+            obj_in=proposed.model_dump(exclude={"created_at", "updated_at"}),
+            commit=False,
+        )
     else:
-        row = await dao_blocks.revise(db, row, values, now)
+        row = await dao_blocks.revise(db, row, values)
 
     state = ScheduleBlockResponse.model_validate(
         block_response(row, reveal_reason=True)
@@ -220,8 +223,8 @@ def block_response(row: ScheduleBlock, *, reveal_reason: bool) -> dict[str, obje
         "ends_at": row.ends_at,
         "reason_code": row.reason_code if reveal_reason else None,
         "status": row.status,
-        "created_at": row.created_at,
-        "updated_at": row.updated_at,
+        "created_at": row.date_added,
+        "updated_at": row.date_updated,
         "version": row.version,
     }
 

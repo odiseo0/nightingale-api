@@ -66,8 +66,8 @@ def clinical_profile_response(
         patient_version=patient.version,
         age_years=age_years,
         age_as_of=today,
-        created_at=profile.created_at,
-        updated_at=profile.updated_at,
+        created_at=profile.date_added,
+        updated_at=profile.date_updated,
     )
 
 
@@ -94,7 +94,7 @@ async def apply_clinical_operation(
     if patient is Empty:
         return Err(AccountObjectNotFound())
 
-    profile = await dao_clinical_profiles.scoped(db, context.account.id, entity_key)
+    profile = await dao_clinical_profiles.get_by(db, where={"account_id": context.account.id, "patient_id": entity_key}, execution_options={"populate_existing": True})
 
     if profile is Empty:
         if expected_version != 0:
@@ -126,8 +126,8 @@ async def apply_clinical_operation(
             source_type=payload.source_type,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=version,
         )
         await dao_clinical_profiles.add(db, profile)
@@ -135,7 +135,7 @@ async def apply_clinical_operation(
         profile.sex_at_birth = payload.sex_at_birth
         profile.source_type = payload.source_type
         profile.updated_by_user_id = context.actor.user_id
-        profile.updated_at = now
+        profile.date_updated = now
         profile.version = version
         await dao_clinical_profiles.flush(db)
 
@@ -188,7 +188,7 @@ async def read_clinical_profile(
         if patient is Empty:
             return Err(AccountObjectNotFound())
 
-        profile = await dao_clinical_profiles.scoped(db, account_id, patient_id)
+        profile = await dao_clinical_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, execution_options={"populate_existing": True})
         today = await clinical_today(db, scope.value.account.time_zone)
 
         if profile is Empty:
@@ -239,13 +239,13 @@ async def read_clinical_history(
         if await clinical_patient(db, account_id, patient_id) is Empty:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_clinical_profile_histories.page(
+        rows, total = await dao_clinical_profile_histories.get_multi(
             db,
-            account_id,
-            patient_id,
-            (query.page - 1) * query.shows,
-            query.shows,
-            query.after_version,
+            where={"account_id": account_id, "patient_id": patient_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(
             rows, total, ClinicalProfileHistoryResponse.model_validate

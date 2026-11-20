@@ -16,7 +16,7 @@ async def check_services(runtime, administrative, client, tokens):
     from src.api.accounts.application.accounts_cases import bootstrap_practice
     from src.api.accounts.domain.accounts import BootstrapPracticeInput
     from src.api.authorization.application.authorization_cases import identified_users
-    from src.api.services.repository.dao import dao_offers, dao_services
+    from src.api.services.repository.dao import dao_offers
     from src.api.services.application.offers_cases import booking_service
     from src.api.accounts.application.accounts_cases import get_account_context
     from src.core.db import transaction
@@ -167,8 +167,7 @@ async def check_services(runtime, administrative, client, tokens):
         await db.execute(text("INSERT INTO nightingale.account_professionals(account_id,professional_id,user_id,created_at,updated_at) VALUES (:account,:professional,:user,clock_timestamp(),clock_timestamp())"), {"account": second, "professional": UUID(professional), "user": UUID(owner["userId"])})
         await db.execute(text("INSERT INTO nightingale.account_sync_heads(account_id,created_at,updated_at) VALUES (:account,clock_timestamp(),clock_timestamp())"), {"account": second})
     async with runtime() as db, transaction(db):
-        now = await dao_services.server_time(db)
-        await dao_offers.create_offer(db, {"account_id": second, "professional_id": UUID(professional), "service_id": offered, "duration_minutes_override": 45, "created_at": now, "updated_at": now}, commit=False)
+        await dao_offers.create_offer(db, {"account_id": second, "professional_id": UUID(professional), "service_id": offered, "duration_minutes_override": 45}, commit=False)
 
     assert (await submit(envelope("UpdateService", offered, {"defaultDurationMinutes": 20}, 1)))["status"] == "accepted"
     assert (await get(base + "/services", assistant))["items"][0]["effectiveDurationMinutes"] == 20
@@ -235,8 +234,7 @@ async def check_services(runtime, administrative, client, tokens):
     # The composite FK must reject a service owned by another professional.
     try:
         async with runtime() as db, transaction(db):
-            now = await dao_services.server_time(db)
-            await dao_offers.create_offer(db, {"account_id": UUID(base.rsplit("/",1)[1]), "professional_id": UUID(professional), "service_id": foreign, "duration_minutes_override": None, "created_at": now, "updated_at": now}, commit=False)
+            await dao_offers.create_offer(db, {"account_id": UUID(base.rsplit("/",1)[1]), "professional_id": UUID(professional), "service_id": foreign, "duration_minutes_override": None}, commit=False)
     except Exception as error:
         from src.core.db import DAOError
         assert isinstance(error, DAOError)

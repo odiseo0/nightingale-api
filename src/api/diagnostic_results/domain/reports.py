@@ -4,6 +4,7 @@ from pydantic import UUID7, AwareDatetime, ConfigDict, Field, model_validator
 
 from src.api.clinical_records.domain.clinical import ClinicalSourceType
 from src.api.clinical_records.domain.conditions import ClinicalDate
+from src.api.diagnostic_results.domain.results import CorrectDiagnosticReportResultPayload
 from src.core.schema import BaseModel, PageQuery
 
 ReportKind = Literal["laboratory", "imaging", "pathology", "other"]
@@ -49,6 +50,16 @@ class UpdateDiagnosticReportPayload(DiagnosticReportFields):
 
 class CorrectDiagnosticReportPayload(BaseModel):
     correction_reason: str = Field(min_length=1)
+    results: list[CorrectDiagnosticReportResultPayload]
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def unique_result_ids(self) -> Self:
+        ids = [result.result_id for result in self.results]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Los resultados no pueden repetir resultId")
+        return self
 
 
 class DiagnosticReportResponse(DiagnosticReportFields):

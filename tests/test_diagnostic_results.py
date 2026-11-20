@@ -4,6 +4,7 @@ from uuid import uuid7
 from pydantic import ValidationError
 
 from src.api.diagnostic_results.domain.reports import (
+    CorrectDiagnosticReportPayload,
     CreateDiagnosticReportPayload,
     UpdateDiagnosticReportPayload,
 )
@@ -56,6 +57,26 @@ class DiagnosticResultSchemaTests(unittest.TestCase):
             UpdateDiagnosticReportPayload.model_validate({})
         with self.assertRaises(ValidationError):
             UpdateDiagnosticReportResultPayload.model_validate({})
+
+    def test_report_correction_requires_the_complete_identified_result_set(self):
+        with self.assertRaises(ValidationError):
+            CorrectDiagnosticReportPayload.model_validate({"correctionReason": "Emisión"})
+        assert CorrectDiagnosticReportPayload.model_validate({
+            "correctionReason": "Emisión", "results": [],
+        }).results == []
+        result_id = uuid7()
+        item = {
+            "resultId": str(result_id), "analyteName": "Glucosa",
+            "resultKind": "numeric", "value": "92", "unit": "mg/dL",
+        }
+        corrected = CorrectDiagnosticReportPayload.model_validate({
+            "correctionReason": "Emisión", "results": [item],
+        })
+        assert corrected.results[0].result_id == result_id
+        with self.assertRaises(ValidationError):
+            CorrectDiagnosticReportPayload.model_validate({
+                "correctionReason": "Emisión", "results": [item, item],
+            })
 
 
 if __name__ == "__main__":

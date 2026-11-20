@@ -76,7 +76,7 @@ type EntryResponse = PatientConditionResponse | PatientAllergyIntoleranceRespons
 
 @dataclass(frozen=True)
 class EntryAdapter:
-    scoped: Callable[[UUID], Awaitable[ClinicalEntry | EmptyType]]
+    read: Callable[[UUID], Awaitable[ClinicalEntry | EmptyType]]
     create: Callable[
         [AccountContext, UUID, CreateEntryPayload, datetime], Awaitable[ClinicalEntry]
     ]
@@ -116,8 +116,8 @@ def section_review_response(
         reviewed_at=review.reviewed_at,
         active_count=active_count,
         version=review.version,
-        created_at=review.created_at,
-        updated_at=review.updated_at,
+        created_at=review.date_added,
+        updated_at=review.date_updated,
     )
 
 
@@ -128,8 +128,9 @@ async def current_section_review(
     section: EntrySection,
     active_count: int,
 ) -> ClinicalSectionReviewResponse:
-    review = await dao_section_reviews.scoped(
-        db, context.account.id, patient_id, section
+    review = await dao_section_reviews.get_by(
+        db, where={"account_id": context.account.id, "patient_id": patient_id, "section": section},
+        execution_options={"populate_existing": True}
     )
 
     return section_review_response(section, patient_id, review, active_count)
@@ -173,8 +174,9 @@ async def derive_section_review(
     if was_pertinent == pertinent:
         return []
 
-    review = await dao_section_reviews.scoped(
-        db, context.account.id, patient_id, section
+    review = await dao_section_reviews.get_by(
+        db, where={"account_id": context.account.id, "patient_id": patient_id, "section": section},
+        execution_options={"populate_existing": True}
     )
     expected = "has_entries" if pertinent else "unknown"
 
@@ -192,8 +194,8 @@ async def derive_section_review(
             source_type="unknown",
             reviewed_by_user_id=context.actor.user_id,
             reviewed_at=now,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_section_reviews.add(db, review)
@@ -202,7 +204,7 @@ async def derive_section_review(
         review.source_type = "unknown"
         review.reviewed_by_user_id = context.actor.user_id
         review.reviewed_at = now
-        review.updated_at = now
+        review.date_updated = now
         review.version += 1
         await dao_section_reviews.flush(db)
 
@@ -244,8 +246,9 @@ async def apply_section_review(
     if await lock_clinical_patient(db, context.account.id, patient_id) is Empty:
         return Err(AccountObjectNotFound())
 
-    review = await dao_section_reviews.scoped(
-        db, context.account.id, patient_id, section
+    review = await dao_section_reviews.get_by(
+        db, where={"account_id": context.account.id, "patient_id": patient_id, "section": section},
+        execution_options={"populate_existing": True}
     )
     current_version = 0 if review is Empty else review.version
 
@@ -275,8 +278,8 @@ async def apply_section_review(
             source_type=payload.source_type,
             reviewed_by_user_id=context.actor.user_id,
             reviewed_at=now,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_section_reviews.add(db, review)
@@ -285,7 +288,7 @@ async def apply_section_review(
         review.source_type = payload.source_type
         review.reviewed_by_user_id = context.actor.user_id
         review.reviewed_at = now
-        review.updated_at = now
+        review.date_updated = now
         review.version += 1
         await dao_section_reviews.flush(db)
 
@@ -333,14 +336,13 @@ async def read_section_review(
             return Err(AccountObjectNotFound())
 
         if history:
-            rows, total = await dao_section_review_histories.page(
+            rows, total = await dao_section_review_histories.get_multi(
                 db,
-                account_id,
-                patient_id,
-                section,
-                (query.page - 1) * query.shows,
-                query.shows,
-                query.after_version
+                where={"account_id": account_id, "patient_id": patient_id, "section": section},
+                page=(query.page - 1) * query.shows,
+                shows=query.shows,
+                ordering=[("version", False)],
+                after_version=query.after_version
                 if isinstance(query, ClinicalHistoryQuery)
                 else None,
             )
@@ -426,7 +428,7 @@ async def apply_entry_write(
 
         return Ok(await finish(entry, patient_id, was_pertinent, "created"))
 
-    entry = await adapter.scoped(entity_key)
+    entry = await adapter.read(entity_key)
 
     if entry is Empty:
         return Err(AccountObjectNotFound())
@@ -476,7 +478,7 @@ async def read_entry[Entry: PatientEntry, Response: BaseModel](
     section: EntrySection,
     entry_id: UUID | None,
     query: PageQuery,
-    scoped: Callable[[UUID], Awaitable[Entry | EmptyType]],
+    read: Callable[[UUID], Awaitable[Entry | EmptyType]],
     page: Callable[[PageQuery], Awaitable[tuple[list[Entry], int]]],
     response: Callable[[Entry], Response],
     audit_action: str,
@@ -495,7 +497,7 @@ async def read_entry[Entry: PatientEntry, Response: BaseModel](
             rows, total = await page(query)
             result = clinical_page(rows, total, response)
         else:
-            entry = await scoped(entry_id)
+            entry = await read(entry_id)
             if entry is Empty or entry.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
             result = response(entry)
@@ -515,7 +517,7 @@ async def read_entry_history[Entry: PatientEntry, Response: BaseModel](
     section: EntrySection,
     entry_id: UUID,
     query: ClinicalHistoryQuery,
-    scoped: Callable[[UUID], Awaitable[Entry | EmptyType]],
+    read: Callable[[UUID], Awaitable[Entry | EmptyType]],
     page: Callable[[int, int, int | None], Awaitable[tuple[list[Entry], int]]],
     response: Callable[[Entry], Response],
     audit_action: str,
@@ -527,7 +529,7 @@ async def read_entry_history[Entry: PatientEntry, Response: BaseModel](
         if isinstance(scope, Err):
             return scope
 
-        entry = await scoped(entry_id)
+        entry = await read(entry_id)
 
         if entry is Empty or entry.patient_id != patient_id:
             return Err(AccountObjectNotFound())

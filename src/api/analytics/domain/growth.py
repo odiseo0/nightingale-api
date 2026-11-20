@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Literal
 
 from pydantic import ConfigDict, Field
 
@@ -15,18 +14,16 @@ from src.core.schema import BaseModel
 
 
 class GrowthInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
     reference_code: ReferenceCode
     indicator: Indicator
     sex: Sex
     age_months: int = Field(ge=0)
     value: Decimal = Field(gt=0)
 
-
-class GrowthResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+
+class GrowthResult(BaseModel):
     reference_code: ReferenceCode
     indicator: Indicator
     sex: Sex
@@ -34,15 +31,15 @@ class GrowthResult(BaseModel):
     z_score: Decimal
     reference_version: str
 
-
-class GrowthLimit(BaseModel):
-    """La referencia no aplica: se conserva la medición y se explica el límite."""
-
     model_config = ConfigDict(extra="forbid")
 
+
+class GrowthLimit(BaseModel):
     indicator: Indicator
     age_months: int
     limit_explanation: str
+
+    model_config = ConfigDict(extra="forbid")
 
 
 def _nearest_row(input: GrowthInput) -> LmsRow | None:
@@ -53,22 +50,28 @@ def _nearest_row(input: GrowthInput) -> LmsRow | None:
         and row.indicator == input.indicator
         and row.sex == input.sex
     ]
+
     for row in rows:
         if row.age_months == input.age_months:
             return row
+
     return None
 
 
 def z_score_from_lms(value: Decimal, row: LmsRow) -> Decimal:
     ratio = value / row.mu
+
     if row.lambda_ == 0:
-        return Decimal(str(float(ratio).ln())) / row.sigma
+        return ratio.ln() / row.sigma
+
     power = float(ratio) ** float(row.lambda_)
+
     return Decimal(str((power - 1) / float(row.lambda_))) / row.sigma
 
 
 def compute_growth(input: GrowthInput) -> GrowthResult | GrowthLimit:
     bounds = INDICATOR_RANGES.get((input.reference_code, input.indicator))
+
     if bounds is None:
         return GrowthLimit(
             indicator=input.indicator,
@@ -77,6 +80,7 @@ def compute_growth(input: GrowthInput) -> GrowthResult | GrowthLimit:
         )
 
     low, high = bounds
+
     if not low <= input.age_months <= high:
         return GrowthLimit(
             indicator=input.indicator,
@@ -88,6 +92,7 @@ def compute_growth(input: GrowthInput) -> GrowthResult | GrowthLimit:
         )
 
     row = _nearest_row(input)
+
     if row is None:
         return GrowthLimit(
             indicator=input.indicator,
@@ -103,12 +108,3 @@ def compute_growth(input: GrowthInput) -> GrowthResult | GrowthLimit:
         z_score=z_score_from_lms(input.value, row),
         reference_version="who2006-lms-fixture-20261118",
     )
-
-
-__all__ = [
-    "GrowthInput",
-    "GrowthLimit",
-    "GrowthResult",
-    "compute_growth",
-    "z_score_from_lms",
-]

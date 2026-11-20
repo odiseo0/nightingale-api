@@ -14,25 +14,6 @@ from src.core.utils.utils import Empty, EmptyType
 
 
 class ClinicalEncounterDAO(DAO[ClinicalEncounter, BaseModel, BaseModel]):
-    async def scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        encounter_id: UUID,
-        *,
-        lock: bool = False,
-    ) -> ClinicalEncounter | EmptyType:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == encounter_id
-        )
-
-        if lock:
-            statement = statement.with_for_update()
-
-        row = await db.scalar(statement.execution_options(populate_existing=True))
-
-        return Empty if row is None else row
-
     async def page(
         self,
         db: AsyncSession,
@@ -95,30 +76,5 @@ class ClinicalEncounterDAO(DAO[ClinicalEncounter, BaseModel, BaseModel]):
         return row
 
 
-class ClinicalEncounterHistoryDAO(DAO[ClinicalEncounterHistory, BaseModel, BaseModel]):
-    async def page(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        encounter_id: UUID,
-        offset: int,
-        shows: int,
-        after_version: int | None,
-    ) -> tuple[list[ClinicalEncounterHistory], int]:
-        statement = select(self.model).where(
-            self.model.account_id == account_id, self.model.id == encounter_id
-        )
-
-        if after_version is not None:
-            statement = statement.where(self.model.version > after_version)
-
-        total = await self.count(db, statement)
-        rows = await db.scalars(
-            statement.order_by(self.model.version).offset(offset).limit(shows)
-        )
-
-        return list(rows), total
-
-
 dao_encounters = ClinicalEncounterDAO(ClinicalEncounter)
-dao_encounter_histories = ClinicalEncounterHistoryDAO(ClinicalEncounterHistory)
+dao_encounter_histories = DAO(ClinicalEncounterHistory)

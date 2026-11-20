@@ -109,7 +109,7 @@ async def booking_patient(
     if starts_at.tzinfo is None or starts_at.utcoffset() is None:
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
-    row = await dao_profiles.scoped(db, context.account.id, patient_id)
+    row = await dao_profiles.get_by(db, where={"account_id": context.account.id, "patient_id": patient_id}, execution_options={"populate_existing": True})
 
     if row is Empty:
         return Err(AccountObjectNotFound())
@@ -148,7 +148,7 @@ async def apply_patient_operation(
 
         data = payload
 
-        if await dao_profiles.scoped(db, context.account.id, data.patient_id) is Empty:
+        if await dao_profiles.get_by(db, where={"account_id": context.account.id, "patient_id": data.patient_id}, execution_options={"populate_existing": True}) is Empty:
             return Err(AccountObjectNotFound())
 
         if not await dao_identifiers.available_ids(db, [entity_key]):
@@ -163,8 +163,8 @@ async def apply_patient_operation(
                 "verification_status": "declared",
                 "verified_at": None,
                 "verified_by_user_id": None,
-                "created_at": now,
-                "updated_at": now,
+                "date_added": now,
+                "date_updated": now,
                 "version": 1,
             },
             commit=False,
@@ -188,7 +188,7 @@ async def apply_patient_operation(
             )
         )
 
-    row = await dao_profiles.scoped(db, context.account.id, entity_key)
+    row = await dao_profiles.get_by(db, where={"account_id": context.account.id, "patient_id": entity_key}, execution_options={"populate_existing": True})
 
     if action == "RegisterPatient":
         if expected_version != 0:
@@ -225,8 +225,8 @@ async def apply_patient_operation(
                 "completion_status": "draft",
                 "status": "active",
                 "version": 1,
-                "created_at": now,
-                "updated_at": now,
+                "date_added": now,
+                "date_updated": now,
             },
             commit=False,
         )
@@ -242,8 +242,8 @@ async def apply_patient_operation(
                     "verified_at": None,
                     "verified_by_user_id": None,
                     "version": 1,
-                    "created_at": now,
-                    "updated_at": now,
+                    "date_added": now,
+                    "date_updated": now,
                 },
                 commit=False,
             )
@@ -371,7 +371,7 @@ async def read_patients(
                 total=total,
             )
         else:
-            row = await dao_profiles.scoped(db, account_id, patient_id)
+            row = await dao_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, execution_options={"populate_existing": True})
 
             if row is Empty:
                 return Err(AccountObjectNotFound())
@@ -395,7 +395,7 @@ async def read_patients(
 async def clinical_patient(
     db: AsyncSession, account_id: UUID, patient_id: UUID
 ) -> PatientProfileResponse | EmptyType:
-    row = await dao_profiles.scoped(db, account_id, patient_id)
+    row = await dao_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, execution_options={"populate_existing": True})
 
     if row is Empty:
         return Empty
@@ -406,7 +406,7 @@ async def clinical_patient(
 async def lock_clinical_patient(
     db: AsyncSession, account_id: UUID, patient_id: UUID
 ) -> PatientProfileResponse | EmptyType:
-    row = await dao_profiles.lock_scoped(db, account_id, patient_id)
+    row = await dao_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, for_update=True, execution_options={"populate_existing": True})
 
     if row is Empty:
         return Empty
@@ -451,12 +451,17 @@ async def read_birth_date_changes(
         if scope.value.account.status != "active":
             return Err(AccessDenied())
 
-        if await dao_profiles.scoped(db, account_id, patient_id) is Empty:
+        if await dao_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, execution_options={"populate_existing": True}) is Empty:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_birth_changes.page(
-            db, account_id, patient_id, (query.page - 1) * query.shows, query.shows,
-            query.after_version,
+        rows, total = await dao_birth_changes.get_multi(
+            db,
+            where={"account_id": account_id, "patient_id": patient_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("patient_version", False), ("id", False)],
+            after_version=query.after_version,
+            after_version_field="patient_version",
         )
         response = PaginatedResponse[PatientBirthDateChangeResponse](
             items=[

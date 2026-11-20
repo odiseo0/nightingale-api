@@ -90,6 +90,19 @@ async def check_sync(runtime, administrative, client, tokens):
     assert accepted["state"]["deviceId"] == owner["deviceId"] and accepted["entityVersion"] == 1
     assert "originalResult" not in accepted
     assert await counts() == (1, 1, 1, 1, 1, 2)
+    async with administrative() as db:
+        stamps = (await db.execute(text("""
+            SELECT d.created_at,d.updated_at,r.completed_at,c.accepted_at,a.occurred_at,c.projection_json
+            FROM nightingale.account_device_accesses d
+            JOIN nightingale.operation_receipts r ON r.account_id=d.account_id AND r.operation_id=:operation
+            JOIN nightingale.change_log c ON c.account_id=d.account_id AND c.operation_id=r.operation_id
+            JOIN nightingale.audit_events a ON a.account_id=d.account_id AND a.operation_id=r.operation_id
+            WHERE d.account_id=:account AND d.device_id=:device
+        """), {"account": account_id, "device": UUID(owner["deviceId"]), "operation": UUID(first["operationId"])})).one()
+        assert stamps.updated_at == stamps.created_at
+        assert stamps.created_at >= stamps.completed_at
+        assert stamps.completed_at == stamps.accepted_at == stamps.occurred_at
+        assert stamps.projection_json == accepted["state"]
     duplicate = (await submit([dict(first, dependsOn=[], occurredAtLocal=None)]))[0]
     assert duplicate["status"] == "duplicate" and duplicate["originalResult"] == accepted
     assert "originalResult" not in duplicate["originalResult"]
@@ -116,6 +129,14 @@ async def check_sync(runtime, administrative, client, tokens):
     unsupported = operation(action="FutureOperation", entityKey=str(account_id), expectedVersion=1, payload={"noShowGraceMinutes": 20})
     results = await submit([unsupported, operation(dependsOn=[unsupported["operationId"]]), operation()])
     assert [item["error"]["code"] for item in results] == ["UNSUPPORTED_OPERATION", "DEPENDENCY_FAILED", "NO_CHANGES"]
+    invalid_key = operation(
+        action="RegisterPatient",
+        entityKey={"patientId": str(uuid7()), "contactPersonId": str(uuid7())},
+    )
+    mixed = await submit([operation(), invalid_key, operation()])
+    assert len(mixed) == 3
+    assert mixed[1]["status"] == "rejected" and mixed[1]["error"]["code"] == "VALIDATION_ERROR"
+    assert mixed[0]["error"]["code"] == mixed[2]["error"]["code"] == "NO_CHANGES"
 
     before = await counts()
     forward = operation()
@@ -125,6 +146,11 @@ async def check_sync(runtime, administrative, client, tokens):
     await submit([operation(payload={"value": "x" * 65536})], status=413)
     response = await client.post(base, content=b" " * (1024 * 1024) + b"{}", headers={**access.authorization(owner), "Content-Type": "application/json"})
     access.expect(response, 413)
+    understated = await client.post(base, content=b" " * (1024 * 1024) + b"{}", headers={
+        **access.authorization(owner), "Content-Type": "application/json", "Content-Length": "1",
+    })
+    access.expect(understated, 413)
+    assert understated.json()["correlationId"] == understated.headers["x-correlation-id"]
     assert await counts() == before
 
     # Add a member as a fixture; invitations remain T10 work.
@@ -303,6 +329,8 @@ async def check_sync(runtime, administrative, client, tokens):
     await submit([expired], another, 410)
     assert (await submit([dict(expired, expectedVersion=1)], another))[0]["error"]["code"] == "IDEMPOTENCY_CONFLICT"
 
+    await check_correction_fingerprints(submit, operation, another, administrative)
+
     # Global revocation and account acceptance serialize on identity before account rows.
     from src.api.authorization.application import authorization_cases
     original_control = authorization_cases.record_control
@@ -369,6 +397,71 @@ async def check_sync(runtime, administrative, client, tokens):
             receipt = await db.scalar(text("SELECT count(*) FROM nightingale.operation_receipts WHERE account_id=:account AND operation_id=:operation"), {"account": account_id, "operation": UUID(write["operationId"])})
             assert effect == receipt == int(acceptance_first)
     print("Global/account identity races passed: observed PostgreSQL waiters in both commit orders, without partial effect or result access after revocation.")
+
+
+async def check_correction_fingerprints(submit, operation, owner, administrative):
+    def measurement_operation(**changes):
+        return operation(owner, **changes)
+
+    async def send(envelope):
+        return (await submit([envelope], owner))[0]
+
+    patient = uuid7()
+    await send(measurement_operation(action="RegisterPatient", entityKey=str(patient),
+        payload={"fullName": "Fixture fingerprint"}))
+    measurement = uuid7()
+    await send(measurement_operation(action="RecordPatientMeasurement", entityKey=str(measurement),
+        payload={"patientId": str(patient), "kind": "weight", "value": 70,
+            "unit": "kg", "method": "manual", "measuredAt": "2026-01-01T10:00:00Z"}))
+
+    omitted = measurement_operation(action="CorrectPatientMeasurement", entityKey=str(measurement),
+        expectedVersion=1, payload={"correctionReason": "Fixture omission"})
+    accepted = await send(omitted)
+    assert accepted["status"] == "accepted" and accepted["entityVersion"] == 2
+    repeated = await send(omitted)
+    assert repeated["status"] == "duplicate" and repeated["originalResult"] == accepted
+    null_variant = {**omitted, "payload": {**omitted["payload"], "method": None}}
+    changed = await send(null_variant)
+    assert changed["status"] == "conflict" and changed["error"]["code"] == "IDEMPOTENCY_CONFLICT"
+
+    null_correction = measurement_operation(action="CorrectPatientMeasurement", entityKey=str(measurement),
+        expectedVersion=2, payload={"correctionReason": "Fixture null", "method": None})
+    nulled = await send(null_correction)
+    assert nulled["status"] == "accepted" and nulled["state"]["method"] is None
+    assert (await send(null_correction))["status"] == "duplicate"
+
+    concurrent = measurement_operation(action="CorrectPatientMeasurement", entityKey=str(measurement),
+        expectedVersion=3, payload={"value": 71, "correctionReason": "Fixture concurrent"})
+    raced = await asyncio.gather(send(concurrent), send(concurrent))
+    assert sorted(result["status"] for result in raced) == ["accepted", "duplicate"]
+
+    legacy = measurement_operation(action="CorrectPatientMeasurement", entityKey=str(measurement),
+        expectedVersion=4, payload={"correctionReason": "Fixture legacy"})
+    from src.api.sync.application import operations_cases
+    current_fingerprint = operations_cases._operation_fingerprint
+
+    def legacy_fingerprint(envelope, payload, *, legacy_correction=False):
+        return current_fingerprint(envelope, payload, legacy_correction=True)
+
+    with patch.object(operations_cases, "_operation_fingerprint", new=legacy_fingerprint):
+        legacy_accepted = await send(legacy)
+    assert legacy_accepted["status"] == "accepted" and legacy_accepted["entityVersion"] == 5
+    legacy_retry = await send(legacy)
+    assert legacy_retry["status"] == "duplicate" and legacy_retry["originalResult"] == legacy_accepted
+    legacy_null = {**legacy, "payload": {**legacy["payload"], "method": None}}
+    assert (await send(legacy_null))["status"] == "duplicate"
+
+    async with administrative() as db:
+        current = (await db.execute(text("""
+            SELECT version,method FROM nightingale.patient_measurements WHERE id=:id
+        """), {"id": measurement})).one()
+        assert current.version == 5 and current.method is None
+        assert await db.scalar(text("""
+            SELECT count(*) FROM nightingale.patient_measurement_histories WHERE id=:id
+        """), {"id": measurement}) == 5
+        assert await db.scalar(text("""
+            SELECT count(*) FROM nightingale.operation_receipts WHERE operation_id=:id
+        """), {"id": UUID(concurrent["operationId"])}) == 1
 
 
 async def main(check=check_sync):

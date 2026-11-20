@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db import DAO
@@ -35,11 +35,26 @@ class AnalyticPointDAO(DAO[AnalyticMeasurementPoint, BaseModel, BaseModel]):
         )
         await self.add(db, point)
 
+    async def delete_for_source(
+        self, db: AsyncSession, account_id: UUID, source_measurement_id: UUID
+    ) -> None:
+        await db.execute(
+            delete(self.model).where(
+                self.model.account_id == account_id,
+                self.model.source_measurement_id == source_measurement_id,
+            )
+        )
+
     async def clear(self, db: AsyncSession) -> None:
         await db.execute(delete(self.model))
 
 
 class AnalyticEtlStateDAO(DAO[AnalyticEtlState, BaseModel, BaseModel]):
+    async def lock(self, db: AsyncSession) -> None:
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended('nightingale_analytics_etl',0))")
+        )
+
     async def for_account(
         self, db: AsyncSession, account_id: UUID
     ) -> AnalyticEtlState | EmptyType:
@@ -49,19 +64,16 @@ class AnalyticEtlStateDAO(DAO[AnalyticEtlState, BaseModel, BaseModel]):
 
         return Empty if row is None else row
 
-    async def advance(self, db: AsyncSession, account_id: UUID, seq: int, now) -> None:
+    async def advance(self, db: AsyncSession, account_id: UUID, seq: int) -> None:
         row = await self.for_account(db, account_id)
 
         if row is Empty:
             await self.add(
                 db,
-                AnalyticEtlState(
-                    account_id=account_id, last_change_seq=seq, updated_at=now
-                ),
+                AnalyticEtlState(account_id=account_id, last_change_seq=seq),
             )
         else:
             row.last_change_seq = seq
-            row.updated_at = now
             await self.flush(db)
 
 

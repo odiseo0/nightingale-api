@@ -1,6 +1,6 @@
 # P-20261117-05-clinical-stage-3: funciones clínicas completas sin prescripción
 
-**Estado:** In progress. **Creado:** 2026-11-17. **Actualizado:** 2026-11-17. **Lista de tareas:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-11-17. **Actualizado:** 2026-11-18. **Lista de tareas:** [todo.md](todo.md).
 
 ## 1. Contexto y resultado
 
@@ -257,9 +257,9 @@ Cada bloque deja un recorrido funcional antes de comenzar el siguiente. No se cr
 
 #### C12 · Resto de Etapa 3 listo para revisión final
 
-- [ ] Todos los comandos pertinentes y recorridos ficticios pasan.
-- [ ] Documentación distingue servidor, consumidores, jurídico/operación y producción.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Todos los comandos pertinentes y recorridos ficticios pasan, incluida la verificación conjunta de CR-01 a CR-05.
+- [x] Documentación distingue servidor, consumidores, jurídico/operación y producción.
+- [x] Revisión y aceptación expresa del usuario. **C12 aceptado el 2026-11-18.**
 
 ## 8. Riesgos y mitigación
 

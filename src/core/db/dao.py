@@ -115,7 +115,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
             statement = self.options(statement, effective_options)
 
         if for_update:
-            statement = statement.with_for_update()
+            statement = statement.with_for_update(read=for_update == "read")
 
         result = (await db.execute(statement, **kwargs)).unique().scalar_one_or_none()
 
@@ -144,6 +144,8 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
         db: AsyncSession,
         where: dict[str, Any],
         options: list[tuple[str, StrategyOptions]] | None = None,
+        *,
+        for_update: bool | Literal["read"] = False,
         **kwargs: Unpack[Kwargs],
     ) -> ModelType | EmptyType:
         statement = select(self.model)
@@ -155,6 +157,9 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
 
         if options is not None:
             statement = self.options(statement, options)
+
+        if for_update:
+            statement = statement.with_for_update(read=for_update == "read")
 
         result = (await db.execute(statement, **kwargs)).unique().scalar_one_or_none()
 
@@ -172,6 +177,9 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
         shows: int | None = 100,
         ordering: list[tuple[str, bool]] | None = None,
         options: list[tuple[str, StrategyOptions]] | None = None,
+        after_version: int | None = None,
+        after_version_field: str = "version",
+        include_total: bool = True,
         **kwargs: Unpack[Kwargs],
     ) -> tuple[list[ModelType], int]:
         statement = select(self.model)
@@ -189,6 +197,9 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
 
             statement = statement.where(*conditions)
 
+        if after_version is not None:
+            statement = statement.where(getattr(self.model, after_version_field) > after_version)
+
         if ordering is None:
             ordering = [("date_added", True)]
 
@@ -201,7 +212,7 @@ class DAO[ModelType: Base, CreateSchema: BaseModel, UpdateSchema: BaseModel]:
         if shows is not None:
             paginated = paginated.limit(shows)
 
-        count = await self.count(db, statement)
+        count = await self.count(db, statement) if include_total else 0
         results = (await db.execute(paginated, **kwargs)).unique().scalars().all()
 
         return results, count

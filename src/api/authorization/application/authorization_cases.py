@@ -146,8 +146,8 @@ async def register_device(
                 "display_name": obj_in.device_name,
                 "client_version": obj_in.client_version,
                 "local_schema_version": obj_in.local_schema_version,
-                "created_at": now,
-                "updated_at": now,
+                "date_added": now,
+                "date_updated": now,
             },
         )
         token_id, secret, fingerprint = issue_token()
@@ -159,7 +159,7 @@ async def register_device(
                 "device_id": device.id,
                 "user_id": user.id,
                 "secret_hash": fingerprint,
-                "created_at": now,
+                "date_added": now,
             },
         )
         issued = DeviceTokenIssued(
@@ -217,7 +217,7 @@ async def rotate_token(
                 "device_id": actor.device_id,
                 "user_id": actor.user_id,
                 "secret_hash": fingerprint,
-                "created_at": now,
+                "date_added": now,
             },
         )
         await dao_device_tokens.update(
@@ -280,7 +280,7 @@ async def revoke_device(
             {
                 "status": "revoked",
                 "version": device.version + 1,
-                "updated_at": now,
+                "date_updated": now,
             },
             commit=False,
         )

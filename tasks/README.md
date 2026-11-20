@@ -1,12 +1,16 @@
 # Planes y tareas
 
+## Revisión general de código
+
+- [P-20261118-01-project-code-review](P-20261118-01-project-code-review/plan.md), **In progress**, con [revisión inicial](P-20261118-01-project-code-review/review.md) y [lista de control](P-20261118-01-project-code-review/todo.md). Cubre el árbol actual sin diffs de Git, ordena fallos por gravedad y prepara la reutilización de persistencia y la reducción de funciones largas. T01–T16 y T33–T44 Done; C01–C06 y C13–C17 aceptados el 2026-11-18. C08 tiene T20–T22 comprobadas y espera revisión del usuario; no se marca aceptado.
+
 ## Planes de componentes nuevos
 
 - [P-20261117-01-authorization-policies](P-20261117-01-authorization-policies/plan.md), **Completed**, con [lista de control](P-20261117-01-authorization-policies/todo.md). T01–T17 Done y C06 aceptado el 2026-11-18. El usuario autorizó pasar C01, aceptó C02/C03 y autorizó continuar hasta C06 sin aceptar por anticipado C04/C05. Pasaron 259 pruebas, los trece probes locales, los contratos y el build.
 - [P-20261117-02-account-subscriptions](P-20261117-02-account-subscriptions/plan.md), **Approved**, con [lista de control](P-20261117-02-account-subscriptions/todo.md). Implementa planes, asientos, USD/BCV, evidencias y verificación manual. Depende de C06 del plan de autorización; las decisiones `SU-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
 - [P-20261117-03-patient-billing](P-20261117-03-patient-billing/plan.md), **Approved**, con [lista de control](P-20261117-03-patient-billing/todo.md). Implementa precios, cargos, reportes del paciente, revisión, saldos, comprobantes y analítica. Depende de C10 de suscripciones; las decisiones `BI-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
 - [P-20261117-04-clinical-documents](P-20261117-04-clinical-documents/plan.md), **Approved**, con [lista de control](P-20261117-04-clinical-documents/todo.md). Implementa récipes/órdenes, emisión profesional, PDF, historia, paciente y QR como bloque acotado de Etapa 3. Depende de C10 de facturación; las decisiones `CD-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
-- [P-20261117-05-clinical-stage-3](P-20261117-05-clinical-stage-3/plan.md), **In progress**, con [lista de control](P-20261117-05-clinical-stage-3/todo.md). Cubre el resto de Etapa 3 sin prescripción/récipes. El usuario autorizó el inicio inmediato el 2026-11-17 sin esperar a Autorización ([D19](../docs/decisions.md#d19--plan-del-resto-de-etapa-3-sin-prescripción)): no altera Autorización ni otros planes. T01–T34 Done y C01–C11 aceptados el 2026-11-17/18 (C12 pendiente de revisión del usuario): medicación declarada, planes de cuidados, informes/resultados con adjuntos (S3 con aioaws; desarrollo local en `.tmp/attachments`), plantillas + odontología y analítica/crecimiento OMS implementados con suite, probes PostgreSQL reales y contratos exportados.
+- [P-20261117-05-clinical-stage-3](P-20261117-05-clinical-stage-3/plan.md), **Completed**, con [lista de control](P-20261117-05-clinical-stage-3/todo.md). Cubre el resto de Etapa 3 sin prescripción/récipes. T01–T36 Done y C01–C12 aceptados el 2026-11-17/18, incluida la verificación conjunta de críticos en P-20261118-01/C16. Medicación declarada, planes de cuidados, informes/resultados con adjuntos, plantillas + odontología y analítica/crecimiento OMS comprobados con suite, probes PostgreSQL reales y contratos exportados; consumidores y producción siguen fuera.
 
 ## Planes vigentes y antecedentes
 

@@ -57,10 +57,11 @@ async def booking_responsible(
     if contact_id is None:
         return Err(AccountRuleError("COMPLETENESS_CONFLICT")) if required else Ok(None)
 
-    link = await dao_relationships.scoped(
-        db, context.account.id, patient_id, contact_id
+    link = await dao_relationships.get_by(
+        db, where={"account_id": context.account.id, "patient_id": patient_id, "contact_person_id": contact_id},
+        execution_options={"populate_existing": True}
     )
-    contact = await dao_contacts.scoped(db, context.account.id, contact_id)
+    contact = await dao_contacts.get_by(db, where={"account_id": context.account.id, "id": contact_id}, execution_options={"populate_existing": True})
 
     if link is Empty or contact is Empty:
         return Err(AccountObjectNotFound())
@@ -99,14 +100,15 @@ async def apply_contact_operation(
             return Err(AccountRuleError("VALIDATION_ERROR"))
 
         patient_id, contact_id = entity_key["patientId"], entity_key["contactPersonId"]
-        profile = await dao_profiles.scoped(db, context.account.id, patient_id)
-        contact = await dao_contacts.scoped(db, context.account.id, contact_id)
+        profile = await dao_profiles.get_by(db, where={"account_id": context.account.id, "patient_id": patient_id}, execution_options={"populate_existing": True})
+        contact = await dao_contacts.get_by(db, where={"account_id": context.account.id, "id": contact_id}, execution_options={"populate_existing": True})
 
         if profile is Empty or contact is Empty:
             return Err(AccountObjectNotFound())
 
-        link = await dao_relationships.scoped(
-            db, context.account.id, patient_id, contact_id
+        link = await dao_relationships.get_by(
+            db, where={"account_id": context.account.id, "patient_id": patient_id, "contact_person_id": contact_id},
+            execution_options={"populate_existing": True}
         )
         row = link
     else:
@@ -119,7 +121,7 @@ async def apply_contact_operation(
             if existing is not Empty and existing.account_id != context.account.id:
                 return Err(AccountRuleError("INVALID_STATE_TRANSITION"))
 
-        row = await dao_contacts.scoped(db, context.account.id, entity_key)
+        row = await dao_contacts.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True})
 
     creating = action.startswith("Create")
 
@@ -227,8 +229,8 @@ async def apply_contact_operation(
             "account_id": context.account.id,
             "status": "active",
             "version": 1,
-            "created_at": now,
-            "updated_at": now,
+            "date_added": now,
+            "date_updated": now,
         }
 
         if relationship:
@@ -300,12 +302,12 @@ async def read_contacts(
 
         if (
             patient_id is not None
-            and await dao_profiles.scoped(db, account_id, patient_id) is Empty
+            and await dao_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, execution_options={"populate_existing": True}) is Empty
         ):
             return Err(AccountObjectNotFound())
 
         if contact_id is not None:
-            contact = await dao_contacts.scoped(db, account_id, contact_id)
+            contact = await dao_contacts.get_by(db, where={"account_id": account_id, "id": contact_id}, execution_options={"populate_existing": True})
 
             if contact is Empty:
                 return Err(AccountObjectNotFound())

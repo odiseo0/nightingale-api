@@ -4,10 +4,10 @@ from uuid import UUID
 from sqlalchemy import Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class Appointment(Base):
+class Appointment(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -28,8 +28,6 @@ class Appointment(Base):
     location_state_snapshot: Mapped[str] = mapped_column(Text)
     location_city_snapshot: Mapped[str] = mapped_column(Text)
     time_zone_snapshot: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
 
 
 class AppointmentHistory(Base):

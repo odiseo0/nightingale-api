@@ -6,8 +6,9 @@ from pydantic import UUID7, AwareDatetime, ConfigDict, Field
 from src.api.patients.domain.patients import PatientBirthDateChangeResponse
 from src.core.schema import BaseModel, PageQuery
 
-
-type ClinicalSourceType = Literal["patient", "related_person", "professional", "external_document", "unknown"]
+type ClinicalSourceType = Literal[
+    "patient", "related_person", "professional", "external_document", "unknown"
+]
 type SexAtBirth = Literal["male", "female", "other", "unknown"]
 
 

@@ -29,17 +29,19 @@ async def snapshot_specialty_templates(
     account_id = context.account.id
     items: list[SyncItem] = []
 
-    for template in await dao_templates.active_snapshot(db, account_id):
+    records = await dao_specialty_records.valid_snapshot(db, account_id)
+    required = {(record.template_id, record.template_version) for record in records}
+    for template in await dao_templates.for_snapshot(db, account_id, required):
         items.append(
             SyncItem(
                 entity_type="specialty_template",
-                entity_key=template.id,
+                entity_key={"templateId": template.id, "version": str(template.version)},
                 entity_version=template.version,
                 state=await template_response(db, template),
             )
         )
 
-    for record in await dao_specialty_records.valid_snapshot(db, account_id):
+    for record in records:
         items.append(
             SyncItem(
                 entity_type="specialty_record",

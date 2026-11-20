@@ -5,7 +5,10 @@ from uuid import UUID, uuid7
 from src.api.accounts.application.accounts_cases import account_context
 from src.api.accounts.domain.accounts import AccountContext, ClinicalSection
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
-from src.api.accounts.domain.policies import clinical_level_allows, clinical_section_for_action
+from src.api.accounts.domain.policies import (
+    clinical_level_allows,
+    clinical_section_for_action,
+)
 from src.api.audit.application.audit_cases import record_control
 from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.application.authorization_cases import authenticate
@@ -15,6 +18,7 @@ from src.api.clinical_records.domain.conditions import (
 )
 from src.api.patients.application.patients_cases import clinical_server_time
 from src.core import Err, Result
+from src.core.constants import CORRELATION_ID
 from src.core.schema import BaseModel, PaginatedResponse
 
 if TYPE_CHECKING:
@@ -24,7 +28,12 @@ if TYPE_CHECKING:
 def clinical_result_section(
     action: str, payload: BaseModel | None
 ) -> ClinicalSection | None:
-    section = payload.section if isinstance(payload, SetPatientClinicalSectionReviewPayload) else None
+    section = (
+        payload.section
+        if isinstance(payload, SetPatientClinicalSectionReviewPayload)
+        else None
+    )
+
     return clinical_section_for_action(action, section)
 
 
@@ -53,9 +62,8 @@ async def clinical_read_scope(
     if isinstance(scope, Err):
         return scope
 
-    if (
-        scope.value.account.status != "active"
-        or not clinical_level_allows(scope.value, section, "read")
+    if scope.value.account.status != "active" or not clinical_level_allows(
+        scope.value, section, "read"
     ):
         return Err(AccessDenied())
 
@@ -79,7 +87,7 @@ async def record_clinical_read(
             object_type=object_type,
             object_key=object_key,
             outcome="accepted",
-            correlation_id=uuid7(),
+            correlation_id=CORRELATION_ID.get() or uuid7(),
             occurred_at=await clinical_server_time(db),
         ),
     )

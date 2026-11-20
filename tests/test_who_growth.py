@@ -2,7 +2,7 @@ import unittest
 from decimal import Decimal
 
 from src.api.analytics.domain.growth import GrowthInput, compute_growth, z_score_from_lms
-from src.api.analytics.domain.references import FIXTURE_LMS_ROWS
+from src.api.analytics.domain.references import FIXTURE_LMS_ROWS, LmsRow
 
 
 class WhoGrowthTests(unittest.TestCase):
@@ -27,6 +27,15 @@ class WhoGrowthTests(unittest.TestCase):
             age_months=0, value=Decimal("4.5"),
         ))
         self.assertGreater(float(high.z_score), 0)
+
+    def test_zero_lambda_uses_decimal_logarithm(self):
+        row = LmsRow(
+            reference_code="who2006", indicator="weight_for_age", sex="male",
+            age_months=0, lambda_=Decimal("0"), mu=Decimal("10"),
+            sigma=Decimal("0.1"),
+        )
+        result = z_score_from_lms(Decimal("20"), row)
+        self.assertEqual(result, Decimal("2").ln() / Decimal("0.1"))
 
     def test_out_of_range_returns_limit_without_curve(self):
         result = compute_growth(GrowthInput(

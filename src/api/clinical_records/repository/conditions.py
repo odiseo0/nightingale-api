@@ -4,10 +4,10 @@ from uuid import UUID
 from sqlalchemy import Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class PatientCondition(Base):
+class PatientCondition(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -20,8 +20,6 @@ class PatientCondition(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
@@ -43,7 +41,7 @@ class PatientConditionHistory(Base):
     changed_at: Mapped[datetime]
 
 
-class PatientClinicalSectionReview(Base):
+class PatientClinicalSectionReview(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID] = mapped_column(primary_key=True)
     section: Mapped[str] = mapped_column(primary_key=True)
@@ -51,8 +49,6 @@ class PatientClinicalSectionReview(Base):
     source_type: Mapped[str] = mapped_column(Text, server_default="unknown")
     reviewed_by_user_id: Mapped[UUID]
     reviewed_at: Mapped[datetime]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 

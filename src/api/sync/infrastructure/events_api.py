@@ -61,6 +61,7 @@ async def events(
                 )
                 async for notice in stream_events(credential, connection, slot)
             )
+
             return BoundedEventSourceResponse(
                 frames, partial(close_events, connection, slot)
             )

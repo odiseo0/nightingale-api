@@ -1,12 +1,12 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Row, case, func, or_, select, text
+from sqlalchemy import Row, case, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db import DAO, DAOError
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
+from src.core.utils.utils import Empty, EmptyType, datetime_now
 
 from .models import (
     Account,
@@ -24,7 +24,6 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
         db: AsyncSession,
         account_id: UUID,
         changes: dict[str, object],
-        now: datetime,
     ) -> Account:
         account = await self.get_for_update(
             db, account_id, execution_options={"populate_existing": True}
@@ -36,7 +35,7 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
         return await self.update(
             db,
             account_id,
-            {**changes, "version": account.version + 1, "updated_at": now},
+            {**changes, "version": account.version + 1},
             commit=False,
         )
 
@@ -46,7 +45,7 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
         )
 
     async def get_server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        return datetime_now()
 
     async def is_known_time_zone(self, db: AsyncSession, name: str) -> bool:
         # Use the same catalog as the account constraint; no OS tzdata is needed.
@@ -124,18 +123,6 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
         return list(rows), total
 
-    async def get_scoped(
-        self, db: AsyncSession, account_id: UUID, user_id: UUID
-    ) -> AccountMembership | EmptyType:
-        row = await db.scalar(
-            select(self.model)
-            .where(self.model.account_id == account_id, self.model.user_id == user_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-
-        return row if row is not None else Empty
-
     async def set_status(
         self,
         db: AsyncSession,
@@ -147,7 +134,7 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
     ) -> AccountMembership:
         row.status = status
         row.version += 1
-        row.updated_at = now
+        row.date_updated = now
 
         await self.flush(db)
 
@@ -167,7 +154,7 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
             setattr(row, name, value)
 
         row.version += 1
-        row.updated_at = now
+        row.date_updated = now
         await self.flush(db)
 
         return row
@@ -186,8 +173,8 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
             self.model(
                 account_id=account_id,
                 user_id=user_id,
-                created_at=now,
-                updated_at=now,
+                date_added=now,
+                date_updated=now,
             ),
         )
 
@@ -198,7 +185,7 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
 
 class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
-    async def scoped(
+    async def for_account(
         self, db: AsyncSession, account_id: UUID, professional_id: UUID
     ) -> Row[Professional, str, str] | None:
         return (
@@ -289,7 +276,7 @@ class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
         )
 
     async def rename(
-        self, db: AsyncSession, professional_id: UUID, public_name: str, now: datetime
+        self, db: AsyncSession, professional_id: UUID, public_name: str
     ) -> Professional:
         professional = await self.get_for_update(
             db, professional_id, execution_options={"populate_existing": True}
@@ -304,7 +291,6 @@ class ProfessionalDAO(DAO[Professional, BaseModel, BaseModel]):
             {
                 "public_name": public_name,
                 "version": professional.version + 1,
-                "updated_at": now,
             },
             commit=False,
         )
@@ -327,8 +313,8 @@ class AccountProfessionalDAO(DAO[AccountProfessional, BaseModel, BaseModel]):
                 account_id=account_id,
                 professional_id=professional_id,
                 user_id=user_id,
-                created_at=now,
-                updated_at=now,
+                date_added=now,
+                date_updated=now,
             ),
         )
 
@@ -358,11 +344,9 @@ class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
         row: AccountDeviceAccess,
         status: str,
         user_id: UUID,
-        now: datetime,
     ) -> AccountDeviceAccess:
         row.status = status
         row.changed_by_user_id = user_id
-        row.updated_at = now
         row.version += 1
 
         await self.flush(db)
@@ -387,8 +371,8 @@ class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
                 user_id=user_id,
                 created_by_user_id=user_id,
                 changed_by_user_id=user_id,
-                created_at=now,
-                updated_at=now,
+                date_added=now,
+                date_updated=now,
             ),
         )
 
@@ -397,37 +381,8 @@ class AccountDeviceAccessDAO(DAO[AccountDeviceAccess, BaseModel, BaseModel]):
 
         return access
 
-    async def get_scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        device_id: UUID,
-    ) -> AccountDeviceAccess | EmptyType:
-        device = await db.scalar(
-            select(self.model)
-            .where(
-                self.model.account_id == account_id, self.model.device_id == device_id
-            )
-            .with_for_update(read=True)
-            .execution_options(populate_existing=True)
-        )
-
-        return device if device is not None else Empty
-
 
 class AccountInvitationDAO(DAO[AccountInvitation, BaseModel, BaseModel]):
-    async def get_scoped(
-        self, db: AsyncSession, invitation_id: UUID, account_id: UUID
-    ) -> AccountInvitation | EmptyType:
-        row = await db.scalar(
-            select(self.model)
-            .where(self.model.id == invitation_id, self.model.account_id == account_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-
-        return row if row is not None else Empty
-
     async def resolve(
         self,
         db: AsyncSession,
@@ -440,7 +395,7 @@ class AccountInvitationDAO(DAO[AccountInvitation, BaseModel, BaseModel]):
         row.status = "accepted" if accepted_operation_id is not None else "revoked"
         row.accepted_at = now if accepted_operation_id is not None else None
         row.accepted_operation_id = accepted_operation_id
-        row.updated_at = now
+        row.date_updated = now
         row.version += 1
 
         await self.flush(db)

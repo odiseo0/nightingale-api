@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException
 
+from src.core.constants import CORRELATION_ID
 from src.core.db import DAOError
 from src.core.schema import ApiError, FieldError
 
@@ -13,11 +14,6 @@ from src.core.schema import ApiError, FieldError
 async def no_query_parameters(request: Request):
     if request.query_params:
         raise HTTPException(status_code=422)
-
-
-async def bounded_body(request: Request):
-    if len(await request.body()) > 1024 * 1024:
-        raise HTTPException(status_code=413)
 
 
 async def request_correlation_id(request: Request):
@@ -55,13 +51,26 @@ def error_response(
 
 async def correlate_request(request: Request, call_next):
     request.state.correlation_id = uuid7()
-    response = await call_next(request)
-    response.headers["X-Correlation-ID"] = str(request.state.correlation_id)
+    token = CORRELATION_ID.set(request.state.correlation_id)
 
-    if request.url.path.startswith("/v1/"):
-        response.headers["Cache-Control"] = "no-store"
+    try:
+        response = await call_next(request)
 
-    return response
+        if response.status_code == 413:
+            response = error_response(
+                request,
+                413,
+                "REQUEST_TOO_LARGE",
+                "El cuerpo supera el límite permitido",
+            )
+        response.headers["X-Correlation-ID"] = str(request.state.correlation_id)
+
+        if request.url.path.startswith("/v1/"):
+            response.headers["Cache-Control"] = "no-store"
+
+        return response
+    finally:
+        CORRELATION_ID.reset(token)
 
 
 async def validation_error(request: Request, error: RequestValidationError):

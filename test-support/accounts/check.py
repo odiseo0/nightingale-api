@@ -253,6 +253,42 @@ async def check_accounts(runtime, administrative, client, tokens):
     access.expect(response, 404)
 
     await access.issue(client, tokens[0]["access_token"])
+    permission_columns = (
+        ("clinicalProfile", "clinical_profile_access"),
+        ("conditions", "conditions_access"),
+        ("allergies", "allergies_access"),
+        ("encounters", "encounters_access"),
+        ("notes", "notes_access"),
+        ("measurements", "measurements_access"),
+        ("immunizations", "immunizations_access"),
+        ("antecedents", "antecedents_access"),
+        ("declaredMedications", "declared_medications_access"),
+        ("carePlans", "care_plans_access"),
+        ("diagnosticReports", "diagnostic_reports_access"),
+        ("specialtyTemplates", "specialty_templates_access"),
+    )
+    levels = ("none", "read", "read_write")
+    async with administrative() as db:
+        async with db.begin():
+            membership = await db.get(
+                AccountMembership, (practice.account_id, UUID(assistant["userId"]))
+            )
+            for index, (_, column) in enumerate(permission_columns):
+                setattr(membership, column, levels[index % len(levels)])
+        stored_permissions = {
+            alias: getattr(membership, column) for alias, column in permission_columns
+        }
+    response = await client.get(
+        base + f"/members/{assistant['userId']}/clinical-permissions",
+        headers=access.authorization(owner),
+    )
+    access.expect(response, 200)
+    assert response.json()["clinicalPermissions"] == stored_permissions
+    response = await client.get(
+        base + f"/members/{assistant['userId']}/clinical-permissions",
+        headers=access.authorization(assistant),
+    )
+    access.expect(response, 403)
     devices = await call(runtime, get_devices, secrets[0], page=1, shows=1)
     next_devices = await call(runtime, get_devices, secrets[0], page=2, shows=1)
     assert isinstance(devices, Ok) and isinstance(next_devices, Ok)

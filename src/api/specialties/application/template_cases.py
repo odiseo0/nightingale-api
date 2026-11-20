@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid7
 
@@ -13,6 +14,7 @@ from src.api.clinical_records.application.access_cases import (
     clinical_read_scope,
     record_clinical_read,
 )
+from src.api.clinical_records.application.timeline_cases import project_stage3_entry
 from src.api.clinical_records.domain.clinical import ClinicalHistoryQuery
 from src.api.encounters.application.encounters_cases import valid_encounter_for_record
 from src.api.patients.application.patients_cases import (
@@ -87,7 +89,7 @@ def _field_rows(
 
 
 async def template_response(
-    db: AsyncSession, row: SpecialtyTemplate
+    db: AsyncSession, row: SpecialtyTemplate | SpecialtyTemplateHistory
 ) -> SpecialtyTemplateResponse:
     fields = await dao_template_fields.for_version(
         db, row.account_id, row.id, row.version
@@ -111,8 +113,8 @@ async def template_response(
             )
             for field in fields
         ],
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
     )
 
 
@@ -142,8 +144,8 @@ async def record_response(
         ],
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -193,7 +195,7 @@ async def _apply_template(db, context, action, entity_key, expected_version, pay
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_templates.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_templates.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
 
         now = await clinical_server_time(db)
@@ -206,8 +208,8 @@ async def _apply_template(db, context, action, entity_key, expected_version, pay
             change_note=payload.change_note,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_templates.add(db, row)
@@ -216,7 +218,7 @@ async def _apply_template(db, context, action, entity_key, expected_version, pay
         )
         event = "created"
     else:
-        row = await dao_templates.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_templates.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -227,7 +229,13 @@ async def _apply_template(db, context, action, entity_key, expected_version, pay
                 return Err(AccountRuleError("VALIDATION_ERROR"))
             if row.template_status == "retired":
                 return Err(AccountRuleError("NO_CHANGES", row.version))
+            current = await template_response(db, row)
             row.template_status = "retired"
+            row.version += 1
+            await dao_template_fields.replace_for_version(
+                db, context.account.id, row.id, row.version,
+                _field_rows(context.account.id, row.id, row.version, current.fields),
+            )
             event = "updated"
         elif action == "UpdateSpecialtyTemplate":
             if not isinstance(payload, UpdateSpecialtyTemplatePayload):
@@ -248,7 +256,7 @@ async def _apply_template(db, context, action, entity_key, expected_version, pay
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         await dao_templates.flush(db)
 
     state = await template_response(db, row)
@@ -264,12 +272,12 @@ async def _apply_template(db, context, action, entity_key, expected_version, pay
             version=row.version,
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
 
@@ -289,7 +297,7 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_specialty_records.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_specialty_records.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
         if await lock_clinical_patient(db, context.account.id, payload.patient_id) is Empty:
             return Err(AccountObjectNotFound())
@@ -298,19 +306,15 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
         ):
             return Err(AccountObjectNotFound())
 
-        template = await dao_templates.scoped(db, context.account.id, payload.template_id)
+        template = await dao_templates.get_by(db, where={"account_id": context.account.id, "id": payload.template_id}, execution_options={"populate_existing": True})
         if template is Empty or template.template_status != "active":
             return Err(AccountObjectNotFound())
 
-        invalid = await _unknown_fields(db, context, payload.template_id, template.version, payload.values)
+        invalid = await _validate_record_values(
+            db, context, payload.template_id, template.version, payload.values
+        )
         if invalid is not None:
             return invalid
-        if len({value.field_key for value in payload.values}) != len(payload.values):
-            return Err(AccountRuleError("VALIDATION_ERROR"))
-
-        missing_required = await _missing_required(db, context, payload.template_id, template.version, payload.values)
-        if missing_required is not None:
-            return missing_required
 
         now = await clinical_server_time(db)
         row = SpecialtyRecord(
@@ -325,8 +329,8 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_specialty_records.add(db, row)
@@ -335,7 +339,7 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
         )
         event = "created"
     else:
-        row = await dao_specialty_records.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_specialty_records.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -346,21 +350,31 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
         if action == "InvalidateSpecialtyRecord":
             if not isinstance(payload, InvalidateSpecialtyRecordPayload):
                 return Err(AccountRuleError("VALIDATION_ERROR"))
+            current = await record_response(db, row)
             row.record_status = "entered-in-error"
             row.correction_reason = payload.correction_reason
+            row.version += 1
+            await dao_specialty_record_values.replace_for_version(
+                db, context.account.id, row.id, row.version,
+                _value_rows(
+                    context.account.id, row.patient_id, row.id, row.version, current.values
+                ),
+            )
             event = "invalidated"
         elif action == "UpdateSpecialtyRecord":
             if not isinstance(payload, UpdateSpecialtyRecordPayload):
                 return Err(AccountRuleError("VALIDATION_ERROR"))
-            values = payload.values if payload.values is not None else []
-            invalid = await _unknown_fields(db, context, row.template_id, row.template_version, values)
-            if invalid is not None:
-                return invalid
-            missing_required = await _missing_required(
+            current = await record_response(db, row)
+            values = (
+                current.values
+                if "values" not in payload.model_fields_set
+                else payload.values or []
+            )
+            invalid = await _validate_record_values(
                 db, context, row.template_id, row.template_version, values
             )
-            if missing_required is not None:
-                return missing_required
+            if invalid is not None:
+                return invalid
             now = await clinical_server_time(db)
             row.version += 1
             if payload.recorded_at is not None:
@@ -374,7 +388,7 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         await dao_specialty_records.flush(db)
 
     state = await record_response(db, row)
@@ -393,13 +407,28 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
             version=row.version,
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
+    )
+
+    await project_stage3_entry(
+        db,
+        row.account_id,
+        patient_id=row.patient_id,
+        entry_type="specialty_record",
+        entry_id=row.id,
+        source_section="specialty_templates",
+        occurrence_date=None,
+        occurred_at=row.recorded_at,
+        date_precision="instant",
+        accepted_at=row.date_updated,
+        entity_version=row.version,
+        record_status=row.record_status,
     )
 
     return Ok(
@@ -412,19 +441,38 @@ async def _apply_record(db, context, action, entity_key, expected_version, paylo
     )
 
 
-async def _unknown_fields(db, context, template_id, template_version, values) -> Result | None:
-    fields = await dao_template_fields.for_version(db, context.account.id, template_id, template_version)
-    known = {field.field_key for field in fields}
-    if any(value.field_key not in known for value in values):
+async def _validate_record_values(
+    db: AsyncSession,
+    context: AccountContext,
+    template_id: UUID,
+    template_version: int,
+    values: Sequence[SpecialtyRecordValue],
+) -> Result[None, AccountRuleError] | None:
+    fields = await dao_template_fields.for_version(
+        db, context.account.id, template_id, template_version
+    )
+    definitions = {field.field_key: field for field in fields}
+    provided = [value.field_key for value in values]
+    if len(provided) != len(set(provided)) or any(
+        key not in definitions for key in provided
+    ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
-    return None
-
-
-async def _missing_required(db, context, template_id, template_version, values) -> Result | None:
-    fields = await dao_template_fields.for_version(db, context.account.id, template_id, template_version)
-    provided = {value.field_key for value in values}
-    if any(field.required and field.field_key not in provided for field in fields):
+    if any(
+        field.required and field.field_key not in provided for field in fields
+    ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
+
+    for value in values:
+        field = definitions[value.field_key]
+        matches = {
+            "text": value.value_text is not None,
+            "number": value.value_number is not None,
+            "boolean": value.value_boolean is not None,
+            "date_partial": value.value_date is not None,
+        }[field.field_kind]
+        if not matches:
+            return Err(AccountRuleError("VALIDATION_ERROR"))
+
     return None
 
 
@@ -442,7 +490,7 @@ async def read_templates(db, credential, account_id, query: SpecialtyTemplateQue
             response = clinical_page(items, total, lambda state: state)
             action = "ReadSpecialtyTemplates"
         else:
-            row = await dao_templates.scoped(db, account_id, template_id)
+            row = await dao_templates.get_by(db, where={"account_id": account_id, "id": template_id}, execution_options={"populate_existing": True})
             if row is Empty:
                 return Err(AccountObjectNotFound())
             response = await template_response(db, row)
@@ -459,12 +507,14 @@ async def read_template_history(db, credential, account_id, template_id, query: 
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_templates.scoped(db, account_id, template_id)
+        row = await dao_templates.get_by(db, where={"account_id": account_id, "id": template_id}, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_template_histories.page(
-            db, account_id, template_id, (query.page - 1) * query.shows, query.shows, query.after_version
+        rows, total = await dao_template_histories.get_multi(
+            db, where={"account_id": account_id, "id": template_id},
+            page=(query.page - 1) * query.shows, shows=query.shows,
+            ordering=[("version", False)], after_version=query.after_version,
         )
 
         states = []
@@ -489,8 +539,8 @@ async def read_template_history(db, credential, account_id, template_id, query: 
                         )
                         for field in fields
                     ],
-                    created_at=history_row.created_at,
-                    updated_at=history_row.updated_at,
+                    created_at=history_row.date_added,
+                    updated_at=history_row.date_updated,
                     action=history_row.action,
                     actor_user_id=history_row.actor_user_id,
                     operation_id=history_row.operation_id,
@@ -524,7 +574,7 @@ async def read_specialty_records(
             response = clinical_page(items, total, lambda state: state)
             action = "ReadSpecialtyRecords"
         else:
-            row = await dao_specialty_records.scoped(db, account_id, record_id)
+            row = await dao_specialty_records.get_by(db, where={"account_id": account_id, "id": record_id}, execution_options={"populate_existing": True})
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
             response = await record_response(db, row)
@@ -541,20 +591,28 @@ async def read_specialty_record_history(db, credential, account_id, patient_id, 
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_specialty_records.scoped(db, account_id, record_id)
+        row = await dao_specialty_records.get_by(db, where={"account_id": account_id, "id": record_id}, execution_options={"populate_existing": True})
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_specialty_record_histories.page(
-            db, account_id, record_id, (query.page - 1) * query.shows, query.shows, query.after_version
+        rows, total = await dao_specialty_record_histories.get_multi(
+            db, where={"account_id": account_id, "id": record_id},
+            page=(query.page - 1) * query.shows, shows=query.shows,
+            ordering=[("version", False)], after_version=query.after_version,
         )
-        response = clinical_page(rows, total, _record_history_view)
+        items = [await _record_history_view(db, row) for row in rows]
+        response = clinical_page(items, total, lambda state: state)
         await record_clinical_read(db, scope.value, "ReadSpecialtyRecordHistory", "specialty_record", str(record_id))
 
     return Ok(response)
 
 
-def _record_history_view(row: SpecialtyRecordHistory) -> SpecialtyRecordHistoryResponse:
+async def _record_history_view(
+    db: AsyncSession, row: SpecialtyRecordHistory
+) -> SpecialtyRecordHistoryResponse:
+    values = await dao_specialty_record_values.for_record_version(
+        db, row.account_id, row.id, row.version
+    )
     return SpecialtyRecordHistoryResponse(
         record_id=row.id,
         patient_id=row.patient_id,
@@ -562,11 +620,20 @@ def _record_history_view(row: SpecialtyRecordHistory) -> SpecialtyRecordHistoryR
         template_id=row.template_id,
         template_version=row.template_version,
         recorded_at=row.recorded_at,
-        values=[],
+        values=[
+            SpecialtyRecordValueResponse(
+                field_key=value.field_key,
+                value_text=value.value_text,
+                value_number=value.value_number,
+                value_boolean=value.value_boolean,
+                value_date=value.value_date,
+            )
+            for value in values
+        ],
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
         action=row.action,
         actor_user_id=row.actor_user_id,

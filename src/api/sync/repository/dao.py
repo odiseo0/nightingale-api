@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
+from src.core.utils.utils import Empty, EmptyType, datetime_now
 
 from .models import (
     AccountSyncHead,
@@ -57,7 +57,7 @@ class AccountSyncHeadDAO(DAO[AccountSyncHead, BaseModel, BaseModel]):
     ) -> int:
         head.last_sequence += 1
         head.permission_epoch += int(permission_changed)
-        head.updated_at = now
+        head.date_updated = now
         await self.flush(db)
 
         if commit:
@@ -78,7 +78,7 @@ class AccountSyncHeadDAO(DAO[AccountSyncHead, BaseModel, BaseModel]):
         return head if head is not None else Empty
 
     async def get_server_time(self, db: AsyncSession) -> datetime:
-        return (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        return datetime_now()
 
     async def get_for_account(
         self,
@@ -103,8 +103,8 @@ class AccountSyncHeadDAO(DAO[AccountSyncHead, BaseModel, BaseModel]):
             db,
             self.model(
                 account_id=account_id,
-                created_at=now,
-                updated_at=now,
+                date_added=now,
+                date_updated=now,
             ),
         )
 
@@ -125,12 +125,13 @@ class OperationReceiptDAO(DAO[OperationReceipt, BaseModel, BaseModel]):
         )
 
     async def purge_expired(self, db: AsyncSession) -> int:
+        now = datetime_now()
         keys = (
             select(
                 self.model.account_id, self.model.actor_user_id, self.model.operation_id
             )
             .where(
-                self.model.result_expires_at <= func.clock_timestamp(),
+                self.model.result_expires_at <= now,
                 self.model.result_json.is_not(None),
                 self.model.purged_at.is_(None),
             )
@@ -152,7 +153,7 @@ class OperationReceiptDAO(DAO[OperationReceipt, BaseModel, BaseModel]):
                     self.model.operation_id,
                 ).in_(keys),
             )
-            .values(result_json=None, purged_at=func.clock_timestamp())
+            .values(result_json=None, purged_at=now)
             .returning(self.model.operation_id)
         )
         result = await db.scalars(statement)
@@ -188,27 +189,10 @@ class OperationReceiptDAO(DAO[OperationReceipt, BaseModel, BaseModel]):
 
         return Empty if row is None else (row.action, row.clinical_section)
 
-    async def get_scoped(
-        self,
-        db: AsyncSession,
-        account_id: UUID,
-        actor_user_id: UUID,
-        operation_id: UUID,
-    ) -> OperationReceipt | EmptyType:
-        return await self.get_by(
-            db,
-            where={
-                "account_id": account_id,
-                "actor_user_id": actor_user_id,
-                "operation_id": operation_id,
-            },
-            execution_options={"populate_existing": True},
-        )
-
 
 class ChangeLogDAO(DAO[ChangeLog, BaseModel, BaseModel]):
     async def purge_expired(self, db: AsyncSession) -> int:
-        now = (await db.execute(select(func.clock_timestamp()))).scalar_one()
+        now = datetime_now()
         cutoff = now - timedelta(days=90)
         head = await db.scalar(
             select(AccountSyncHead)
@@ -255,7 +239,7 @@ class ChangeLogDAO(DAO[ChangeLog, BaseModel, BaseModel]):
             )
         )
         head.retained_from_sequence = retained_from
-        head.updated_at = now
+        head.date_updated = now
         await self.flush(db)
 
         return count
@@ -312,7 +296,7 @@ class SyncSnapshotDAO(DAO[SyncSnapshot, BaseModel, BaseModel]):
     async def purge_expired(self, db: AsyncSession) -> int:
         expired = (
             select(self.model.id)
-            .where(self.model.expires_at <= func.clock_timestamp())
+            .where(self.model.expires_at <= datetime_now())
             .order_by(self.model.expires_at, self.model.id)
             .limit(100)
             .with_for_update(skip_locked=True)
@@ -412,7 +396,7 @@ class SyncStreamLeaseDAO(DAO[SyncStreamLease, BaseModel, BaseModel]):
     async def purge_expired(self, db: AsyncSession) -> int:
         expired = (
             select(self.model.id)
-            .where(self.model.expires_at <= func.clock_timestamp())
+            .where(self.model.expires_at <= datetime_now())
             .order_by(self.model.expires_at, self.model.id)
             .limit(100)
             .with_for_update(skip_locked=True)

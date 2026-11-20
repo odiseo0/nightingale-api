@@ -45,12 +45,13 @@ async def snapshot_diagnostic_reports(
             )
 
     for attachment in await dao_report_attachments.valid_snapshot(db, account_id):
+        report_id = await dao_reports.for_attachment(db, account_id, attachment.id)
         items.append(
             SyncItem(
                 entity_type="report_attachment",
                 entity_key=attachment.id,
                 entity_version=attachment.version,
-                state=attachment_response(attachment),
+                state=attachment_response(attachment, report_id),
             )
         )
 

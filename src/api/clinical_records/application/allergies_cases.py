@@ -73,8 +73,8 @@ def allergy_response(
         last_occurrence_date=allergy.last_occurrence_date,
         source_type=allergy.source_type,
         correction_reason=allergy.correction_reason,
-        created_at=allergy.created_at,
-        updated_at=allergy.updated_at,
+        created_at=allergy.date_added,
+        updated_at=allergy.date_updated,
         version=allergy.version,
     )
 
@@ -158,7 +158,7 @@ async def record_allergy_history(
             action=action,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=allergy.updated_at,
+            changed_at=allergy.date_updated,
         ),
     )
 
@@ -246,8 +246,8 @@ async def apply_allergy_operation(
             correction_reason=data.correction_reason,
             created_by_user_id=ctx.actor.user_id,
             updated_by_user_id=ctx.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_allergies.add(db, allergy)
@@ -264,7 +264,7 @@ async def apply_allergy_operation(
         payload,
         operation_id,
         EntryAdapter(
-            scoped=lambda key: dao_allergies.scoped(db, context.account.id, key),
+            read=lambda key: dao_allergies.get_by(db, where={"account_id": context.account.id, "id": key}, execution_options={"populate_existing": True}),
             create=create,
             revise=lambda entry, changes, now: dao_allergies.revise(
                 db, entry, changes, now
@@ -321,7 +321,7 @@ async def read_allergies(
         "allergies",
         allergy_id,
         query,
-        lambda key: dao_allergies.scoped(db, account_id, key),
+        lambda key: dao_allergies.get_by(db, where={"account_id": account_id, "id": key}, execution_options={"populate_existing": True}),
         lambda filters: dao_allergies.page(db, account_id, patient_id, filters),
         allergy_response,
         "ReadPatientAllergies",
@@ -345,9 +345,10 @@ async def read_allergy_history(
         "allergies",
         allergy_id,
         query,
-        lambda key: dao_allergies.scoped(db, account_id, key),
-        lambda offset, shows, after: dao_allergy_histories.page(
-            db, account_id, allergy_id, offset, shows, after
+        lambda key: dao_allergies.get_by(db, where={"account_id": account_id, "id": key}, execution_options={"populate_existing": True}),
+        lambda offset, shows, after: dao_allergy_histories.get_multi(
+            db, where={"account_id": account_id, "id": allergy_id},
+            page=offset, shows=shows, ordering=[("version", False)], after_version=after,
         ),
         allergy_history_response,
         "ReadPatientAllergyHistory",

@@ -207,7 +207,7 @@ async def check_appointments(runtime, administrative, client, tokens):
     async with administrative() as db:
         row = await dao_appointments.get(db,appointment)
         template = appointment_response(row)
-        first_history = (await dao_histories.page(db,account_id,appointment,AppointmentHistoryQuery()))[0][0]
+        first_history = (await dao_histories.get_multi(db, where={"account_id": account_id, "appointment_id": appointment}, ordering=[("version", False)]))[0][0]
         history_template = AppointmentHistoryResponse.model_validate(first_history).model_dump()
     values = {**template,"id":foreign_id,"account_id":second,"starts_at":datetime.fromisoformat("2026-11-02T18:00:00Z"),"ends_at":datetime.fromisoformat("2026-11-02T18:30:00Z")}
     history_values = {**history_template,"appointment_id":foreign_id,"account_id":second,"starts_at":values["starts_at"],"ends_at":values["ends_at"]}
@@ -350,7 +350,7 @@ async def check_appointments(runtime, administrative, client, tokens):
     async with administrative() as db:
         row = await dao_appointments.get(db,probe_id)
         probe_state = appointment_response(row)
-        probe_history = (await dao_histories.page(db,account_id,probe_id,AppointmentHistoryQuery()))[0][0]
+        probe_history = (await dao_histories.get_multi(db, where={"account_id": account_id, "appointment_id": probe_id}, ordering=[("version", False)]))[0][0]
         probe_history_values = AppointmentHistoryResponse.model_validate(probe_history).model_dump()
     async def invalid_sql(kind,session_factory=runtime):
         before = await counts()

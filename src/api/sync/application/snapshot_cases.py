@@ -117,8 +117,8 @@ def snapshot_response(row: SyncSnapshot) -> Result[SnapshotResponse, SyncReadErr
         sequence=row.base_sequence,
         window=window,
         clinical_sections=row.clinical_sections,
-        issued_at=row.created_at,
-        expires_at=row.created_at + timedelta(days=90),
+        issued_at=row.date_added,
+        expires_at=row.date_added + timedelta(days=90),
     )
     cursor = sign_position(
         position.model_dump_json(by_alias=True).encode(),
@@ -226,7 +226,18 @@ async def create_snapshot(
                 | PatientNoteResponse
                 | PatientMeasurementResponse
                 | PatientImmunizationResponse
-                | PatientAntecedentResponse,
+                | PatientAntecedentResponse
+                | DeclaredMedicationResponse
+                | CarePlanResponse
+                | CarePlanGoalResponse
+                | CarePlanActionResponse
+                | CarePlanReviewResponse
+                | DiagnosticReportResponse
+                | DiagnosticReportResultResponse
+                | ReportAttachmentResponse
+                | SpecialtyRecordResponse
+                | DentalFindingResponse
+                | DentalTreatmentResponse,
             )
         }
         items.extend(
@@ -277,7 +288,7 @@ async def create_snapshot(
                 "audience": "owner" if context.owner else "members",
                 "item_count": len(items),
                 "clinical_sections": clinical_sections,
-                "created_at": now,
+                "date_added": now,
                 "expires_at": now + timedelta(minutes=15),
             },
         )

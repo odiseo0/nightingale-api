@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleError
+from pydantic import ConfigDict
+
+from src.api.accounts.domain.errors import AccountObjectNotFound
 from src.api.analytics.domain.growth import (
     GrowthInput,
     GrowthResult,
@@ -19,8 +21,6 @@ from src.api.clinical_records.repository.dao import (
 from src.api.patients.application.patients_cases import clinical_patient
 from src.core import Err, Ok
 from src.core.db import transaction
-from pydantic import ConfigDict
-
 from src.core.schema import BaseModel
 from src.core.utils.utils import Empty
 
@@ -58,19 +58,25 @@ async def read_growth(
 ):
     async with transaction(db):
         scope = await clinical_read_scope(db, credential, account_id, "measurements")
+
         if isinstance(scope, Err):
             return scope
 
         patient = await clinical_patient(db, account_id, patient_id)
+
         if patient is Empty:
             return Err(AccountObjectNotFound())
 
-        profile = await dao_clinical_profiles.scoped(db, account_id, patient_id)
+        profile = await dao_clinical_profiles.get_by(db, where={"account_id": account_id, "patient_id": patient_id}, execution_options={"populate_existing": True})
         sex: Sex | None = None
+
         if profile is not Empty and profile.sex_at_birth in ("male", "female"):
             sex = profile.sex_at_birth
 
-        rows = await dao_measurements.series_for_kind(db, account_id, patient_id, "weight")
+        rows = await dao_measurements.series_for_kind(
+            db, account_id, patient_id, "weight"
+        )
+
         if indicator != "weight_for_age":
             rows = []
 
@@ -80,14 +86,18 @@ async def read_growth(
         for row in rows:
             if row.record_status != "valid" or row.value is None:
                 continue
+
             measured_on = row.measured_at.date()
             age_months = None
+
             if patient.birth_date is not None:
                 age_months = (measured_on.year - patient.birth_date.year) * 12 + (
                     measured_on.month - patient.birth_date.month
                 )
+
                 if measured_on.day < patient.birth_date.day:
                     age_months -= 1
+
             if age_months is None or age_months < 0 or sex is None:
                 points.append(
                     GrowthPoint(
@@ -110,6 +120,7 @@ async def read_growth(
                     value=row.value,
                 )
             )
+
             if isinstance(result, GrowthResult):
                 reference_version = result.reference_version
                 points.append(

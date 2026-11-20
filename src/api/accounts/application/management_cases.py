@@ -78,7 +78,7 @@ async def account_professional(
     *,
     own: bool = False,
 ) -> Result[ProfessionalResponse, AccountObjectNotFound | AccessDenied]:
-    row = await dao_professionals.scoped(db, context.account.id, professional_id)
+    row = await dao_professionals.for_account(db, context.account.id, professional_id)
 
     if row is None:
         return Err(AccountObjectNotFound())
@@ -114,8 +114,6 @@ async def apply_management_operation(
 
     if not isinstance(entity_key, UUID):
         return Err(AccountRuleError("VALIDATION_ERROR"))
-
-    now = await dao_accounts.get_server_time(db)
 
     if action in ("UpdateAccountDetails", "UpdateAccountPolicy", "SetAccountStatus"):
         if entity_key != context.account.id:
@@ -167,7 +165,7 @@ async def apply_management_operation(
         if all(getattr(current, name) == value for name, value in changes.items()):
             return Err(AccountRuleError("NO_CHANGES", current.version))
 
-        row = await dao_accounts.revise(db, entity_key, changes, now)
+        row = await dao_accounts.revise(db, entity_key, changes)
         state = AccountResponse.model_validate(row)
 
         return Ok(
@@ -202,7 +200,7 @@ async def apply_management_operation(
         if data.public_name == row.public_name:
             return Err(AccountRuleError("NO_CHANGES", row.version))
 
-        row = await dao_professionals.rename(db, entity_key, data.public_name, now)
+        row = await dao_professionals.rename(db, entity_key, data.public_name)
         state = ProfessionalResponse.model_validate(row)
 
         return Ok(
@@ -221,7 +219,7 @@ async def apply_management_operation(
     if payload is None or payload.model_fields_set:
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
-    row = await dao_account_devices.get_scoped(db, context.account.id, entity_key)
+    row = await dao_account_devices.get_by(db, where={"account_id": context.account.id, "device_id": entity_key}, for_update="read", execution_options={"populate_existing": True})
 
     if row is Empty:
         return Err(AccountObjectNotFound())
@@ -241,8 +239,9 @@ async def apply_management_operation(
 
     if target_status == "active":
         users = await identified_users(db, [row.user_id])
-        membership = await dao_memberships.get_scoped(
-            db, context.account.id, row.user_id
+        membership = await dao_memberships.get_by(
+            db, where={"account_id": context.account.id, "user_id": row.user_id},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if (
@@ -254,7 +253,7 @@ async def apply_management_operation(
             return Err(AccessDenied())
 
     row = await dao_account_devices.set_status(
-        db, row, target_status, context.actor.user_id, now
+        db, row, target_status, context.actor.user_id
     )
 
     state = AccountDeviceResponse(
@@ -337,8 +336,8 @@ async def get_team(
                     if row.user_id == context.account.owner_user_id
                     else "assistant",
                     status=row.status,
-                    created_at=row.created_at,
-                    updated_at=row.updated_at,
+                    created_at=row.date_added,
+                    updated_at=row.date_updated,
                     version=row.version,
                 )
                 for row in rows
@@ -402,7 +401,7 @@ async def get_member_clinical_permissions(
         if not context.owner or context.account.status != "active":
             return Err(AccessDenied())
 
-        row = await dao_memberships.get_scoped(db, account_id, user_id)
+        row = await dao_memberships.get_by(db, where={"account_id": account_id, "user_id": user_id}, for_update=True, execution_options={"populate_existing": True})
 
         if row is Empty:
             return Err(AccountObjectNotFound())
@@ -413,6 +412,15 @@ async def get_member_clinical_permissions(
                 clinical_profile=row.clinical_profile_access,
                 conditions=row.conditions_access,
                 allergies=row.allergies_access,
+                encounters=row.encounters_access,
+                notes=row.notes_access,
+                measurements=row.measurements_access,
+                immunizations=row.immunizations_access,
+                antecedents=row.antecedents_access,
+                declared_medications=row.declared_medications_access,
+                care_plans=row.care_plans_access,
+                diagnostic_reports=row.diagnostic_reports_access,
+                specialty_templates=row.specialty_templates_access,
             ),
             membership_version=row.version,
         )

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from src.api.clinical_records.application.access_cases import (
     clinical_read_scope,
     record_clinical_read,
 )
+from src.api.clinical_records.application.timeline_cases import _date_precision, project_stage3_entry
 from src.api.clinical_records.domain.clinical import ClinicalHistoryQuery
 from src.api.diagnostic_results.domain.reports import (
     CorrectDiagnosticReportPayload,
@@ -24,7 +26,9 @@ from src.api.diagnostic_results.domain.reports import (
 )
 from src.api.diagnostic_results.domain.results import (
     AddDiagnosticReportResultPayload,
+    CorrectDiagnosticReportResultPayload,
     DiagnosticReportResultHistoryResponse,
+    DiagnosticReportResultQuery,
     DiagnosticReportResultResponse,
     InvalidateDiagnosticReportResultPayload,
     InvalidateReportAttachmentPayload,
@@ -91,8 +95,8 @@ def report_response(row: DiagnosticReport) -> DiagnosticReportResponse:
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -112,16 +116,19 @@ def result_response(row: DiagnosticReportResult) -> DiagnosticReportResultRespon
         reference_text=row.reference_text,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
 
-def attachment_response(row: ReportAttachment) -> ReportAttachmentResponse:
+def attachment_response(
+    row: ReportAttachment, report_id: UUID | None = None
+) -> ReportAttachmentResponse:
     return ReportAttachmentResponse(
         attachment_id=row.id,
-        report_id=None,
+        patient_id=row.patient_id,
+        report_id=report_id,
         file_name=row.file_name,
         content_type=row.content_type,
         byte_size=row.byte_size,
@@ -129,8 +136,8 @@ def attachment_response(row: ReportAttachment) -> ReportAttachmentResponse:
         uploaded_at=row.uploaded_at,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
@@ -140,6 +147,18 @@ def _history_fields(state, *extra: str) -> dict:
     for key in ("report_id", "result_id", "attachment_id", *extra):
         data.pop(key, None)
     return data
+
+
+async def _attachment_matches_report(
+    db: AsyncSession, account_id: UUID, patient_id: UUID, attachment_id: UUID
+) -> bool:
+    attachment = await dao_report_attachments.get_by(db, where={"account_id": account_id, "id": attachment_id}, execution_options={"populate_existing": True})
+
+    return (
+        attachment is not Empty
+        and attachment.patient_id == patient_id
+        and attachment.record_status == "valid"
+    )
 
 
 async def apply_diagnostic_operation(
@@ -169,7 +188,7 @@ async def _apply_report(db, context, action, entity_key, expected_version, paylo
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_reports.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_reports.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
         if await lock_clinical_patient(db, context.account.id, payload.patient_id) is Empty:
             return Err(AccountObjectNotFound())
@@ -178,12 +197,10 @@ async def _apply_report(db, context, action, entity_key, expected_version, paylo
         ):
             return Err(AccountObjectNotFound())
 
-        if payload.attachment_id is not None:
-            attachment = await dao_report_attachments.scoped(
-                db, context.account.id, payload.attachment_id
-            )
-            if attachment is Empty or attachment.patient_id != payload.patient_id:
-                return Err(AccountObjectNotFound())
+        if payload.attachment_id is not None and not await _attachment_matches_report(
+            db, context.account.id, payload.patient_id, payload.attachment_id
+        ):
+            return Err(AccountObjectNotFound())
 
         now = await clinical_server_time(db)
         row = DiagnosticReport(
@@ -197,14 +214,14 @@ async def _apply_report(db, context, action, entity_key, expected_version, paylo
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_reports.add(db, row)
         event = "created"
     else:
-        row = await dao_reports.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_reports.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -223,6 +240,11 @@ async def _apply_report(db, context, action, entity_key, expected_version, paylo
             changes = payload.model_dump(exclude_unset=True)
             if all(getattr(row, name) == value for name, value in changes.items()):
                 return Err(AccountRuleError("NO_CHANGES", row.version))
+            attachment_id = changes.get("attachment_id")
+            if attachment_id is not None and not await _attachment_matches_report(
+                db, context.account.id, row.patient_id, attachment_id
+            ):
+                return Err(AccountObjectNotFound())
             for name, value in changes.items():
                 setattr(row, name, value)
             event = "updated"
@@ -230,7 +252,7 @@ async def _apply_report(db, context, action, entity_key, expected_version, paylo
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_reports.flush(db)
 
@@ -241,26 +263,155 @@ async def _apply_report(db, context, action, entity_key, expected_version, paylo
             account_id=row.account_id,
             id=row.id,
             **_history_fields(state),
+            attachment_id=row.attachment_id,
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
 
-    return Ok(
-        AccountEffect(
+    occurrence_date, date_precision = _date_precision(row.sample_date or row.issued_date)
+    await project_stage3_entry(
+        db,
+        row.account_id,
+        patient_id=row.patient_id,
+        entry_type="diagnostic_report",
+        entry_id=row.id,
+        source_section="diagnostic_reports",
+        occurrence_date=occurrence_date,
+        occurred_at=row.date_updated,
+        date_precision=date_precision,
+        accepted_at=row.date_updated,
+        entity_version=row.version,
+        record_status=row.record_status,
+    )
+    changes = [
+        AccountChange(
+            "diagnostic_report",
+            str(row.id),
             state,
             state.version,
-            [AccountChange("diagnostic_report", str(row.id), state, state.version, "clinical_diagnostic_reports")],
-            False,
+            "clinical_diagnostic_reports",
         )
+    ]
+    if action == "CorrectDiagnosticReport" and isinstance(payload, CorrectDiagnosticReportPayload):
+        corrected = await _replace_report_results(
+            db, context, row, payload, operation_id, row.date_updated
+        )
+        if isinstance(corrected, Err):
+            return corrected
+        changes.extend(corrected.value)
+
+    return Ok(AccountEffect(state, state.version, changes, False))
+
+
+async def _corrected_result_change(
+    db: AsyncSession,
+    context: AccountContext,
+    row: DiagnosticReportResult,
+    operation_id: UUID,
+    event: str,
+) -> AccountChange:
+    state = result_response(row)
+    await dao_report_result_histories.add(
+        db,
+        DiagnosticReportResultHistory(
+            account_id=row.account_id,
+            id=row.id,
+            report_id=row.report_id,
+            **_history_fields(state),
+            created_by_user_id=row.created_by_user_id,
+            updated_by_user_id=row.updated_by_user_id,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
+            version=row.version,
+            action=event,
+            actor_user_id=context.actor.user_id,
+            operation_id=operation_id,
+            changed_at=row.date_updated,
+        ),
     )
+
+    return AccountChange(
+        "diagnostic_report_result",
+        str(row.id),
+        state,
+        row.version,
+        "clinical_diagnostic_reports",
+    )
+
+
+async def _replace_report_results(
+    db: AsyncSession,
+    context: AccountContext,
+    report: DiagnosticReport,
+    payload: CorrectDiagnosticReportPayload,
+    operation_id: UUID,
+    now: datetime,
+) -> Result[list[AccountChange], AccountObjectNotFound]:
+    existing = {
+        row.id: row
+        for row in await dao_report_results.for_report(db, report.account_id, report.id)
+    }
+    retained = set()
+    changes = []
+
+    for item in payload.results:
+        row = existing.get(item.result_id)
+        if row is None:
+            if await dao_report_results.get(db, item.result_id) is not Empty:
+                return Err(AccountObjectNotFound())
+            row = DiagnosticReportResult(
+                id=item.result_id,
+                account_id=report.account_id,
+                patient_id=report.patient_id,
+                report_id=report.id,
+                **item.model_dump(exclude={"result_id"}),
+                record_status="valid",
+                correction_reason=payload.correction_reason,
+                created_by_user_id=context.actor.user_id,
+                updated_by_user_id=context.actor.user_id,
+                date_added=now,
+                date_updated=now,
+                version=1,
+            )
+            await dao_report_results.add(db, row)
+            event = "created"
+        else:
+            if row.record_status != "valid":
+                return Err(AccountObjectNotFound())
+            values = item.model_dump(exclude={"result_id"})
+            if all(getattr(row, name) == value for name, value in values.items()):
+                retained.add(row.id)
+                continue
+            for name, value in values.items():
+                setattr(row, name, value)
+            row.correction_reason = payload.correction_reason
+            row.updated_by_user_id = context.actor.user_id
+            row.date_updated = now
+            row.version += 1
+            await dao_report_results.flush(db)
+            event = "updated"
+        retained.add(row.id)
+        changes.append(await _corrected_result_change(db, context, row, operation_id, event))
+
+    for row in existing.values():
+        if row.id not in retained and row.record_status == "valid":
+            row.record_status = "entered-in-error"
+            row.correction_reason = payload.correction_reason
+            row.updated_by_user_id = context.actor.user_id
+            row.date_updated = now
+            row.version += 1
+            await dao_report_results.flush(db)
+            changes.append(await _corrected_result_change(db, context, row, operation_id, "invalidated"))
+
+    return Ok(changes)
 
 
 async def _apply_result(db, context, action, entity_key, expected_version, payload, operation_id):
@@ -269,9 +420,9 @@ async def _apply_result(db, context, action, entity_key, expected_version, paylo
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_report_results.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_report_results.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
-        report = await dao_reports.scoped(db, context.account.id, payload.report_id)
+        report = await dao_reports.get_by(db, where={"account_id": context.account.id, "id": payload.report_id}, execution_options={"populate_existing": True})
         if report is Empty or report.patient_id != payload.patient_id or report.record_status != "valid":
             return Err(AccountObjectNotFound())
 
@@ -286,14 +437,14 @@ async def _apply_result(db, context, action, entity_key, expected_version, paylo
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_report_results.add(db, row)
         event = "created"
     else:
-        row = await dao_report_results.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_report_results.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -336,7 +487,7 @@ async def _apply_result(db, context, action, entity_key, expected_version, paylo
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_report_results.flush(db)
 
@@ -350,13 +501,13 @@ async def _apply_result(db, context, action, entity_key, expected_version, paylo
             **_history_fields(state),
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
 
@@ -370,13 +521,64 @@ async def _apply_result(db, context, action, entity_key, expected_version, paylo
     )
 
 
+async def _link_report_attachment(
+    db: AsyncSession,
+    context: AccountContext,
+    report_id: UUID,
+    attachment_id: UUID,
+    patient_id: UUID,
+    operation_id: UUID,
+    now: datetime,
+) -> Result[AccountChange, AccountObjectNotFound]:
+    report = await dao_reports.get_by(db, where={"account_id": context.account.id, "id": report_id}, for_update=True, execution_options={"populate_existing": True})
+    if (
+        report is Empty
+        or report.patient_id != patient_id
+        or report.record_status != "valid"
+    ):
+        return Err(AccountObjectNotFound())
+
+    report.attachment_id = attachment_id
+    report.updated_by_user_id = context.actor.user_id
+    report.date_updated = now
+    report.version += 1
+    await dao_reports.flush(db)
+    state = report_response(report)
+    await dao_report_histories.add(
+        db,
+        DiagnosticReportHistory(
+            account_id=report.account_id,
+            id=report.id,
+            **_history_fields(state),
+            attachment_id=attachment_id,
+            created_by_user_id=report.created_by_user_id,
+            updated_by_user_id=report.updated_by_user_id,
+            date_added=report.date_added,
+            date_updated=report.date_updated,
+            version=report.version,
+            action="updated",
+            actor_user_id=context.actor.user_id,
+            operation_id=operation_id,
+            changed_at=now,
+        ),
+    )
+
+    return Ok(AccountChange(
+        "diagnostic_report",
+        str(report.id),
+        state,
+        report.version,
+        "clinical_diagnostic_reports",
+    ))
+
+
 async def _apply_attachment(db, context, action, entity_key, expected_version, payload, operation_id):
     if action == "UploadReportAttachment":
         if not isinstance(payload, UploadReportAttachmentPayload):
             return Err(AccountRuleError("VALIDATION_ERROR"))
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
-        if await dao_report_attachments.scoped(db, context.account.id, entity_key) is not Empty:
+        if await dao_report_attachments.get_by(db, where={"account_id": context.account.id, "id": entity_key}, execution_options={"populate_existing": True}) is not Empty:
             return Err(AccountRuleError("VERSION_CONFLICT", 1))
         if await lock_clinical_patient(db, context.account.id, payload.patient_id) is Empty:
             return Err(AccountObjectNotFound())
@@ -405,8 +607,8 @@ async def _apply_attachment(db, context, action, entity_key, expected_version, p
             correction_reason=None,
             created_by_user_id=context.actor.user_id,
             updated_by_user_id=context.actor.user_id,
-            created_at=now,
-            updated_at=now,
+            date_added=now,
+            date_updated=now,
             version=1,
         )
         await dao_report_attachments.add(db, row)
@@ -415,7 +617,7 @@ async def _apply_attachment(db, context, action, entity_key, expected_version, p
         )
         event = "created"
     else:
-        row = await dao_report_attachments.scoped(db, context.account.id, entity_key, lock=True)
+        row = await dao_report_attachments.get_by(db, where={"account_id": context.account.id, "id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if row is Empty:
             return Err(AccountObjectNotFound())
         if row.version != expected_version:
@@ -433,39 +635,53 @@ async def _apply_attachment(db, context, action, entity_key, expected_version, p
             return Err(AccountRuleError("UNSUPPORTED_OPERATION"))
 
         row.updated_by_user_id = context.actor.user_id
-        row.updated_at = await clinical_server_time(db)
+        row.date_updated = await clinical_server_time(db)
         row.version += 1
         await dao_report_attachments.flush(db)
 
-    state = attachment_response(row)
+    report_id = payload.report_id if action == "UploadReportAttachment" else None
+    linked = None
+    if report_id is not None:
+        linked = await _link_report_attachment(
+            db, context, report_id, row.id, row.patient_id, operation_id, row.date_updated
+        )
+        if isinstance(linked, Err):
+            return linked
+
+    state = attachment_response(row, report_id)
     await dao_report_attachment_histories.add(
         db,
         ReportAttachmentHistory(
             account_id=row.account_id,
             id=row.id,
             patient_id=row.patient_id,
-            **_history_fields(state),
+            **_history_fields(state, "patient_id"),
             storage_key=row.storage_key,
             created_by_user_id=row.created_by_user_id,
             updated_by_user_id=row.updated_by_user_id,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            date_added=row.date_added,
+            date_updated=row.date_updated,
             version=row.version,
             action=event,
             actor_user_id=context.actor.user_id,
             operation_id=operation_id,
-            changed_at=row.updated_at,
+            changed_at=row.date_updated,
         ),
     )
 
-    return Ok(
-        AccountEffect(
+    changes = [
+        AccountChange(
+            "report_attachment",
+            str(row.id),
             state,
             state.version,
-            [AccountChange("report_attachment", str(row.id), state, state.version, "clinical_diagnostic_reports")],
-            False,
+            "clinical_diagnostic_reports",
         )
-    )
+    ]
+    if linked is not None:
+        changes.append(linked.value)
+
+    return Ok(AccountEffect(state, state.version, changes, False))
 
 
 async def read_reports(
@@ -491,7 +707,7 @@ async def read_reports(
             response = clinical_page(rows, total, report_response)
             action = "ReadPatientDiagnosticReports"
         else:
-            row = await dao_reports.scoped(db, account_id, report_id)
+            row = await dao_reports.get_by(db, where={"account_id": account_id, "id": report_id}, execution_options={"populate_existing": True})
             if row is Empty or row.patient_id != patient_id:
                 return Err(AccountObjectNotFound())
             response = report_response(row)
@@ -508,12 +724,17 @@ async def read_report_history(db, credential, account_id, patient_id, report_id,
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_reports.scoped(db, account_id, report_id)
+        row = await dao_reports.get_by(db, where={"account_id": account_id, "id": report_id}, execution_options={"populate_existing": True})
         if row is Empty or row.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
-        rows, total = await dao_report_histories.page(
-            db, account_id, report_id, (query.page - 1) * query.shows, query.shows, query.after_version
+        rows, total = await dao_report_histories.get_multi(
+            db,
+            where={"account_id": account_id, "id": report_id},
+            page=(query.page - 1) * query.shows,
+            shows=query.shows,
+            ordering=[("version", False)],
+            after_version=query.after_version,
         )
         response = clinical_page(rows, total, _report_history)
         await record_clinical_read(db, scope.value, "ReadPatientDiagnosticReportHistory", "diagnostic_report", str(report_id))
@@ -551,47 +772,57 @@ def report_history_view(row: DiagnosticReportHistory) -> DiagnosticReportRespons
         captured_at_local=row.captured_at_local,
         record_status=row.record_status,
         correction_reason=row.correction_reason,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+        created_at=row.date_added,
+        updated_at=row.date_updated,
         version=row.version,
     )
 
 
-async def read_report_results(db, credential, account_id, patient_id, report_id):
-    async with transaction(db):
-        scope = await clinical_read_scope(db, credential, account_id, "diagnostic_reports")
-        if isinstance(scope, Err):
-            return scope
-
-        report = await dao_reports.scoped(db, account_id, report_id)
-        if report is Empty or report.patient_id != patient_id:
-            return Err(AccountObjectNotFound())
-
-        rows = [
-            result
-            for result in await dao_report_results.for_report(db, account_id, report_id)
-            if result.record_status == "valid"
-        ]
-        response = clinical_page(rows, len(rows), result_response)
-        await record_clinical_read(db, scope.value, "ReadPatientDiagnosticReportResults", "diagnostic_report", str(report_id))
-
-    return Ok(response)
-
-
-async def read_attachment(
-    db: AsyncSession, credential: str | None, account_id: UUID, attachment_id: UUID
+async def read_report_results(
+    db, credential, account_id, patient_id, report_id, query: DiagnosticReportResultQuery
 ):
     async with transaction(db):
         scope = await clinical_read_scope(db, credential, account_id, "diagnostic_reports")
         if isinstance(scope, Err):
             return scope
 
-        row = await dao_report_attachments.scoped(db, account_id, attachment_id)
-        if row is Empty or row.record_status != "valid":
+        report = await dao_reports.get_by(db, where={"account_id": account_id, "id": report_id}, execution_options={"populate_existing": True})
+        if report is Empty or report.patient_id != patient_id:
             return Err(AccountObjectNotFound())
 
+        rows, total = await dao_report_results.page_for_report(
+            db, account_id, report_id, query
+        )
+        response = clinical_page(rows, total, result_response)
+        await record_clinical_read(db, scope.value, "ReadPatientDiagnosticReportResults", "diagnostic_report", str(report_id))
+
+    return Ok(response)
+
+
+async def read_attachment(
+    db: AsyncSession,
+    credential: str | None,
+    account_id: UUID,
+    patient_id: UUID,
+    attachment_id: UUID,
+    load_content: bool = False,
+):
+    async with transaction(db):
+        scope = await clinical_read_scope(db, credential, account_id, "diagnostic_reports")
+        if isinstance(scope, Err):
+            return scope
+
+        row = await dao_report_attachments.get_by(db, where={"account_id": account_id, "id": attachment_id}, execution_options={"populate_existing": True})
+        if (
+            row is Empty
+            or row.patient_id != patient_id
+            or row.record_status != "valid"
+        ):
+            return Err(AccountObjectNotFound())
+
+        report_id = await dao_reports.for_attachment(db, account_id, attachment_id)
         await record_clinical_read(db, scope.value, "ReadReportAttachment", "report_attachment", str(attachment_id))
 
-    content = await report_storage.fetch(account_id, attachment_id)
-    state = attachment_response(row)
+    content = await report_storage.fetch(row.storage_key) if load_content else None
+    state = attachment_response(row, report_id)
     return Ok((state, content))

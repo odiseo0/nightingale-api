@@ -64,7 +64,7 @@ async def invitation_target(db: AsyncSession, actor, invitation_id: UUID):
 async def invitation_context(
     db: AsyncSession, actor, account_id: UUID, invitation_id: UUID
 ):
-    row = await dao_invitations.get_scoped(db, invitation_id, account_id)
+    row = await dao_invitations.get_by(db, where={"id": invitation_id, "account_id": account_id}, for_update=True, execution_options={"populate_existing": True})
 
     if row is Empty or row.invitee_user_id != actor.user_id:
         return Err(AccountObjectNotFound())
@@ -76,14 +76,14 @@ async def invitation_context(
     if account is Empty or account.kind != "independent" or account.status != "active":
         return Err(AccessDenied())
 
-    membership = await dao_memberships.get_scoped(db, account_id, actor.user_id)
+    membership = await dao_memberships.get_by(db, where={"account_id": account_id, "user_id": actor.user_id}, for_update=True, execution_options={"populate_existing": True})
 
     if row.status == "accepted" and (
         membership is Empty or membership.status != "active"
     ):
         return Err(AccessDenied())
 
-    device = await dao_account_devices.get_scoped(db, account_id, actor.device_id)
+    device = await dao_account_devices.get_by(db, where={"account_id": account_id, "device_id": actor.device_id}, for_update="read", execution_options={"populate_existing": True})
 
     if device is not Empty and device.status == "revoked":
         return Err(AccessDenied())
@@ -131,7 +131,7 @@ async def apply_invitation_operation(
         if entity_key == context.account.owner_user_id:
             return Err(AccessDenied())
 
-        membership = await dao_memberships.get_scoped(db, context.account.id, entity_key)
+        membership = await dao_memberships.get_by(db, where={"account_id": context.account.id, "user_id": entity_key}, for_update=True, execution_options={"populate_existing": True})
         if membership is Empty:
             return Err(AccountObjectNotFound())
 
@@ -155,8 +155,8 @@ async def apply_invitation_operation(
             display_name=users[entity_key].display_name,
             role="assistant",
             status=membership.status,
-            created_at=membership.created_at,
-            updated_at=membership.updated_at,
+            created_at=membership.date_added,
+            updated_at=membership.date_updated,
             version=membership.version,
         )
 
@@ -178,8 +178,9 @@ async def apply_invitation_operation(
         if entity_key == context.account.owner_user_id:
             return Err(AccessDenied())
 
-        membership = await dao_memberships.get_scoped(
-            db, context.account.id, entity_key
+        membership = await dao_memberships.get_by(
+            db, where={"account_id": context.account.id, "user_id": entity_key},
+            for_update=True, execution_options={"populate_existing": True}
         )
 
         if membership is Empty:
@@ -200,8 +201,8 @@ async def apply_invitation_operation(
             display_name=users[entity_key].display_name,
             role="assistant",
             status=membership.status,
-            created_at=membership.created_at,
-            updated_at=membership.updated_at,
+            created_at=membership.date_added,
+            updated_at=membership.date_updated,
             version=membership.version,
         )
 
@@ -247,8 +248,8 @@ async def apply_invitation_operation(
                 "account_id": context.account.id,
                 "invitee_user_id": data.invitee_user_id,
                 "created_by_user_id": context.actor.user_id,
-                "created_at": now,
-                "updated_at": now,
+                "date_added": now,
+                "date_updated": now,
                 "expires_at": now + timedelta(hours=72),
                 "accepted_at": None,
                 "accepted_operation_id": None,
@@ -265,7 +266,7 @@ async def apply_invitation_operation(
             )
         )
 
-    invitation = await dao_invitations.get_scoped(db, entity_key, context.account.id)
+    invitation = await dao_invitations.get_by(db, where={"id": entity_key, "account_id": context.account.id}, for_update=True, execution_options={"populate_existing": True})
 
     if invitation is Empty or (
         action == "AcceptInvitation"
@@ -292,8 +293,9 @@ async def apply_invitation_operation(
             )
         )
 
-    membership = await dao_memberships.get_scoped(
-        db, context.account.id, context.actor.user_id
+    membership = await dao_memberships.get_by(
+        db, where={"account_id": context.account.id, "user_id": context.actor.user_id},
+        for_update=True, execution_options={"populate_existing": True}
     )
 
     if membership is not Empty and membership.status == "active":
@@ -314,8 +316,8 @@ async def apply_invitation_operation(
         display_name=users[context.actor.user_id].display_name,
         role="assistant",
         status="active",
-        created_at=membership.created_at,
-        updated_at=membership.updated_at,
+        created_at=membership.date_added,
+        updated_at=membership.date_updated,
         version=membership.version,
     )
     invitation = await dao_invitations.resolve(

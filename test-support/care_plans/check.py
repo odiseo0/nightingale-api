@@ -93,9 +93,49 @@ async def check_care_plans(runtime, administrative, client, tokens):
     still_pending = await get(f"/patients/{patient}/care-plans/{plan}/goals/{goal}")
     assert still_pending["evaluationStatus"] == "pending", "completar actividad no evalúa el objetivo"
 
-    evaluated = await operation("EvaluateCarePlanGoal", goal, {"evaluationStatus": "achieved"}, 1, actor=assistant)
+    evaluated = await operation("EvaluateCarePlanGoal", goal, {
+        "evaluationStatus": "achieved", "note": "Meta ficticia alcanzada",
+    }, 1, actor=assistant)
     assert evaluated["entityVersion"] == 2
     assert evaluated["state"]["evaluatedByUserId"] == assistant["userId"]
+    assert evaluated["state"]["evaluationNote"] == "Meta ficticia alcanzada"
+    read_goal = await get(f"/patients/{patient}/care-plans/{plan}/goals/{goal}")
+    assert read_goal["evaluationNote"] == "Meta ficticia alcanzada"
+
+    narrative = uuid7()
+    await operation("AddCarePlanGoal", narrative, {
+        "planId": str(plan), "patientId": str(patient),
+        "description": "Objetivo narrativo", "goalKind": "narrative",
+    }, actor=assistant)
+    pending_action = uuid7()
+    await operation("AddCarePlanAction", pending_action, {
+        "planId": str(plan), "patientId": str(patient),
+        "description": "Acción pendiente",
+    }, actor=assistant)
+    goal_base = f"/patients/{patient}/care-plans/{plan}/goals"
+    narrative_only = await get(goal_base + "?goalKind=narrative")
+    assert narrative_only["total"] == 1 and narrative_only["items"][0]["goalId"] == str(narrative)
+    pending_only = await get(goal_base + "?evaluationStatus=pending")
+    assert pending_only["total"] == 1 and pending_only["items"][0]["goalId"] == str(narrative)
+    combined = await get(goal_base + "?goalKind=narrative&evaluationStatus=pending")
+    assert combined["total"] == 1 and combined["items"][0]["goalId"] == str(narrative)
+    goal_pages = [await get(goal_base + f"?page={page}&shows=1") for page in (1, 2)]
+    assert all(page["total"] == 2 and len(page["items"]) == 1 for page in goal_pages)
+    assert goal_pages[0]["items"][0]["goalId"] != goal_pages[1]["items"][0]["goalId"]
+    actions_pending = await get(
+        f"/patients/{patient}/care-plans/{plan}/actions?completionStatus=not_completed"
+    )
+    assert actions_pending["total"] == 1
+    assert actions_pending["items"][0]["actionId"] == str(pending_action)
+    evaluated_without_note = await operation("EvaluateCarePlanGoal", narrative, {
+        "evaluationStatus": "not_achieved",
+    }, 1, actor=assistant)
+    assert evaluated_without_note["state"]["evaluationNote"] is None
+    goal_history = (await get(f"{goal_base}/{goal}/history"))["items"]
+    assert [item["evaluationNote"] for item in goal_history] == [None, "Meta ficticia alcanzada"], goal_history
+    recent_goal_history = await get(f"{goal_base}/{goal}/history?afterVersion=1")
+    assert recent_goal_history["total"] == 1
+    assert recent_goal_history["items"][0]["version"] == 2
 
     review = uuid7()
     created_review = await operation("AddCarePlanReview", review, {
@@ -119,10 +159,19 @@ async def check_care_plans(runtime, administrative, client, tokens):
     items = (await get(f"/sync/snapshots/{snapshot.json()['snapshotId']}/items?shows=500", actor=assistant))["items"]
     entities = {item["entityType"] for item in items}
     assert {"care_plan", "care_plan_goal", "care_plan_action", "care_plan_review"} <= entities
+    captured_goal = next(item for item in items
+        if item["entityType"] == "care_plan_goal" and item["entityKey"] == str(goal))
+    assert captured_goal["state"]["evaluationNote"] == "Meta ficticia alcanzada"
     async with administrative() as db:
         assert await db.scalar(text("SELECT count(*) FROM nightingale.audit_events WHERE object_key::text LIKE '%PRIV-%'")) == 0
         assert await db.scalar(text("SELECT count(*) FROM nightingale.care_plan_histories WHERE id=:id"), {"id": plan}) == 2
         assert await db.scalar(text("SELECT count(*) FROM nightingale.care_plan_goal_histories WHERE id=:id"), {"id": goal}) == 2
+        assert await db.scalar(text("SELECT evaluation_note FROM nightingale.care_plan_goals WHERE id=:id"), {"id": goal}) == "Meta ficticia alcanzada"
+        history_notes = (await db.execute(text("""
+            SELECT evaluation_note FROM nightingale.care_plan_goal_histories
+            WHERE id=:id ORDER BY version
+        """), {"id": goal})).scalars().all()
+        assert list(history_notes) == [None, "Meta ficticia alcanzada"]
 
     await operation("SetMemberClinicalPermissions", assistant["userId"], {"clinicalPermissions": {"carePlans": "none"}}, 1)
     await get(f"/patients/{patient}/care-plans", actor=assistant, status=403)

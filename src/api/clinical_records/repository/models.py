@@ -5,22 +5,20 @@ from uuid import UUID
 from sqlalchemy import Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class PatientClinicalProfile(Base):
+class PatientClinicalProfile(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID] = mapped_column(primary_key=True)
     sex_at_birth: Mapped[str | None] = mapped_column(Text)
     source_type: Mapped[str] = mapped_column(Text, server_default="unknown")
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class PatientNote(Base):
+class PatientNote(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -31,8 +29,6 @@ class PatientNote(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
@@ -52,7 +48,7 @@ class PatientNoteHistory(Base):
     changed_at: Mapped[datetime]
 
 
-class PatientMeasurement(Base):
+class PatientMeasurement(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -70,8 +66,6 @@ class PatientMeasurement(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
@@ -98,7 +92,7 @@ class PatientMeasurementHistory(Base):
     changed_at: Mapped[datetime]
 
 
-class PatientImmunization(Base):
+class PatientImmunization(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -119,8 +113,6 @@ class PatientImmunization(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
@@ -150,7 +142,7 @@ class PatientImmunizationHistory(Base):
     changed_at: Mapped[datetime]
 
 
-class PatientAntecedent(Base):
+class PatientAntecedent(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -165,8 +157,6 @@ class PatientAntecedent(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 

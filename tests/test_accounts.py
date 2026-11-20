@@ -146,7 +146,7 @@ class AccessMatrixTests(unittest.TestCase):
                             device = Empty if device_state is None else SimpleNamespace(status=device_state)
                             with patch.object(cases, 'authenticate', new=AsyncMock(return_value=Ok(actor))), \
                                 patch.object(cases.dao_accounts, 'get_for_member', new=AsyncMock(return_value=(account, membership))), \
-                                patch.object(cases.dao_account_devices, 'get_scoped', new=AsyncMock(return_value=device)), \
+                                patch.object(cases.dao_account_devices, 'get_by', new=AsyncMock(return_value=device)), \
                                 patch.object(cases, 'get_permission_epoch', new=AsyncMock(return_value=Ok(7))):
                                 async with AsyncSession() as db:
                                     response = await cases.get_access(db, None, account_id)

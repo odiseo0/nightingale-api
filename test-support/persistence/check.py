@@ -187,6 +187,19 @@ async def check_result_scope_backfill(migrator):
         raise AssertionError("Clinical result scope is mutable")
 
 
+async def check_timestamp_inventory(connection: asyncpg.Connection) -> None:
+    defaults = await connection.fetchval("""
+        SELECT count(*) FROM information_schema.columns
+        WHERE ((table_schema='nightingale' AND column_name IN ('created_at','updated_at'))
+            OR (table_schema='analytics' AND table_name='etl_state' AND column_name='updated_at'))
+            AND column_default='CURRENT_TIMESTAMP'
+    """)
+    assert defaults == 85
+    assert await connection.fetchval(
+        "SELECT to_regproc('nightingale.set_row_updated_at')"
+    ) is None
+
+
 async def check_migrations(directory):
     result = migrate("upgrade", "head")
 
@@ -212,6 +225,7 @@ async def check_migrations(directory):
             )
             >= 28
         )
+        await check_timestamp_inventory(migrator)
         await check_result_scope_backfill(migrator)
 
         # A failing revision must roll back both its DDL and its version update.
@@ -251,6 +265,82 @@ async def check_migrations(directory):
         await migrator.execute("INSERT INTO nightingale.transaction_probe VALUES (1,0)")
     finally:
         await migrator.close()
+
+
+async def check_row_timestamps() -> None:
+    from src.api.patients.repository.dao import dao_patients
+    from src.api.patients.repository.models import Patient
+    from src.core.db.session import async_session_factory
+    from src.core.utils.utils import datetime_now
+
+    orm_id, core_id, sql_id, explicit_id, rollback_id = (uuid7() for _ in range(5))
+
+    async with async_session_factory() as db:
+        async with db.begin():
+            orm_row = Patient(id=orm_id)
+            db.add(orm_row)
+            await db.flush()
+            await db.refresh(orm_row)
+            assert orm_row.date_added <= orm_row.date_updated
+            assert orm_row.date_added.utcoffset() is not None
+
+            core_row = await dao_patients.create(
+                db, obj_in={"id": core_id}, commit=False
+            )
+            assert core_row.date_added <= core_row.date_updated
+            assert core_row.date_added.utcoffset() is not None
+
+            sql_row = (
+                await db.execute(
+                    text("INSERT INTO nightingale.patients(id) VALUES (:id) RETURNING created_at,updated_at"),
+                    {"id": sql_id},
+                )
+            ).one()
+            assert sql_row.created_at == sql_row.updated_at
+            assert sql_row.created_at.utcoffset() is not None
+
+            instant = datetime_now().replace(microsecond=123456)
+            db.add(Patient(id=explicit_id, date_added=instant, date_updated=instant))
+            await db.flush()
+            explicit_row = await db.get(Patient, explicit_id, populate_existing=True)
+            assert explicit_row is not None
+            assert explicit_row.date_added == instant
+            assert explicit_row.date_updated == instant
+            assert explicit_row.date_added.microsecond == 123456
+
+        async with db.begin():
+            previous_row = await db.get(Patient, orm_id)
+            assert previous_row is not None
+            previous = previous_row.date_updated
+            await asyncio.sleep(0.001)
+            updated = await dao_patients.update(
+                db,
+                orm_id,
+                {"date_added": previous_row.date_added},
+                commit=False,
+            )
+            assert updated.date_updated > previous
+
+            instant = datetime_now()
+            updated = await dao_patients.update(
+                db, orm_id, {"date_updated": instant}, commit=False
+            )
+            assert updated.date_updated == instant
+
+        try:
+            async with db.begin():
+                await db.execute(
+                    text("INSERT INTO nightingale.patients(id) VALUES (:id)"),
+                    {"id": rollback_id},
+                )
+                raise RuntimeError("Fixture rollback")
+        except RuntimeError:
+            pass
+
+        assert await db.scalar(
+            text("SELECT count(*) FROM nightingale.patients WHERE id=:id"),
+            {"id": rollback_id},
+        ) == 0
 
 
 async def check_transactions():
@@ -414,6 +504,8 @@ async def check_transactions():
                     )
                 else:
                     raise AssertionError("Runtime identity has migration privileges")
+
+        await check_row_timestamps()
     finally:
         await engine.dispose()
 
@@ -460,7 +552,8 @@ async def main():
             await admin.close()
 
     print(
-        "PostgreSQL checks passed: migrations up/down, failed revision rollback, runtime DDL denied, write rollback and two coordinated writers."
+        "PostgreSQL checks passed: migrations up/down, failed revision rollback, runtime DDL denied, "
+        "inherited row timestamp defaults/onupdate, explicit instant preservation, write rollback and two coordinated writers."
     )
 
 

@@ -85,6 +85,7 @@ class CarePlanGoalResponse(CarePlanGoalFields):
     evaluation_status: EvaluationStatus
     evaluated_at: AwareDatetime | None
     evaluated_by_user_id: UUID7 | None
+    evaluation_note: str | None
     record_status: Literal["valid", "entered-in-error"]
     correction_reason: str | None
     created_at: AwareDatetime

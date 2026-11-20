@@ -108,8 +108,6 @@ async def apply_service_operation(
     if isinstance(scope, Err):
         return scope
 
-    now = await dao_services.server_time(db)
-
     if isinstance(data, CreateServicePayload):
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))
@@ -119,12 +117,7 @@ async def apply_service_operation(
 
         row = await dao_services.create(
             db,
-            obj_in={
-                **data.model_dump(),
-                "id": entity_key,
-                "created_at": now,
-                "updated_at": now,
-            },
+            obj_in={**data.model_dump(), "id": entity_key},
             commit=False,
         )
     else:
@@ -136,7 +129,7 @@ async def apply_service_operation(
         if all(getattr(row, name) == value for name, value in values.items()):
             return Err(AccountRuleError("NO_CHANGES", row.version))
 
-        row = await dao_services.revise(db, row, values, now)
+        row = await dao_services.revise(db, row, values)
 
     state = ServiceResponse.model_validate(row)
     targets = await catalog_accounts(db, context.actor.user_id, context.account.id)
@@ -185,8 +178,8 @@ async def read_catalog(
                     "name": row.name,
                     "default_duration_minutes": row.default_duration_minutes,
                     "status": row.status,
-                    "created_at": row.created_at,
-                    "updated_at": row.updated_at,
+                    "created_at": row.date_added,
+                    "updated_at": row.date_updated,
                     "version": row.version,
                 }
                 for row in rows

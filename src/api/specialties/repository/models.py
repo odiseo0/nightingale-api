@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy import Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.db.model import Base
+from src.core.db.model import Base, Date
 
 
-class SpecialtyTemplate(Base):
+class SpecialtyTemplate(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     name: Mapped[str] = mapped_column(Text)
@@ -17,12 +17,10 @@ class SpecialtyTemplate(Base):
     change_note: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class SpecialtyTemplateHistory(Base):
+class SpecialtyTemplateHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Text)
@@ -32,8 +30,6 @@ class SpecialtyTemplateHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
@@ -55,7 +51,7 @@ class SpecialtyTemplateFieldRow(Base):
     display_order: Mapped[int]
 
 
-class SpecialtyRecord(Base):
+class SpecialtyRecord(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -67,12 +63,10 @@ class SpecialtyRecord(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class SpecialtyRecordHistory(Base):
+class SpecialtyRecordHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -85,8 +79,6 @@ class SpecialtyRecordHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
@@ -108,7 +100,7 @@ class SpecialtyRecordValueRow(Base):
     value_date: Mapped[str | None] = mapped_column(Text)
 
 
-class DentalFinding(Base):
+class DentalFinding(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -124,12 +116,10 @@ class DentalFinding(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class DentalFindingHistory(Base):
+class DentalFindingHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -146,15 +136,13 @@ class DentalFindingHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]
     changed_at: Mapped[datetime]
 
 
-class DentalTreatment(Base):
+class DentalTreatment(Date, Base):
     id: Mapped[UUID] = mapped_column(primary_key=True)
     account_id: Mapped[UUID]
     patient_id: Mapped[UUID]
@@ -167,12 +155,10 @@ class DentalTreatment(Base):
     correction_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     version: Mapped[int] = mapped_column(server_default="1")
 
 
-class DentalTreatmentHistory(Base):
+class DentalTreatmentHistory(Date, Base):
     account_id: Mapped[UUID] = mapped_column(primary_key=True)
     id: Mapped[UUID] = mapped_column(primary_key=True)
     patient_id: Mapped[UUID]
@@ -186,8 +172,6 @@ class DentalTreatmentHistory(Base):
     version: Mapped[int] = mapped_column(primary_key=True)
     created_by_user_id: Mapped[UUID]
     updated_by_user_id: Mapped[UUID]
-    created_at: Mapped[datetime]
-    updated_at: Mapped[datetime]
     action: Mapped[str] = mapped_column(Text)
     actor_user_id: Mapped[UUID]
     operation_id: Mapped[UUID]

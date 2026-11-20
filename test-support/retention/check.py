@@ -64,7 +64,12 @@ async def check_retention(runtime, administrative, client, tokens):
     registrations = [envelope("RegisterPatient", uuid7(), {"fullName": "Fixture retained patient"}) for _ in range(102)]
     registrations[0]["payload"]["identifiers"] = [{"id": str(uuid7()), "documentType": "national_id", "documentNumber": "FIXTURE-RETAINED-001"}]
     rejected = [envelope("FutureOperation", uuid7(), {}) for _ in range(502)]
-    with patch.object(dao_heads, "get_server_time", return_value=old):
+    offsets = iter(range(10000))
+    with patch.object(
+        dao_heads,
+        "get_server_time",
+        side_effect=lambda *_: old + timedelta(microseconds=next(offsets)),
+    ):
         assert (await submit([envelope("RegisterAccountDevice", owner["deviceId"], {})]))[0]["status"] == "accepted"
         for items, expected in ((registrations, "accepted"), (rejected, "rejected")):
             for offset in range(0, len(items), 100):

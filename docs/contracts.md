@@ -1,6 +1,6 @@
 # Contratos y propiedad
 
-**Estado al 2026-11-16:** el [contrato HTTP v1](api-v1.md), revisión 1.3, conserva camelCase y page/shows. Etapa 2 está implementada para revisión C09: 78 rutas, 127 esquemas y 66 acciones generadas. El manifiesto incluye origen, `sourceHead`, `sourceSha256` y huellas de archivos; dos generaciones y `--check` producen los mismos artefactos. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales y los ejemplos se comprueban contra PostgreSQL/Keycloak aislados. Consumidores y producción siguen pendientes.
+**Estado al 2026-11-16:** el [contrato HTTP v1](api-v1.md), revisión 1.3, conserva camelCase y page/shows. Etapa 2 está implementada para revisión C09: 78 rutas, 127 esquemas y 66 acciones generadas. El manifiesto incluye origen, `sourceHead`, `sourceSha256` y huellas de archivos; `sourceHead` es el último commit que afecta las fuentes del contrato y `sourceSha256` cubre su contenido actual. Dos generaciones y `--check` producen los mismos artefactos, incluso tras commits ajenos a esas fuentes. [OpenAPI/JSON Schema](../contracts/README.md) se generan desde la app/modelos reales y los ejemplos se comprueban contra PostgreSQL/Keycloak aislados. Consumidores y producción siguen pendientes.
 
 ## Una fuente por contrato
 

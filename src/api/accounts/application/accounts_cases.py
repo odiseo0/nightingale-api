@@ -105,8 +105,8 @@ async def bootstrap_practice(
                 "id": uuid7(),
                 "kind": "independent",
                 "owner_user_id": user.id,
-                "created_at": now,
-                "updated_at": now,
+                "date_added": now,
+                "date_updated": now,
             },
         )
         await dao_memberships.create_membership(
@@ -121,8 +121,8 @@ async def bootstrap_practice(
                     "id": uuid7(),
                     "user_id": user.id,
                     "public_name": obj_in.professional_name,
-                    "created_at": now,
-                    "updated_at": now,
+                    "date_added": now,
+                    "date_updated": now,
                 },
             )
         await dao_account_professionals.link(
@@ -271,7 +271,7 @@ async def account_context(
     if account.status != "active" and not owner:
         return Err(AccessDenied())
 
-    registered = await dao_account_devices.get_scoped(db, account.id, actor.device_id)
+    registered = await dao_account_devices.get_by(db, where={"account_id": account.id, "device_id": actor.device_id}, for_update="read", execution_options={"populate_existing": True})
 
     if require_device and (registered is Empty or registered.status != "active"):
         return Err(AccessDenied())
@@ -315,7 +315,7 @@ async def register_own_device(
     if device_id != actor.device_id or context.account.status != "active":
         return Err(AccessDenied())
 
-    existing = await dao_account_devices.get_scoped(db, context.account.id, device_id)
+    existing = await dao_account_devices.get_by(db, where={"account_id": context.account.id, "device_id": device_id}, for_update="read", execution_options={"populate_existing": True})
 
     if existing is not Empty and existing.status == "revoked":
         return Err(AccessDenied())
@@ -429,7 +429,7 @@ async def encounter_participants(
     if assistant_id is None:
         return True
 
-    assistant = await dao_memberships.get_scoped(db, account_id, assistant_id)
+    assistant = await dao_memberships.get_by(db, where={"account_id": account_id, "user_id": assistant_id}, for_update=True, execution_options={"populate_existing": True})
 
     return assistant is not Empty and assistant.status == "active"
 
