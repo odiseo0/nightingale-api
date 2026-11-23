@@ -64,7 +64,12 @@ async def invitation_target(db: AsyncSession, actor, invitation_id: UUID):
 async def invitation_context(
     db: AsyncSession, actor, account_id: UUID, invitation_id: UUID
 ):
-    row = await dao_invitations.get_by(db, where={"id": invitation_id, "account_id": account_id}, for_update=True, execution_options={"populate_existing": True})
+    row = await dao_invitations.get_by(
+        db,
+        where={"id": invitation_id, "account_id": account_id},
+        for_update=True,
+        execution_options={"populate_existing": True},
+    )
 
     if row is Empty or row.invitee_user_id != actor.user_id:
         return Err(AccountObjectNotFound())
@@ -76,14 +81,24 @@ async def invitation_context(
     if account is Empty or account.kind != "independent" or account.status != "active":
         return Err(AccessDenied())
 
-    membership = await dao_memberships.get_by(db, where={"account_id": account_id, "user_id": actor.user_id}, for_update=True, execution_options={"populate_existing": True})
+    membership = await dao_memberships.get_by(
+        db,
+        where={"account_id": account_id, "user_id": actor.user_id},
+        for_update=True,
+        execution_options={"populate_existing": True},
+    )
 
     if row.status == "accepted" and (
         membership is Empty or membership.status != "active"
     ):
         return Err(AccessDenied())
 
-    device = await dao_account_devices.get_by(db, where={"account_id": account_id, "device_id": actor.device_id}, for_update="read", execution_options={"populate_existing": True})
+    device = await dao_account_devices.get_by(
+        db,
+        where={"account_id": account_id, "device_id": actor.device_id},
+        for_update="read",
+        execution_options={"populate_existing": True},
+    )
 
     if device is not Empty and device.status == "revoked":
         return Err(AccessDenied())
@@ -112,14 +127,16 @@ async def apply_invitation_operation(
     if action != "AcceptInvitation" and not context.owner:
         return Err(AccessDenied())
 
-    if not isinstance(entity_key, UUID):
-        return Err(AccountRuleError("VALIDATION_ERROR"))
-
     if payload is None:
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
     if (
-        action not in ("CreateInvitation", "SetMembershipStatus", "SetMemberClinicalPermissions")
+        action
+        not in (
+            "CreateInvitation",
+            "SetMembershipStatus",
+            "SetMemberClinicalPermissions",
+        )
         and payload.model_fields_set
     ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
@@ -131,7 +148,12 @@ async def apply_invitation_operation(
         if entity_key == context.account.owner_user_id:
             return Err(AccessDenied())
 
-        membership = await dao_memberships.get_by(db, where={"account_id": context.account.id, "user_id": entity_key}, for_update=True, execution_options={"populate_existing": True})
+        membership = await dao_memberships.get_by(
+            db,
+            where={"account_id": context.account.id, "user_id": entity_key},
+            for_update=True,
+            execution_options={"populate_existing": True},
+        )
         if membership is Empty:
             return Err(AccountObjectNotFound())
 
@@ -140,10 +162,13 @@ async def apply_invitation_operation(
 
         data = ClinicalPermissions(**payload.clinical_permissions.model_dump())
         changes = clinical_permission_values(data)
+
         if all(getattr(membership, name) == value for name, value in changes.items()):
             return Err(AccountRuleError("NO_CHANGES", membership.version))
 
-        membership = await dao_memberships.set_clinical_permissions(db, membership, changes, now)
+        membership = await dao_memberships.set_clinical_permissions(
+            db, membership, changes, now
+        )
         state = MemberClinicalPermissionsResponse(
             user_id=membership.user_id,
             clinical_permissions=data,
@@ -179,8 +204,10 @@ async def apply_invitation_operation(
             return Err(AccessDenied())
 
         membership = await dao_memberships.get_by(
-            db, where={"account_id": context.account.id, "user_id": entity_key},
-            for_update=True, execution_options={"populate_existing": True}
+            db,
+            where={"account_id": context.account.id, "user_id": entity_key},
+            for_update=True,
+            execution_options={"populate_existing": True},
         )
 
         if membership is Empty:
@@ -266,7 +293,12 @@ async def apply_invitation_operation(
             )
         )
 
-    invitation = await dao_invitations.get_by(db, where={"id": entity_key, "account_id": context.account.id}, for_update=True, execution_options={"populate_existing": True})
+    invitation = await dao_invitations.get_by(
+        db,
+        where={"id": entity_key, "account_id": context.account.id},
+        for_update=True,
+        execution_options={"populate_existing": True},
+    )
 
     if invitation is Empty or (
         action == "AcceptInvitation"
@@ -294,8 +326,10 @@ async def apply_invitation_operation(
         )
 
     membership = await dao_memberships.get_by(
-        db, where={"account_id": context.account.id, "user_id": context.actor.user_id},
-        for_update=True, execution_options={"populate_existing": True}
+        db,
+        where={"account_id": context.account.id, "user_id": context.actor.user_id},
+        for_update=True,
+        execution_options={"populate_existing": True},
     )
 
     if membership is not Empty and membership.status == "active":

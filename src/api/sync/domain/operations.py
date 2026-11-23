@@ -188,6 +188,7 @@ from src.api.specialties.domain.templates import (
     SpecialtyTemplateResponse,
     UpdateSpecialtyTemplatePayload,
 )
+from src.core.constants import MAX_BATCH_OPERATIONS
 from src.core.schema import ApiError, BaseModel
 from src.core.schema.http import SerializedInstant
 
@@ -439,7 +440,9 @@ class OperationEnvelope(BaseModel):
 
 
 class OperationBatch(BaseModel):
-    operations: list[OperationEnvelope] = Field(min_length=1, max_length=100)
+    operations: list[OperationEnvelope] = Field(
+        min_length=1, max_length=MAX_BATCH_OPERATIONS
+    )
 
     model_config = ConfigDict(extra="forbid")
 

@@ -189,7 +189,8 @@ def operation_policies() -> dict[str, OperationPolicy]:
                 policy.sections += (section,)
                 policy.required_level = "read_write"
 
-            policy.publication += ((position, section),)
+            publication_entry: tuple[int, ClinicalSection | None] = (position, section)
+            policy.publication += (publication_entry,)
             position += 1
 
     policies["AcceptInvitation"] = OperationPolicy(
@@ -306,10 +307,20 @@ def clinical_audiences() -> dict[str, ClinicalSection]:
 def projection_audiences() -> dict[str, tuple[str, ...]]:
     rules: dict[str, tuple[str, ...]] = {
         entity: ("members",)
-        for entity in (
-            "account professional patient_profile patient_identifier contact_person patient_contact "
-            "service_offer schedule_rule schedule_exception schedule_block appointment appointment_history"
-        ).split()
+        for entity in [
+            "account",
+            "professional",
+            "patient_profile",
+            "patient_identifier",
+            "contact_person",
+            "patient_contact",
+            "service_offer",
+            "schedule_rule",
+            "schedule_exception",
+            "schedule_block",
+            "appointment",
+            "appointment_history",
+        ]
     }
 
     rules.update(

@@ -16,6 +16,7 @@ from src.api.sync.domain.operations import (
     OperationResult,
 )
 from src.core import Err, Ok
+from src.core.constants import MAX_OPERATION_BYTES
 from src.core.db import get_db
 from src.core.schema import ApiError
 
@@ -43,7 +44,7 @@ async def accept_operations(
     correlation_id: Annotated[UUID7, Depends(request_correlation_id)],
 ) -> OperationBatchResult:
     if any(
-        len(item.model_dump_json(by_alias=True).encode("utf-8")) > 64 * 1024
+        len(item.model_dump_json(by_alias=True).encode("utf-8")) > MAX_OPERATION_BYTES
         for item in obj_in.operations
     ):
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE)

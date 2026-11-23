@@ -271,7 +271,12 @@ async def account_context(
     if account.status != "active" and not owner:
         return Err(AccessDenied())
 
-    registered = await dao_account_devices.get_by(db, where={"account_id": account.id, "device_id": actor.device_id}, for_update="read", execution_options={"populate_existing": True})
+    registered = await dao_account_devices.get_by(
+        db,
+        where={"account_id": account.id, "device_id": actor.device_id},
+        for_update="read",
+        execution_options={"populate_existing": True},
+    )
 
     if require_device and (registered is Empty or registered.status != "active"):
         return Err(AccessDenied())
@@ -315,7 +320,12 @@ async def register_own_device(
     if device_id != actor.device_id or context.account.status != "active":
         return Err(AccessDenied())
 
-    existing = await dao_account_devices.get_by(db, where={"account_id": context.account.id, "device_id": device_id}, for_update="read", execution_options={"populate_existing": True})
+    existing = await dao_account_devices.get_by(
+        db,
+        where={"account_id": context.account.id, "device_id": device_id},
+        for_update="read",
+        execution_options={"populate_existing": True},
+    )
 
     if existing is not Empty and existing.status == "revoked":
         return Err(AccessDenied())
@@ -423,13 +433,19 @@ async def encounter_participants(
     professional = await dao_account_professionals.get_by(
         db, where={"account_id": account_id, "professional_id": professional_id}
     )
+
     if professional is Empty or professional.status != "active":
         return False
 
     if assistant_id is None:
         return True
 
-    assistant = await dao_memberships.get_by(db, where={"account_id": account_id, "user_id": assistant_id}, for_update=True, execution_options={"populate_existing": True})
+    assistant = await dao_memberships.get_by(
+        db,
+        where={"account_id": account_id, "user_id": assistant_id},
+        for_update=True,
+        execution_options={"populate_existing": True},
+    )
 
     return assistant is not Empty and assistant.status == "active"
 

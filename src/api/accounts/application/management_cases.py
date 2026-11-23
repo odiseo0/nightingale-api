@@ -112,9 +112,6 @@ async def apply_management_operation(
     if not context.owner:
         return Err(AccessDenied())
 
-    if not isinstance(entity_key, UUID):
-        return Err(AccountRuleError("VALIDATION_ERROR"))
-
     if action in ("UpdateAccountDetails", "UpdateAccountPolicy", "SetAccountStatus"):
         if entity_key != context.account.id:
             return Err(AccountObjectNotFound())
@@ -219,7 +216,12 @@ async def apply_management_operation(
     if payload is None or payload.model_fields_set:
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
-    row = await dao_account_devices.get_by(db, where={"account_id": context.account.id, "device_id": entity_key}, for_update="read", execution_options={"populate_existing": True})
+    row = await dao_account_devices.get_by(
+        db,
+        where={"account_id": context.account.id, "device_id": entity_key},
+        for_update="read",
+        execution_options={"populate_existing": True},
+    )
 
     if row is Empty:
         return Err(AccountObjectNotFound())
@@ -240,8 +242,10 @@ async def apply_management_operation(
     if target_status == "active":
         users = await identified_users(db, [row.user_id])
         membership = await dao_memberships.get_by(
-            db, where={"account_id": context.account.id, "user_id": row.user_id},
-            for_update=True, execution_options={"populate_existing": True}
+            db,
+            where={"account_id": context.account.id, "user_id": row.user_id},
+            for_update=True,
+            execution_options={"populate_existing": True},
         )
 
         if (
@@ -401,7 +405,12 @@ async def get_member_clinical_permissions(
         if not context.owner or context.account.status != "active":
             return Err(AccessDenied())
 
-        row = await dao_memberships.get_by(db, where={"account_id": account_id, "user_id": user_id}, for_update=True, execution_options={"populate_existing": True})
+        row = await dao_memberships.get_by(
+            db,
+            where={"account_id": account_id, "user_id": user_id},
+            for_update=True,
+            execution_options={"populate_existing": True},
+        )
 
         if row is Empty:
             return Err(AccountObjectNotFound())
