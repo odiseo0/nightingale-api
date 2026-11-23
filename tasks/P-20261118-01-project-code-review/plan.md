@@ -1,8 +1,10 @@
 # P-20261118-01 · Revisión y refactorización de Nightingale API
 
-**Estado:** In progress. **Creado:** 2026-11-18. **Actualizado:** 2026-11-20.
+**Estado:** Closed. **Creado:** 2026-11-18. **Actualizado:** 2026-11-22.
 
 [Revisión de críticos](review.md#críticos) · [Medianos y menores](review.md#tercera-revisión--medianos-y-menores) · [Código que se puede simplificar](review.md#cuarta-revisión--código-que-se-puede-simplificar) · [Reutilización, variables y constantes](review.md#quinta-revisión--reutilización-variables-y-constantes) · [Tareas y verificación](todo.md)
+
+**Cierre anticipado, 2026-11-22.** El usuario decidió no continuar este plan. Se conservan el trabajo realizado, las tareas `Done`, las comprobaciones y la evidencia registrada. Las tareas pendientes y los checkpoints sin revisión conservan su estado; el cierre no completa el alcance ni acepta C07, C08 o C09.
 
 ## Resultado y alcance
 

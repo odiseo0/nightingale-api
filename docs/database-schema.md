@@ -2569,3 +2569,87 @@ UQ parcial vigente: `UNIQUE (account_id,patient_id,tooth_fdi,surface,finding_kin
 | `record_status`,`correction_reason`, autores, instantes, `version` | | Reglas comunes; historia `dental_treatment_histories` |
 
 CHECK: `treatment_status='performed'` exige `performed_date`. No hay derivación clínica automática entre hallazgo y actuación.
+
+
+## 16. Vademecum global · diseño para C01
+
+Diseño físico de [P-20261122-01-vademecum-read-api](../tasks/P-20261122-01-vademecum-read-api/plan.md), pendiente de aceptación e implementación. Añade cinco tablas al esquema `nightingale`, sin modificar tablas existentes, sync, datos clínicos o medicación declarada. Los IDs textuales y registros conservan la forma de la fuente; las tablas de relación no tienen UUID propio. No hay FK a cuentas porque el contenido es global, ni FK de ingredientes canónicos a monografías porque un ID puede estar no resuelto.
+
+### 16.1 `vademecum_datasets`
+
+Una fila por archivo importado y huella. El contenido del release no se edita; solo cambia `active` durante la activación transaccional.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `source_sha256` | `text` | Sí | Sin valor | UQ; CHECK 64 hex minúsculos |
+| `schema_version` | `text` | Sí | Sin valor | CHECK `1.0.0` |
+| `registry_cutoff_date` | `date` | Sí | Sin valor | CHECK finito |
+| `medical_notice` | `text` | Sí | Sin valor | CHECK no vacío |
+| `imported_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `active` | `boolean` | Sí | `false` | Parte de índice único parcial |
+
+Índice único parcial sobre `(active)` con `WHERE active`: como máximo un release activo. La huella repetida se recupera sin insertar ni cambiar el release activo. Los releases antiguos se conservan; no hay retención automática en esta versión.
+
+### 16.2 `vademecum_products`
+
+Una fila por producto vigente del release. `active_ingredient_text` puede ser cadena vacía porque la fuente contiene productos sin principio activo; no se inventa contenido.
+
+| Columna | Tipo | Obligatoria | Clave / regla |
+|---|---|---|---|
+| `dataset_id` | `uuid` | Sí | PK/FK compuesta a `vademecum_datasets.id` |
+| `registration_number` | `text` | Sí | PK; no vacío; forma fuente |
+| `name` | `text` | Sí | No vacío |
+| `active_ingredient_text` | `text` | Sí | Admite vacío |
+| `approved_at` | `timestamptz` | Sí | CHECK finito |
+| `valid_until` | `timestamptz` | Sí | CHECK finito |
+| `representative` | `text` | Sí | No vacío |
+| `manufacturer` | `text` | No | No vacío si presente |
+| `ingredient_link_status` | `text` | Sí | CHECK con los diez estados del contrato |
+| `ingredient_resolution` | `text` | Sí | CHECK con los cinco estados del contrato |
+| `product_reference` | `jsonb` | No | CHECK objeto si presente; esquema validado al importar/responder |
+| `search_text` | `text` | Sí | Texto normalizado y acotado de §13.3 de api-v1 |
+
+PK `(dataset_id,registration_number)`; FK `dataset_id` RESTRICT. Índice `(dataset_id,name,registration_number)` para orden estable. `product_reference` conserva `scope`, `monographIds`, `sources` y `matchNote`, nunca oficios o administración fuente. `search_text` reúne solo nombre, registro, principio activo, IDs canónicos y nombre/alias/ATC de monografías vinculadas. No contiene secciones clínicas ni datos suplementarios/históricos.
+
+### 16.3 `vademecum_product_ingredients`
+
+| Columna | Tipo | Obligatoria | Clave / regla |
+|---|---|---|---|
+| `dataset_id` | `uuid` | Sí | PK/FK de producto |
+| `registration_number` | `text` | Sí | PK/FK de producto |
+| `ingredient_id` | `text` | Sí | PK; ID canónico textual no vacío |
+
+PK `(dataset_id,registration_number,ingredient_id)`; FK compuesta `(dataset_id,registration_number)` a productos, RESTRICT. Índice `(dataset_id,ingredient_id,registration_number)` para la referencia inversa. No hay nombre derivado ni FK a monografía: el ID puede no estar resuelto.
+
+### 16.4 `vademecum_monographs`
+
+| Columna | Tipo | Obligatoria | Clave / regla |
+|---|---|---|---|
+| `dataset_id` | `uuid` | Sí | PK/FK a dataset |
+| `id` | `text` | Sí | PK; patrón de ID del esquema fuente |
+| `name` | `text` | Sí | No vacío |
+| `atc_code` | `text` | Sí | Admite vacío según la fuente |
+| `document` | `jsonb` | Sí | CHECK objeto; documento 1.0.0 completo validado |
+| `search_text` | `text` | Sí | Solo nombre, alias y ATC normalizados |
+
+PK `(dataset_id,id)`; FK `dataset_id` RESTRICT. Índice `(dataset_id,name,id)` para orden estable. `document` conserva todas las secciones, fuentes, procedencia y revisión. No se agregan columnas clínicas consultables ni se incluye texto clínico en `search_text`.
+
+### 16.5 `vademecum_product_monographs`
+
+| Columna | Tipo | Obligatoria | Clave / regla |
+|---|---|---|---|
+| `dataset_id` | `uuid` | Sí | PK y parte de ambas FK |
+| `registration_number` | `text` | Sí | PK/FK de producto |
+| `monograph_id` | `text` | Sí | PK/FK de monografía |
+| `combination` | `boolean` | Sí | Verdadero si el vínculo figura como combinación |
+
+PK `(dataset_id,registration_number,monograph_id)`; FK compuesta a `(dataset_id,registration_number)` de productos y a `(dataset_id,id)` de monografías, ambas RESTRICT. Un ID presente en ambas colecciones fuente produce un solo vínculo con `combination=true`. Índice `(dataset_id,monograph_id,registration_number)` para filtro inverso.
+
+### 16.6 Importación, activación y permisos
+
+Antes de abrir la transacción de escritura se validan contexto, los 6.264 productos y las 868 monografías con modelos completos; registros/IDs duplicados, vínculos a monografías ausentes y estadísticas vigentes discrepantes rechazan el archivo. Las colecciones históricas y suplementarias conocidas se ignoran explícitamente y no se importan ni se usan para completar datos.
+
+La única transacción inserta dataset, productos, ingredientes, monografías y vínculos en lotes acotados con `commit=False`; después desactiva el release anterior y activa el nuevo. La coordinación de activación y el índice parcial impiden dos activos confirmados. Un error revierte todas las inserciones y el cambio de activo. Repetir una huella no escribe ni altera activación. Las lecturas usan solo el release activo y validan el documento JSONB al reconstruir la respuesta.
+
+La migración concede `SELECT` sobre las cinco tablas a `nightingale_runtime`; no concede INSERT, UPDATE, DELETE, TRUNCATE ni DDL. La importación usa `VADEMECUM_IMPORT_DATABASE_URI` con identidad administrativa distinta del runtime, fuera del servidor. El downgrade revoca los privilegios y elimina las cinco tablas en orden de dependencias sin tocar el resto del esquema.

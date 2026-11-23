@@ -1,6 +1,6 @@
 # Nightingale API: especificación y guía para el escritorio
 
-**Corte:** 2026-11-16. **Contrato remoto:** `1`. **Revisión de modelos:** `api-v1.3`. **Aplicación API:** `0.1.0`.
+**Corte:** 2026-11-22. **Contrato remoto:** `1`. **Revisión de modelos:** `api-v1.3`. **Aplicación API:** `0.1.0`.
 
 Esta es la referencia portable para el repositorio `nightingale`. Explica qué ofrece Nightingale API, cómo consumirla y qué debe resolver el escritorio. Los JSON adjacentes fijan las formas ejecutables; esta guía no los sustituye ni crea otra definición editable. Todos los ejemplos son ficticios.
 
@@ -10,9 +10,9 @@ Conservar juntos estos archivos:
 
 | Archivo | Contenido y uso |
 |---|---|
-| [openapi.json](openapi.json) | OpenAPI 3.1: 78 rutas y 127 esquemas HTTP reales. |
+| [openapi.json](openapi.json) | OpenAPI 3.1: 117 rutas y 205 esquemas HTTP reales. |
 | [public-models.schema.json](public-models.schema.json) | Los mismos modelos públicos en `$defs`, con referencias locales. |
-| [accepted-operations.schema.json](accepted-operations.schema.json) | Envoltorio y payloads de las 66 acciones aceptadas por lote. |
+| [accepted-operations.schema.json](accepted-operations.schema.json) | Envoltorio y payloads de las 104 acciones aceptadas por lote. |
 | [sse.schema.json](sse.schema.json) | Eventos `changes_available`, `heartbeat` y `access_revoked`. |
 | [capabilities.json](capabilities.json) | Revisión, acciones, acciones online, límites y modelos de payload. |
 | [manifest.json](manifest.json) | Origen, HEAD, huella de fuentes y SHA-256 de los cinco JSON anteriores. |
@@ -308,7 +308,7 @@ Validar el payload exacto contra `accepted-operations.schema.json`. La huella id
 | Vacunas | `RecordPatientImmunization`, `UpdatePatientImmunization`, `InvalidatePatientImmunization` | UUID de vacuna; fuente y precisión conservadas. |
 | Antecedentes | `CreatePatientAntecedent`, `UpdatePatientAntecedent`, `InvalidatePatientAntecedent` | UUID de antecedente; relato sin efectos automáticos. |
 
-`AcceptInvitation` figura como acción online en capacidades, pero usa su ruta dirigida y no una de las 66 acciones del lote.
+`AcceptInvitation` figura como acción online en capacidades, pero usa su ruta dirigida y no una de las 104 acciones del lote.
 
 ### 7.3 Resultados e idempotencia
 
@@ -637,3 +637,14 @@ Fuentes propietarias en `nightingale-api`:
 - `src/application.py` y `src/api/*/domain`: origen de los artefactos generados.
 
 La integración real del escritorio, su aplicación atómica en SQLite y cualquier despliegue requieren evidencia propia. Este paquete fija la referencia para realizar ese trabajo sin dejar al consumidor en una revisión anterior.
+
+
+## Vademecum global en línea
+
+Cuatro GET bajo `A/vademecum`: `products`, `products/{registration_number}`, `monographs` y `monographs/{monograph_id}`. Exigen token API, profesional propietario o asistente con pertenencia/cuenta/dispositivo activos. No hay acceso público o de paciente.
+
+Productos admite `q`, `monographId`, `page` y `shows`; monografías admite `q`, `page` y `shows`. La búsqueda se limita a nombre, alias, registro, texto/ID canónico de ingrediente y ATC según el recurso. Las respuestas usan modelos tipados, `items`/`total` en listas y `catalog{schemaVersion,registryCutoffDate,medicalNotice,sourceSha256}` en todas.
+
+El consumidor debe mostrar aviso, revisión, fuentes, procedencia, resolución y calidad de vínculo. El detalle de monografía contiene el documento completo; referencias extranjeras no implican registro venezolano. 404 indica ausencia tras autorización y 503 catálogo no cargado/dependencia no disponible.
+
+El catálogo es online y global: no entra en snapshots, delta, Outbox o SQLite offline, no crea medicación del paciente y no ofrece escrituras/revisión. Productos históricos y evidencia suplementaria quedan fuera. Los esquemas exactos están en `openapi.json` y `public-models.schema.json`; esta guía no acredita implementación del escritorio.

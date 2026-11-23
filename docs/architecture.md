@@ -130,3 +130,12 @@ Authorization conserva identidad, credenciales y dispositivos globales. Accounts
 [La correspondencia de acceso](access-design.md#correspondencia-para-normalizar-autorización--t03--2026-11-17) documenta la fuente ejecutable. La normalización conserva los dos roles y las 66 acciones de la línea base. La Etapa 3 añade sus acciones y permisos al mismo catálogo según D19. Las pruebas de carreras usan PostgreSQL Test aislado y verifican ambos órdenes de aceptación y revocación. La API deniega la recuperación de recibos clínicos históricos sin sección antes de leer su cuerpo (AU-32 autorizado). La huella de permisos conserva compatibilidad con el formato de ocho secciones cuando las cuatro secciones añadidas conservan el nivel `read_write`.
 
 La evidencia está en el plan de autorización; las pruebas locales no acreditan consumidores Rust/Hub, datos reales ni producción.
+
+
+## Vademecum global · diseño C01
+
+[P-20261122-01-vademecum-read-api](../tasks/P-20261122-01-vademecum-read-api/plan.md) añade el componente `vademecum`, pendiente de implementación y aceptación. Posee releases, productos vigentes, referencias canónicas, monografías y vínculos del catálogo global. Su dominio valida el dataset y las respuestas; application coordina importación y lecturas; repository posee cinco tablas y DAOs; infrastructure solo expone los cuatro GET previstos.
+
+Las rutas consumen `get_account_context` de `accounts` y tipos de identidad/autorización existentes, sin importar repositorios ajenos. El contenido es global, pero cada petición exige una cuenta y dispositivo autorizados. No hay relación con `medications`, pacientes, prescripción, consumo, sync o auditoría clínica. La lectura reconstruye y valida la monografía JSONB antes de responder.
+
+El importador es un script administrativo separado del arranque. Valida todo el archivo antes de abrir la escritura, usa una identidad administrativa y una sola transacción para guardar el release completo y activarlo al final. Los DAOs no confirman partes. Los releases anteriores se conservan; solo el activo se lee y el runtime recibe SELECT. No se crea otra aplicación, servidor, almacén offline, API administrativa ni dependencia nueva.

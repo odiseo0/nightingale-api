@@ -243,6 +243,17 @@ La planificación usa las reglas de `planning-task-breakdown`; datasets, bibliot
 
 **Decisiones de producto cerradas para Etapa 3 el 2026-11-17 (T02/T03):** la primera especialidad es odontología con odontograma; los indicadores OMS iniciales son peso/edad, talla o longitud/edad, peso/talla o longitud e IMC/edad (patrones 2006 y referencia 2007); los permisos de los nuevos bloques reusan las secciones `none/read/read_write` por pertenencia de Etapas 1/2; los adjuntos privados usan almacenamiento de objetos S3 con adaptador mínimo sin instalar dependencias. El detalle figura en [§4.3.1 de la especificación clínica](patient-clinical-record.md) y cierra O09–O13 para el alcance de este plan.
 
+### D20 · Vademecum venezolano global de solo lectura
+
+**Confirmada por el usuario el 2026-11-22** al aprobar [P-20261122-01-vademecum-read-api](../tasks/P-20261122-01-vademecum-read-api/plan.md). La decisión fija alcance y arquitectura; no declara implementación, revisión profesional, integración con el escritorio ni despliegue.
+
+- La fuente autoritativa de importación es [vademecum_venezuela_2026-11-03.json](../vademecum/vademecum_venezuela_2026-11-03.json), con monografías conformes a [monograph.schema.json](../vademecum/monograph.schema.json). Comprende los productos vigentes y las monografías de esa fuente, incluidos productos sin vínculo y monografías sin productos. Las copias individuales de apoyo y `data.js` no son fuentes de importación.
+- `src/api/vademecum` será un componente global dentro de la aplicación FastAPI existente, con domain/application/repository/infrastructure y persistencia PostgreSQL. No será otra aplicación ni parte de la medicación declarada por pacientes. Las rutas llevan `account_id` para reutilizar el contexto de acceso, sin duplicar el catálogo por cuenta.
+- Solo el propietario profesional y los asistentes con usuario, pertenencia, cuenta y dispositivo activos pueden consultar el catálogo en línea. No se añade acceso público/paciente, permiso clínico nuevo, escrituras HTTP, flujo de revisión, sincronización ni almacenamiento offline.
+- Las lecturas incluyen productos vigentes, monografías completas, búsqueda acotada por nombre, alias, registro, ingrediente e identificador canónico y ATC. Excluyen productos históricos, dataset suplementario, administración cruda de la fuente y búsqueda en todo el texto clínico.
+- El contenido pendiente se publica con aviso visible, estado de revisión, fuentes, procedencia, corte del registro, huella de fuente y calidad del vínculo/resolución. Las referencias extranjeras no se presentan como registros venezolanos.
+- Cada importación administrativa valida todo el archivo y crea un release por huella SHA-256; guarda su contenido y lo activa en una sola transacción. Solo un release está activo, repetir la huella no cambia datos y los releases anteriores se conservan. La identidad administrativa es separada y el rol runtime recibe solo SELECT sobre las tablas del componente.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |

@@ -2,6 +2,14 @@
 
 Solo datos ficticios. Estos comandos no usan Docker, no registran servicios de Windows y no acceden al PostgreSQL personal. Los datos y descargas viven en `.tmp/test-services/`, que Git ignora. No borres una carpeta de datos mientras su proceso siga activo.
 
+## Vademecum · lectura global
+
+```powershell
+.\.venv\Scripts\python.exe test-support/vademecum/check.py
+```
+
+Usa PostgreSQL Test y Keycloak Test, una base aleatoria eliminada al terminar y la fuente autoritativa del plan. Comprueba migración, importación/idempotencia/rollback, permisos runtime y las cuatro lecturas del personal. La guía administrativa está en [operations/vademecum.md](../docs/operations/vademecum.md). No acredita revisión profesional, consumidor Rust ni producción.
+
 ## SSE y colaboración · T31/T32
 
 ```powershell

@@ -6,6 +6,7 @@ from uuid import uuid7
 import test_foundation as foundation
 from pydantic import ValidationError
 
+from src.core.constants import MAX_BATCH_OPERATIONS
 from src.api.sync.domain.operations import OperationBatch, OperationEnvelope
 from src.api.sync.repository.models import ChangeLog
 
@@ -48,7 +49,15 @@ class OperationSchemaTests(unittest.TestCase):
         ):
             with self.subTest(change=change), self.assertRaises(ValidationError):
                 OperationEnvelope.model_validate(self.operation(**change))
-        for items in ([], [self.operation() for _ in range(101)]):
+        for size in (MAX_BATCH_OPERATIONS - 1, MAX_BATCH_OPERATIONS):
+            batch = OperationBatch.model_validate(
+                {"operations": [self.operation() for _ in range(size)]}
+            )
+            self.assertEqual(len(batch.operations), size)
+        for items in (
+            [],
+            [self.operation() for _ in range(MAX_BATCH_OPERATIONS + 1)],
+        ):
             with self.assertRaises(ValidationError):
                 OperationBatch.model_validate({"operations": items})
 

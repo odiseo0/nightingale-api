@@ -3,6 +3,8 @@ from typing import Annotated, Literal, TypeVar, overload
 
 from pydantic import UUID7, ConfigDict, Field, WithJsonSchema, field_serializer
 
+from src.core.constants import MAX_PAGE_SIZE
+
 from .base import BaseModel
 
 T = TypeVar("T")
@@ -40,7 +42,7 @@ class PaginatedResponse[T](BaseModel):
 
 class PageQuery(BaseModel):
     page: int = Field(default=1, ge=1)
-    shows: int = Field(default=100, ge=1, le=500)
+    shows: int = Field(default=100, ge=1, le=MAX_PAGE_SIZE)
 
     model_config = ConfigDict(extra="forbid")
 

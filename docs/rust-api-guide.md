@@ -91,3 +91,19 @@ El probe local de T32 midió 20 commits/200 avisos con diez streams y dos proces
 Los grupos y resultados completos se conservan al menos 90 días. Un cursor en frontera-1 aún puede seguir; uno anterior requiere captura. Una captura ausente, ajena o ya liberada devuelve el mismo 404; una captura propia aún existente distingue vencimiento y cambio de época con 410. Ninguna recuperación remota borra las intenciones del escritorio por sí sola.
 
 Prueba reproducible de los ejemplos: `.venv/Scripts/python.exe test-support/contracts/check.py`, con servicios Test existentes y datos ficticios. Usa PostgreSQL/Keycloak reales y cliente ASGI para esos ejemplos; las pruebas separadas de SSE/colaboración sí usan dos procesos Uvicorn. No se ejecuta HTTP separado del wheel ni se acredita todavía un consumidor externo.
+
+
+## Vademecum en línea
+
+El catálogo global de productos vigentes y monografías se consulta solo con conexión, con el token de dispositivo y una cuenta donde el profesional o asistente, la pertenencia, la cuenta y la instalación estén activos. `A` significa `/v1/accounts/{account_id}`.
+
+- `GET A/vademecum/products?q=...&monographId=...&page=1&shows=100` busca por nombre, registro, texto/ID de ingrediente, alias y ATC de monografías vinculadas. `monographId` es opcional.
+- `GET A/vademecum/products/{registration_number}` devuelve el producto y sus vínculos del release activo.
+- `GET A/vademecum/monographs?q=...&page=1&shows=100` busca nombre, alias y ATC.
+- `GET A/vademecum/monographs/{monograph_id}` devuelve el documento completo.
+
+Cada respuesta incluye `catalog` con `schemaVersion`, `registryCutoffDate`, `medicalNotice` y `sourceSha256`. La interfaz debe mostrar el aviso y conservar `review`, fuentes, procedencia, `ingredientLinkStatus` e `ingredientResolution`; un vínculo inferido o revisión pendiente no es aprobación clínica. Las especialidades extranjeras de referencia no son registros venezolanos.
+
+Los listados devuelven `items`/`total`; `shows` llega a 500. Una página posterior al final está vacía y conserva el total. 404 significa objeto ausente después de autorización; 503 indica catálogo sin release activo o dependencia no disponible. 401/403 exigen revisar el acceso vigente.
+
+Estas lecturas no participan en capturas, Change Log, Outbox ni almacenamiento offline. No las conviertas en medicación declarada o prescripción de un paciente. No hay endpoints de escritura/revisión ni contenido histórico/suplementario. La referencia ejecutable está en los JSON generados; esta guía no acredita un consumidor Rust implementado.

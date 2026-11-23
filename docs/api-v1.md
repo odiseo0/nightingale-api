@@ -1,6 +1,6 @@
 # Contrato de diseño HTTP v1 para escritorio
 
-**Versión de diseño:** 1.3. **Fecha:** 2026-11-16. **Estado:** Etapa 2 implementada para revisión C09. Los contratos generados contienen 78 rutas, 127 esquemas y 66 acciones por lote, con origen, HEAD y huellas reproducibles. `contractVersion=1` y `modelRevision=api-v1.3`. Consumidores y producción conservan sus límites.
+**Versión de diseño:** 1.3. **Fecha:** 2026-11-22. **Estado:** vademecum implementado para revisión C05. Los contratos generados contienen 117 rutas, 205 esquemas y 104 acciones por lote, con origen, HEAD y huellas reproducibles. `contractVersion=1` y `modelRevision=api-v1.3`. Consumidores y producción conservan sus límites.
 
 Este documento conserva explicación de transporte, permisos y recuperación. [contracts.md](contracts.md) fija propiedad y principios; [database-schema.md](database-schema.md) posee columnas, tipos y restricciones físicas. Los esquemas Pydantic de domain, derivados del BaseModel del proyecto, son la fuente de OpenAPI/JSON Schema exportados por scripts/export_contracts.py. Los generados identifican origen/versión/huella y no se editan a mano. La [guía Rust](rust-api-guide.md) explica su uso y enlaza ejemplos comprobados. Los casos de uso no dependen de FastAPI ni acceden directamente a SQLAlchemy.
 
@@ -725,3 +725,54 @@ Diseño de T22/T24 para C08, no implementado al redactarse; el diccionario clín
 | Actuaciones | `/dental-findings/{finding_id}/treatments`; `/dental-treatments/{treatment_id}`; `/dental-treatments/{treatment_id}/history` | Misma sección; orden `(createdAt,id)` |
 
 Acciones (`specialty_templates read_write`): `RecordDentalFinding` (pieza FDI, superficie nula o cerrada, tipo, nota, fecha), `UpdateDentalFinding`, `ResolveDentalFinding`, `InvalidateDentalFinding`, `AddDentalTreatment` (vinculada al hallazgo), `UpdateDentalTreatment` (incluye `planned`→`performed`), `InvalidateDentalTreatment`. Modelos: `DentalFindingResponse` (`findingId`,`toothFdi`,`surface`,`findingKind`,`findingStatus`,`note`,`recordedDate`) y `DentalTreatmentResponse` (`treatmentId`,`findingId`,`treatmentKind`,`treatmentStatus`,`performedDate`,`note`). Pieza FDI inválida, superficie fuera del conjunto o hallazgo duplicado vigente se rechazan; objeto ajeno = ausencia.
+
+
+## 13. Diseño del vademecum global para C01
+
+Diseño de [P-20261122-01-vademecum-read-api](../tasks/P-20261122-01-vademecum-read-api/plan.md) y [D20](decisions.md#d20--vademecum-venezolano-global-de-solo-lectura), implementado para revisión C05. No cambia `contractVersion`, `modelRevision`, el catálogo de operaciones ni sync. El contenido procede solo de `vademecum/vademecum_venezuela_2026-11-03.json`; no incluye `historicalProducts`, `supplementaryIngredients` ni `data.js`.
+
+### 13.1 Rutas, acceso y errores
+
+`A` equivale a `/v1/accounts/{account_id}`. Las cuatro rutas exigen token API, usuario y pertenencia activos, cuenta activa y dispositivo registrado activo. Owner y assistant tienen el mismo acceso; no se consulta una sección clínica ni un paciente. La autorización precede a la existencia del release y de los objetos.
+
+| Método | Ruta | Respuesta | Consulta y orden |
+|---|---|---|---|
+| GET | `A/vademecum/products` | `VademecumProductPage` | `q`, `monographId`, `page`, `shows`; `(name,registrationNumber)` |
+| GET | `A/vademecum/products/{registration_number}` | `VademecumProductResponse` | Registro exacto dentro del release activo |
+| GET | `A/vademecum/monographs` | `VademecumMonographPage` | `q`, `page`, `shows`; `(name,id)` |
+| GET | `A/vademecum/monographs/{monograph_id}` | `VademecumMonographResponse` | ID textual exacto dentro del release activo |
+
+Los listados usan `page` desde 1, `shows=100` por defecto y máximo 500, LIMIT/OFFSET y `items`/`total`. Una página posterior al final devuelve `items=[]` y el total filtrado. Parámetros desconocidos o inválidos producen 422. Sin release activo, cualquiera de las cuatro rutas devuelve 503 `DEPENDENCY_UNAVAILABLE`, no una colección vacía. Un registro o ID ausente devuelve 404 `NOT_FOUND` después de autorizar. Credencial inválida: 401; cuenta/dispositivo inactivo o no registrado: 403; cuenta no visible, outsider o pertenencia inactiva: 404 por la guarda vigente.
+
+No existen rutas de escritura, importación, revisión, histórico, datos suplementarios ni acceso público/paciente. Estas lecturas no crean auditoría clínica ni entidades de sincronización.
+
+### 13.2 Contexto y modelos públicos
+
+Toda respuesta incluye `catalog: VademecumCatalogContext` con `schemaVersion`, `registryCutoffDate`, `medicalNotice` y `sourceSha256` del release activo. El aviso se muestra junto al contenido; la huella identifica la fuente importada y no prueba revisión clínica.
+
+| Modelo | Campos y significado |
+|---|---|
+| `VademecumProduct` | `registrationNumber`, `name`, `activeIngredientText`, `approvedAt`, `validUntil`, `representative`, `manufacturer` nulo si falta, `monographIds`, `combinationMonographIds`, `canonicalIngredientIds`, `ingredientLinkStatus`, `ingredientResolution`, `productReference` opcional |
+| `VademecumProductReference` | `scope`, `monographIds`, `sources`, `matchNote`; evidencia de referencia para ese producto, no una sustitución del estado de vínculo |
+| `VademecumReferenceSource` | `title`, `url`; referencia externa conservada sin descargar ni comprobar su contenido en esta entrega |
+| `VademecumProductPage` | `catalog`, `items[VademecumProduct]`, `total` |
+| `VademecumProductResponse` | `catalog`, `product` |
+| `VademecumMonographSummary` | `id`, `name`, `sismedAliases`, `atc{code,description}`, `review{status,date,reviewer}` |
+| `VademecumMonographPage` | `catalog`, `items[VademecumMonographSummary]`, `total` |
+| `VademecumMonographResponse` | `catalog`, `monograph` con el documento completo del esquema 1.0.0 |
+
+El detalle de monografía conserva todas las secciones clínicas, formas, especialidades de referencia, poblaciones, seguridad, perfil farmacológico, grupo terapéutico, fuentes, procedencia y revisión definidos por `monograph.schema.json`. `referenceSpecialties` conserva país y no representa aprobación venezolana. `review.status=pending_local_review` y sus campos nulos permanecen visibles; no se convierten en revisión profesional aceptada.
+
+`ingredientLinkStatus` admite exactamente `complete`, `unlinked`, `missing_ingredient`, `historical_complete`, `product_reference`, `inferred_complete`, `combination_only`, `historical_partial`, `inferred_partial`, `partial`. `ingredientResolution` admite `source_text`, `historical_product_match`, `unresolved`, `product_name_inference`, `product_reference`. Estos estados describen la calidad de la vinculación; no afirman que el contenido histórico o suplementario excluido esté disponible.
+
+Mapeo fuente→público de producto: `ef`→`registrationNumber`; `nombre`→`name`; `principioActivo`→`activeIngredientText`; `fechaAprobado`→`approvedAt`; `fechaVigencia`→`validUntil`; `representante`→`representative`; `fabricante`→`manufacturer`; `productMonographReference`→`productReference`. Los demás campos públicos conservan su nombre y significado fuente. No se exponen `id`, `sortId`, `rifRepresentante`, `patrocinante`, `premium`, `oficios`, `fechaCancelado`, `supplementaryIngredientIds`, identificadores de usuarios/documentos de la fuente ni administración no seleccionada.
+
+### 13.3 Búsqueda acotada
+
+Python normaliza `q` y los textos persistidos con Unicode NFKD, elimina marcas diacríticas, pasa a minúsculas y pliega espacios. La coincidencia es una subcadena literal; `%`, `_` y el carácter de escape se escapan antes de SQL LIKE/ILIKE. No se añade texto completo, ranking, fuzzy search ni una extensión PostgreSQL.
+
+- Productos: nombre, registro, `activeIngredientText`, IDs canónicos y, solo de monografías vinculadas al producto, nombre, alias y ATC.
+- Monografías: nombre, `sismedAliases` y código ATC.
+- `monographId` filtra productos por cualquier vínculo simple o de combinación del mismo release antes de contar y paginar.
+
+Nunca se indexan ni consultan mecanismo, indicaciones, posología, seguridad, fuentes, procedencia u otro texto clínico para `q`.

@@ -40,6 +40,12 @@ async def check_contracts(runtime, administrative, client, tokens):
     from src.api.sync.application import events_cases
     from src.api.sync.domain.operations import OperationBatchResult, OperationEnvelope, SERVICE_SCHEMAS, OFFER_SCHEMAS
     from src.core import Ok
+    from src.core.constants import (
+        MAX_BATCH_OPERATIONS,
+        MAX_BODY_BYTES,
+        MAX_OPERATION_BYTES,
+        MAX_PAGE_SIZE,
+    )
     from src.core.schema import PaginatedResponse
     from src.core.schema.http import LiveResponse, ReadyResponse
     from src.settings.api_settings import api_settings
@@ -63,7 +69,18 @@ async def check_contracts(runtime, administrative, client, tokens):
     capabilities = CapabilitiesResponse.model_validate(response.json())
     from src.api.sync.domain.operations import EMPTY_PAYLOAD_ACTIONS, OPERATION_SCHEMAS
     expected_actions = len((set(OPERATION_SCHEMAS) | EMPTY_PAYLOAD_ACTIONS) - {"AcceptInvitation"})
-    assert len(capabilities.operation_catalog) == expected_actions and capabilities.max_page_size == 500
+    assert len(capabilities.operation_catalog) == expected_actions
+    assert (
+        capabilities.max_batch_operations,
+        capabilities.max_body_bytes,
+        capabilities.max_operation_bytes,
+        capabilities.max_page_size,
+    ) == (
+        MAX_BATCH_OPERATIONS,
+        MAX_BODY_BYTES,
+        MAX_OPERATION_BYTES,
+        MAX_PAGE_SIZE,
+    )
     assert "AcceptInvitation" not in capabilities.operation_catalog and "AcceptInvitation" in capabilities.online_only_actions
     access.expect(await client.get("/v1/capabilities?unknown=1"), 422)
 

@@ -15,6 +15,7 @@ from src.api.errors import (
     http_error,
     validation_error,
 )
+from src.core.constants import MAX_BODY_BYTES
 from src.core.db import DAOError
 from src.core.services.pg_notifications import notifications
 from src.settings.api_settings import api_settings
@@ -45,7 +46,7 @@ app = FastAPI(
 app.include_router(router)
 # Starlette 1.9 counts received bytes and enforces Content-Length before parsing.
 # https://www.starlette.dev/middleware/#requestbodylimitmiddleware
-app.add_middleware(RequestBodyLimitMiddleware, max_body_size=1024 * 1024)
+app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_BODY_BYTES)
 app.middleware("http")(correlate_request)
 app.add_exception_handler(RequestValidationError, validation_error)
 app.add_exception_handler(SQLAlchemyError, database_error)

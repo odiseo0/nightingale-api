@@ -5275,6 +5275,821 @@
         "title": "MemberResponse",
         "type": "object"
       },
+      "Monograph": {
+        "additionalProperties": false,
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/MonographAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "atc": {
+            "$ref": "#/components/schemas/MonographAtc"
+          },
+          "forms": {
+            "items": {
+              "$ref": "#/components/schemas/MonographForm"
+            },
+            "title": "Forms",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "indications": {
+            "items": {
+              "$ref": "#/components/schemas/MonographIndication"
+            },
+            "title": "Indications",
+            "type": "array"
+          },
+          "mechanismOfAction": {
+            "title": "Mechanismofaction",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "pharmacologicalProfile": {
+            "$ref": "#/components/schemas/MonographPharmacologicalProfile"
+          },
+          "posology": {
+            "items": {
+              "$ref": "#/components/schemas/MonographPosology"
+            },
+            "title": "Posology",
+            "type": "array"
+          },
+          "provenance": {
+            "items": {
+              "$ref": "#/components/schemas/MonographProvenance"
+            },
+            "title": "Provenance",
+            "type": "array"
+          },
+          "referenceSpecialties": {
+            "items": {
+              "$ref": "#/components/schemas/MonographReferenceSpecialty"
+            },
+            "title": "Referencespecialties",
+            "type": "array"
+          },
+          "review": {
+            "$ref": "#/components/schemas/MonographReview"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/MonographSafety"
+          },
+          "schemaVersion": {
+            "const": "1.0.0",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "sismedAliases": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Sismedaliases",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/MonographSource"
+            },
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          },
+          "specialPopulations": {
+            "$ref": "#/components/schemas/MonographSpecialPopulations"
+          },
+          "therapeuticGroup": {
+            "$ref": "#/components/schemas/MonographTherapeuticGroup"
+          },
+          "therapeuticOverview": {
+            "title": "Therapeuticoverview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "id",
+          "name",
+          "sismedAliases",
+          "atc",
+          "therapeuticOverview",
+          "mechanismOfAction",
+          "indications",
+          "alerts",
+          "posology",
+          "forms",
+          "referenceSpecialties",
+          "specialPopulations",
+          "safety",
+          "pharmacologicalProfile",
+          "therapeuticGroup",
+          "sources",
+          "provenance",
+          "review"
+        ],
+        "title": "Monograph",
+        "type": "object"
+      },
+      "MonographAdverseEffect": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "critical": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical"
+          },
+          "frequency": {
+            "enum": [
+              "very_common",
+              "common",
+              "uncommon",
+              "rare",
+              "very_rare",
+              "unknown"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "systemic",
+              "localized",
+              "unspecified"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "system",
+          "type",
+          "frequency",
+          "critical",
+          "action"
+        ],
+        "title": "MonographAdverseEffect",
+        "type": "object"
+      },
+      "MonographAlert": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "informational",
+              "important",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "severity"
+        ],
+        "title": "MonographAlert",
+        "type": "object"
+      },
+      "MonographAtc": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "description"
+        ],
+        "title": "MonographAtc",
+        "type": "object"
+      },
+      "MonographContraindication": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "title",
+          "description"
+        ],
+        "title": "MonographContraindication",
+        "type": "object"
+      },
+      "MonographForm": {
+        "additionalProperties": false,
+        "properties": {
+          "concentration": {
+            "title": "Concentration",
+            "type": "string"
+          },
+          "pharmaceuticalForm": {
+            "title": "Pharmaceuticalform",
+            "type": "string"
+          },
+          "substance": {
+            "title": "Substance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "substance",
+          "concentration",
+          "pharmaceuticalForm"
+        ],
+        "title": "MonographForm",
+        "type": "object"
+      },
+      "MonographIndication": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "primary",
+              "secondary",
+              "off_label"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "MonographIndication",
+        "type": "object"
+      },
+      "MonographInteraction": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "drug",
+              "food",
+              "laboratory",
+              "other"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "agent",
+          "description"
+        ],
+        "title": "MonographInteraction",
+        "type": "object"
+      },
+      "MonographPharmacologicalProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "administrationAndFood": {
+            "$ref": "#/components/schemas/MonographPharmacologicalSection"
+          },
+          "durationAndHalfLife": {
+            "$ref": "#/components/schemas/MonographPharmacologicalSection"
+          },
+          "eliminationAndExcretion": {
+            "$ref": "#/components/schemas/MonographPharmacologicalSection"
+          },
+          "metabolismAndActivation": {
+            "$ref": "#/components/schemas/MonographPharmacologicalSection"
+          }
+        },
+        "required": [
+          "administrationAndFood",
+          "metabolismAndActivation",
+          "durationAndHalfLife",
+          "eliminationAndExcretion"
+        ],
+        "title": "MonographPharmacologicalProfile",
+        "type": "object"
+      },
+      "MonographPharmacologicalSection": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary",
+          "detail"
+        ],
+        "title": "MonographPharmacologicalSection",
+        "type": "object"
+      },
+      "MonographPopulation": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "contraindicated",
+              "not_recommended",
+              "assess_risk_benefit",
+              "dose_adjustment_required",
+              "no_adjustment",
+              "no_data",
+              "review_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "label",
+          "detail"
+        ],
+        "title": "MonographPopulation",
+        "type": "object"
+      },
+      "MonographPosology": {
+        "additionalProperties": false,
+        "properties": {
+          "commonAdjustments": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commonadjustments"
+          },
+          "indication": {
+            "title": "Indication",
+            "type": "string"
+          },
+          "maximumFrequency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximumfrequency"
+          },
+          "monitoring": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monitoring"
+          },
+          "pharmaceuticalForm": {
+            "title": "Pharmaceuticalform",
+            "type": "string"
+          },
+          "population": {
+            "title": "Population",
+            "type": "string"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "specificIndication": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specificindication"
+          },
+          "usualDose": {
+            "title": "Usualdose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "indication",
+          "route",
+          "pharmaceuticalForm",
+          "specificIndication",
+          "population",
+          "usualDose",
+          "commonAdjustments",
+          "maximumFrequency",
+          "monitoring"
+        ],
+        "title": "MonographPosology",
+        "type": "object"
+      },
+      "MonographPregnancyPopulation": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "contraindicated",
+              "not_recommended",
+              "assess_risk_benefit",
+              "dose_adjustment_required",
+              "no_adjustment",
+              "no_data",
+              "review_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trimesters": {
+            "items": {
+              "enum": [
+                "1T",
+                "2T",
+                "3T"
+              ],
+              "type": "string"
+            },
+            "title": "Trimesters",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "label",
+          "detail",
+          "trimesters"
+        ],
+        "title": "MonographPregnancyPopulation",
+        "type": "object"
+      },
+      "MonographProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "extractionMethod": {
+            "enum": [
+              "manual",
+              "source_section",
+              "source_summary",
+              "automated_table_extraction"
+            ],
+            "title": "Extractionmethod",
+            "type": "string"
+          },
+          "path": {
+            "pattern": "^/",
+            "title": "Path",
+            "type": "string"
+          },
+          "sourceId": {
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "sourceSection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesection"
+          }
+        },
+        "required": [
+          "path",
+          "sourceId",
+          "sourceSection",
+          "extractionMethod"
+        ],
+        "title": "MonographProvenance",
+        "type": "object"
+      },
+      "MonographReferenceSpecialty": {
+        "additionalProperties": false,
+        "properties": {
+          "concentration": {
+            "title": "Concentration",
+            "type": "string"
+          },
+          "country": {
+            "title": "Country",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pharmaceuticalForm": {
+            "title": "Pharmaceuticalform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "concentration",
+          "pharmaceuticalForm",
+          "country"
+        ],
+        "title": "MonographReferenceSpecialty",
+        "type": "object"
+      },
+      "MonographReview": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer"
+          },
+          "status": {
+            "enum": [
+              "pending_local_review",
+              "reviewed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "date",
+          "reviewer"
+        ],
+        "title": "MonographReview",
+        "type": "object"
+      },
+      "MonographSafety": {
+        "additionalProperties": false,
+        "properties": {
+          "adverseEffects": {
+            "items": {
+              "$ref": "#/components/schemas/MonographAdverseEffect"
+            },
+            "title": "Adverseeffects",
+            "type": "array"
+          },
+          "contraindications": {
+            "items": {
+              "$ref": "#/components/schemas/MonographContraindication"
+            },
+            "title": "Contraindications",
+            "type": "array"
+          },
+          "interactions": {
+            "items": {
+              "$ref": "#/components/schemas/MonographInteraction"
+            },
+            "title": "Interactions",
+            "type": "array"
+          },
+          "precautions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Precautions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contraindications",
+          "precautions",
+          "interactions",
+          "adverseEffects"
+        ],
+        "title": "MonographSafety",
+        "type": "object"
+      },
+      "MonographSource": {
+        "additionalProperties": false,
+        "properties": {
+          "consultedOn": {
+            "format": "date",
+            "title": "Consultedon",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "revisedOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revisedon"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedOn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedon"
+          },
+          "url": {
+            "format": "uri",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "url",
+          "consultedOn",
+          "revisedOn",
+          "updatedOn"
+        ],
+        "title": "MonographSource",
+        "type": "object"
+      },
+      "MonographSpecialPopulations": {
+        "additionalProperties": false,
+        "properties": {
+          "breastfeeding": {
+            "$ref": "#/components/schemas/MonographPopulation"
+          },
+          "hepaticImpairment": {
+            "$ref": "#/components/schemas/MonographPopulation"
+          },
+          "olderAdults": {
+            "$ref": "#/components/schemas/MonographPopulation"
+          },
+          "pediatrics": {
+            "$ref": "#/components/schemas/MonographPopulation"
+          },
+          "pregnancy": {
+            "$ref": "#/components/schemas/MonographPregnancyPopulation"
+          },
+          "renalImpairment": {
+            "$ref": "#/components/schemas/MonographPopulation"
+          }
+        },
+        "required": [
+          "renalImpairment",
+          "hepaticImpairment",
+          "olderAdults",
+          "pregnancy",
+          "breastfeeding",
+          "pediatrics"
+        ],
+        "title": "MonographSpecialPopulations",
+        "type": "object"
+      },
+      "MonographTherapeuticGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "associations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Associations",
+            "type": "array"
+          },
+          "atcCode": {
+            "title": "Atccode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "atcCode",
+          "associations"
+        ],
+        "title": "MonographTherapeuticGroup",
+        "type": "object"
+      },
       "OperationBatch": {
         "additionalProperties": false,
         "properties": {
@@ -11071,6 +11886,337 @@
         "additionalProperties": false,
         "properties": {},
         "title": "TokenRotationRequest",
+        "type": "object"
+      },
+      "VademecumCatalogContext": {
+        "additionalProperties": false,
+        "properties": {
+          "medicalNotice": {
+            "title": "Medicalnotice",
+            "type": "string"
+          },
+          "registryCutoffDate": {
+            "format": "date",
+            "title": "Registrycutoffdate",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "sourceSha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sourcesha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "registryCutoffDate",
+          "medicalNotice",
+          "sourceSha256"
+        ],
+        "title": "VademecumCatalogContext",
+        "type": "object"
+      },
+      "VademecumMonographPage": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/VademecumCatalogContext"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VademecumMonographSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog",
+          "items",
+          "total"
+        ],
+        "title": "VademecumMonographPage",
+        "type": "object"
+      },
+      "VademecumMonographResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/VademecumCatalogContext"
+          },
+          "monograph": {
+            "$ref": "#/components/schemas/Monograph"
+          }
+        },
+        "required": [
+          "catalog",
+          "monograph"
+        ],
+        "title": "VademecumMonographResponse",
+        "type": "object"
+      },
+      "VademecumMonographSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "atc": {
+            "$ref": "#/components/schemas/MonographAtc"
+          },
+          "id": {
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "review": {
+            "$ref": "#/components/schemas/MonographReview"
+          },
+          "sismedAliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sismedaliases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sismedAliases",
+          "atc",
+          "review"
+        ],
+        "title": "VademecumMonographSummary",
+        "type": "object"
+      },
+      "VademecumProduct": {
+        "additionalProperties": false,
+        "properties": {
+          "activeIngredientText": {
+            "title": "Activeingredienttext",
+            "type": "string"
+          },
+          "approvedAt": {
+            "format": "date-time",
+            "title": "Approvedat",
+            "type": "string"
+          },
+          "canonicalIngredientIds": {
+            "items": {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            "title": "Canonicalingredientids",
+            "type": "array"
+          },
+          "combinationMonographIds": {
+            "items": {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            "title": "Combinationmonographids",
+            "type": "array"
+          },
+          "ingredientLinkStatus": {
+            "enum": [
+              "complete",
+              "unlinked",
+              "missing_ingredient",
+              "historical_complete",
+              "product_reference",
+              "inferred_complete",
+              "combination_only",
+              "historical_partial",
+              "inferred_partial",
+              "partial"
+            ],
+            "title": "Ingredientlinkstatus",
+            "type": "string"
+          },
+          "ingredientResolution": {
+            "enum": [
+              "source_text",
+              "historical_product_match",
+              "unresolved",
+              "product_name_inference",
+              "product_reference"
+            ],
+            "title": "Ingredientresolution",
+            "type": "string"
+          },
+          "manufacturer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturer"
+          },
+          "monographIds": {
+            "items": {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            "title": "Monographids",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "productReference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VademecumProductReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "registrationNumber": {
+            "title": "Registrationnumber",
+            "type": "string"
+          },
+          "representative": {
+            "title": "Representative",
+            "type": "string"
+          },
+          "validUntil": {
+            "format": "date-time",
+            "title": "Validuntil",
+            "type": "string"
+          }
+        },
+        "required": [
+          "registrationNumber",
+          "name",
+          "activeIngredientText",
+          "approvedAt",
+          "validUntil",
+          "representative",
+          "manufacturer",
+          "monographIds",
+          "combinationMonographIds",
+          "canonicalIngredientIds",
+          "ingredientLinkStatus",
+          "ingredientResolution",
+          "productReference"
+        ],
+        "title": "VademecumProduct",
+        "type": "object"
+      },
+      "VademecumProductPage": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/VademecumCatalogContext"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VademecumProduct"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog",
+          "items",
+          "total"
+        ],
+        "title": "VademecumProductPage",
+        "type": "object"
+      },
+      "VademecumProductReference": {
+        "additionalProperties": false,
+        "properties": {
+          "matchNote": {
+            "title": "Matchnote",
+            "type": "string"
+          },
+          "monographIds": {
+            "items": {
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "type": "string"
+            },
+            "title": "Monographids",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/VademecumReferenceSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scope",
+          "monographIds",
+          "sources",
+          "matchNote"
+        ],
+        "title": "VademecumProductReference",
+        "type": "object"
+      },
+      "VademecumProductResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/VademecumCatalogContext"
+          },
+          "product": {
+            "$ref": "#/components/schemas/VademecumProduct"
+          }
+        },
+        "required": [
+          "catalog",
+          "product"
+        ],
+        "title": "VademecumProductResponse",
+        "type": "object"
+      },
+      "VademecumReferenceSource": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url"
+        ],
+        "title": "VademecumReferenceSource",
         "type": "object"
       }
     },
@@ -24662,6 +25808,471 @@
         ]
       }
     },
+    "/v1/accounts/{account_id}/vademecum/monographs": {
+      "get": {
+        "operationId": "listVademecumMonographs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VademecumMonographPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Monographs",
+        "tags": [
+          "vademecum"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/vademecum/monographs/{monograph_id}": {
+      "get": {
+        "operationId": "getVademecumMonograph",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "monograph_id",
+            "required": true,
+            "schema": {
+              "title": "Monograph Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VademecumMonographResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Monograph",
+        "tags": [
+          "vademecum"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/vademecum/products": {
+      "get": {
+        "operationId": "listVademecumProducts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shows",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Shows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "monographId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Monographid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VademecumProductPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Products",
+        "tags": [
+          "vademecum"
+        ]
+      }
+    },
+    "/v1/accounts/{account_id}/vademecum/products/{registration_number}": {
+      "get": {
+        "operationId": "getVademecumProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid7",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "registration_number",
+            "required": true,
+            "schema": {
+              "title": "Registration Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VademecumProductResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Product",
+        "tags": [
+          "vademecum"
+        ]
+      }
+    },
     "/v1/auth/config": {
       "get": {
         "description": "Devuelve el emisor y cliente OIDC públicos, sin secretos.",
@@ -25589,7 +27200,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "acb8d3063c06db18ed60af7cfb7d1180f60b5c49",
-    "sourceSha256": "bf39aa784ce08db923639f6f73ba00b8ce03b33358767c1ecbd3c991ec5ae51a"
+    "sourceHead": "6bf5dbfc8de399670d8d7b59f4569bbd4e4094db",
+    "sourceSha256": "72e686743e48c0e25464d63389abdbba18dd0c6a620d10ea6872b7897b9b2bc6"
   }
 }

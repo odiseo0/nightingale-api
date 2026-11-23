@@ -24,7 +24,13 @@ async def check_sync(runtime, administrative, client, tokens):
     from src.api.accounts.domain.accounts import BootstrapPracticeInput
     from src.api.sync.repository.dao import dao_changes
     from src.api.sync.application import operations_cases
+    from src.api.sync.domain.operations import OperationEnvelope
     from src.core import Ok
+    from src.core.constants import (
+        MAX_BATCH_OPERATIONS,
+        MAX_BODY_BYTES,
+        MAX_OPERATION_BYTES,
+    )
     from src.core.services.oidc import verify_identity
 
     installations = [await access.issue(client, token["access_token"]) for token in tokens]
@@ -138,15 +144,51 @@ async def check_sync(runtime, administrative, client, tokens):
     assert mixed[1]["status"] == "rejected" and mixed[1]["error"]["code"] == "VALIDATION_ERROR"
     assert mixed[0]["error"]["code"] == mixed[2]["error"]["code"] == "NO_CHANGES"
 
+    for size, expected in (
+        (MAX_OPERATION_BYTES - 1, 200),
+        (MAX_OPERATION_BYTES, 200),
+        (MAX_OPERATION_BYTES + 1, 413),
+    ):
+        candidate = operation(
+            action="RegisterPatient",
+            entityKey=str(uuid7()),
+            payload={"fullName": "", "invalid": True},
+        )
+        overhead = len(
+            OperationEnvelope.model_validate(candidate)
+            .model_dump_json(by_alias=True)
+            .encode("utf-8")
+        )
+        candidate["payload"]["fullName"] = "x" * (size - overhead)
+        assert len(
+            OperationEnvelope.model_validate(candidate)
+            .model_dump_json(by_alias=True)
+            .encode("utf-8")
+        ) == size
+        results = await submit([candidate], status=expected)
+        if expected == 200:
+            assert results[0]["status"] == "rejected"
+            assert results[0]["error"]["code"] == "VALIDATION_ERROR"
+
     before = await counts()
     forward = operation()
     for items in ([first, first], [operation(dependsOn=[forward["operationId"]]), forward], []):
         await submit(items, status=422)
-    await submit([operation() for _ in range(101)], status=422)
-    await submit([operation(payload={"value": "x" * 65536})], status=413)
-    response = await client.post(base, content=b" " * (1024 * 1024) + b"{}", headers={**access.authorization(owner), "Content-Type": "application/json"})
-    access.expect(response, 413)
-    understated = await client.post(base, content=b" " * (1024 * 1024) + b"{}", headers={
+    await submit(
+        [operation() for _ in range(MAX_BATCH_OPERATIONS + 1)], status=422
+    )
+    for size, expected in (
+        (MAX_BODY_BYTES - 1, 422),
+        (MAX_BODY_BYTES, 422),
+        (MAX_BODY_BYTES + 1, 413),
+    ):
+        response = await client.post(
+            base,
+            content=b" " * (size - 2) + b"{}",
+            headers={**access.authorization(owner), "Content-Type": "application/json"},
+        )
+        access.expect(response, expected)
+    understated = await client.post(base, content=b" " * MAX_BODY_BYTES + b"{}", headers={
         **access.authorization(owner), "Content-Type": "application/json", "Content-Length": "1",
     })
     access.expect(understated, 413)

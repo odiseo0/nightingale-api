@@ -1,16 +1,16 @@
 {
   "files": {
-    "accepted-operations.schema.json": "d8a538121c5bd03862731fd4976728b8f3301828b588a474c21b7105bcaae2ea",
-    "capabilities.json": "8aa9542ad5c4ee17977af7374d8c983136d91e79910715118e01ff2e947a1798",
-    "openapi.json": "acd0c6506bcf238544818d25bdf485f9e93419a114e8c0958fb248d81c56c498",
-    "public-models.schema.json": "cf3f597e4e0789fa180cc1c961aae6d3e5fae6055204fd53d4427de3516b6504",
-    "sse.schema.json": "445a9f8cc52caf5b0c31d5e3517436606f1f519e45c6a03fa2487c738426b7dc"
+    "accepted-operations.schema.json": "75fca99f7e1345d3ddb5955c5ba88666c38f44cfd71717840bd8ed1070d9a0f4",
+    "capabilities.json": "16cd6ecfc3a1b3f1916464dd77577ee60447cbd710fade11855c208630f3f9da",
+    "openapi.json": "14bd46759e89428ca3763fbafd1e9a79a94bb9f28dddf9ce0c7c7eff5877d63b",
+    "public-models.schema.json": "3b0f97b4b16e3105f093a9b2f1111c0321375115f8c4bafefe74e26a818d546a",
+    "sse.schema.json": "0203d96d6fa8e2062e3c154d76ca206e74ea32b860f36429ba686927321d2fdb"
   },
   "generated": true,
   "modelRevision": "api-v1.3",
   "origin": "scripts/export_contracts.py",
-  "paths": 113,
-  "schemas": 176,
-  "sourceHead": "acb8d3063c06db18ed60af7cfb7d1180f60b5c49",
-  "sourceSha256": "bf39aa784ce08db923639f6f73ba00b8ce03b33358767c1ecbd3c991ec5ae51a"
+  "paths": 117,
+  "schemas": 205,
+  "sourceHead": "6bf5dbfc8de399670d8d7b59f4569bbd4e4094db",
+  "sourceSha256": "72e686743e48c0e25464d63389abdbba18dd0c6a620d10ea6872b7897b9b2bc6"
 }

@@ -2,10 +2,11 @@
 
 ## Revisión general de código
 
-- [P-20261118-01-project-code-review](P-20261118-01-project-code-review/plan.md), **In progress**, con [revisión inicial](P-20261118-01-project-code-review/review.md) y [lista de control](P-20261118-01-project-code-review/todo.md). Cubre el árbol actual sin diffs de Git, ordena fallos por gravedad y prepara la reutilización de persistencia y la reducción de funciones largas. T01–T16 y T33–T44 Done; C01–C06 y C13–C17 aceptados el 2026-11-18. C08 tiene T20–T22 comprobadas y espera revisión del usuario; no se marca aceptado.
+- [P-20261118-01-project-code-review](P-20261118-01-project-code-review/plan.md), **Closed**, con [revisión inicial](P-20261118-01-project-code-review/review.md) y [lista de control](P-20261118-01-project-code-review/todo.md). El usuario lo cerró el 2026-11-22 y decidió no continuarlo. Conserva el código, las tareas `Done`, las comprobaciones y la evidencia ya registrados. Las tareas pendientes no se ejecutarán dentro de este plan y los checkpoints sin revisión, incluidos C07, C08 y C09, no quedan aceptados.
 
 ## Planes de componentes nuevos
 
+- [P-20261122-01-vademecum-read-api](P-20261122-01-vademecum-read-api/plan.md), **Completed**, con [lista de control](P-20261122-01-vademecum-read-api/todo.md). T01–T12 Done y C01–C05 aceptados el 2026-11-22. La revisión corrigió registros con `/`; pasaron 40 pruebas focales, probes PostgreSQL/Keycloak, contratos, build y diff. La suite conserva el error ajeno documentado de `UsersStructureTests`; consumidores, revisión profesional y producción siguen fuera.
 - [P-20261117-01-authorization-policies](P-20261117-01-authorization-policies/plan.md), **Completed**, con [lista de control](P-20261117-01-authorization-policies/todo.md). T01–T17 Done y C06 aceptado el 2026-11-18. El usuario autorizó pasar C01, aceptó C02/C03 y autorizó continuar hasta C06 sin aceptar por anticipado C04/C05. Pasaron 259 pruebas, los trece probes locales, los contratos y el build.
 - [P-20261117-02-account-subscriptions](P-20261117-02-account-subscriptions/plan.md), **Approved**, con [lista de control](P-20261117-02-account-subscriptions/todo.md). Implementa planes, asientos, USD/BCV, evidencias y verificación manual. Depende de C06 del plan de autorización; las decisiones `SU-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
 - [P-20261117-03-patient-billing](P-20261117-03-patient-billing/plan.md), **Approved**, con [lista de control](P-20261117-03-patient-billing/todo.md). Implementa precios, cargos, reportes del paciente, revisión, saldos, comprobantes y analítica. Depende de C10 de suscripciones; las decisiones `BI-Oxx` se cierran en T01–T04 y ninguna tarea/checkpoint está ejecutado/aceptado.
@@ -39,7 +40,7 @@ D11 sustituye el servidor y almacén propios del Hub y la autorización propuest
 - Plan: `P-YYYYMMDD-NN-short-slug`, con fecha local y número libre para ese día. Conservar el ID tras aprobarlo.
 - Cada plan tiene `plan.md` (objetivo, tareas, dependencias, aceptación y controles) y `todo.md` (estado y evidencia). No mantener una segunda lista de ejecución en otro documento.
 - Tareas `T01`, `T02`…; checkpoints `C01`, `C02`… dentro del plan. Al citar desde otro plan, incluir su ID completo.
-- Planes: `Draft`, `Approved`, `In progress`, `Blocked`, `Completed`, `Superseded`. Tareas: `Todo`, `In progress`, `Blocked`, `Done`. Solo el usuario aprueba plan y checkpoints.
+- Planes: `Draft`, `Approved`, `In progress`, `Blocked`, `Completed`, `Closed`, `Superseded`. `Closed` registra un cierre anticipado y conserva el trabajo realizado sin completar tareas ni aceptar checkpoints pendientes. Tareas: `Todo`, `In progress`, `Blocked`, `Done`. Solo el usuario aprueba plan y checkpoints.
 - Conservar planes cerrados y sustituidos. No renumerar tareas aprobadas; añadir nuevos IDs y explicar el cambio.
 
 Cada tarea identifica propietario de componente, contrato/datos afectados, límites de transacción, efecto en sync y consumidores, dependencias, comprobación y evidencia. Si no afecta a uno, indicarlo. Una tarea debe permitir una revisión concreta; dividirla antes de ejecutar si crece.

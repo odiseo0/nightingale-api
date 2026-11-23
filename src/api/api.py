@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from src.api.accounts.infrastructure.accounts_api import router as accounts_router
 from src.api.accounts.infrastructure.invitations_api import router as invitations_router
+from src.api.analytics.infrastructure.clinical_api import router as analytics_router
 from src.api.appointments.infrastructure.appointments_api import (
     router as appointments_router,
 )
@@ -44,8 +45,9 @@ from src.api.patients.infrastructure.contacts_api import router as contacts_rout
 from src.api.patients.infrastructure.patients_api import router as patients_router
 from src.api.schedule.infrastructure.schedule_api import router as schedule_router
 from src.api.services.infrastructure.services_api import router as services_router
-from src.api.analytics.infrastructure.clinical_api import router as analytics_router
-from src.api.specialties.infrastructure.odontogram_api import router as odontogram_router
+from src.api.specialties.infrastructure.odontogram_api import (
+    router as odontogram_router,
+)
 from src.api.specialties.infrastructure.templates_api import (
     router as specialties_router,
 )
@@ -54,6 +56,12 @@ from src.api.sync.infrastructure.downloads_api import router as downloads_router
 from src.api.sync.infrastructure.events_api import router as events_router
 from src.api.sync.infrastructure.operations_api import router as operations_router
 from src.api.sync.infrastructure.snapshots_api import router as snapshots_router
+from src.api.vademecum.infrastructure.monographs_api import (
+    router as vademecum_monographs_router,
+)
+from src.api.vademecum.infrastructure.products_api import (
+    router as vademecum_products_router,
+)
 
 router = APIRouter()
 
@@ -88,3 +96,5 @@ router.include_router(diagnostic_results_router)
 router.include_router(specialties_router)
 router.include_router(odontogram_router)
 router.include_router(analytics_router)
+router.include_router(vademecum_products_router)
+router.include_router(vademecum_monographs_router)

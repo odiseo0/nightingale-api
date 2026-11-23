@@ -206,3 +206,18 @@ Decisión de [P-20261117-05-clinical-stage-3](../tasks/P-20261117-05-clinical-st
 Los bloques nuevos añaden secciones independientes por pertenencia con los mismos niveles `none`,`read`,`read_write`: medicación declarada (`declared_medications`), tratamiento y planes de cuidados (`care_plans`), informes y resultados (`diagnostic_reports`), plantillas y especialidad (`specialty_templates`) y analítica clínica (`clinical_analytics`). Propietario conserva acceso completo; asistentes existentes y nuevos empiezan con `read_write` y solo el propietario reduce niveles online, con la misma semántica de Etapas 1/2: `none` excluye lecturas, historias, totales, resultados, adjuntos, capturas y derivados; `read` permite consultas; `read_write` permite acciones y recuperación de resultados. Los adjuntos exigen además autorización vigente en `diagnostic_reports` antes de cada descarga. Cuando Autorización (P-20261117-01) esté Completed, su matriz de políticas sustituirá esta configuración sin cambiar el contrato de Etapa 3 por deducción.
 
 Compatibilidad de `SetMemberClinicalPermissions`: la API calcula la huella del formato de ocho secciones si medicación declarada, cuidados, informes y especialidades conservan `read_write`. Si alguna de esas cuatro secciones tiene nivel `read` o `none`, incluye las doce secciones en la huella. La validación, la ejecución y las respuestas usan los doce niveles vigentes. Los recibos ya guardados conservan su huella.
+
+
+## Acceso al vademecum global · diseño C01
+
+Diseño de [P-20261122-01-vademecum-read-api](../tasks/P-20261122-01-vademecum-read-api/plan.md), pendiente de implementación y revisión. El componente reutiliza `get_account_context(..., require_device=True)` dentro de la transacción de lectura y exige además `context.account.status == "active"`. No usa la excepción administrativa que permite al propietario consultar una cuenta inactiva.
+
+| Condición actual | Resultado antes de leer el catálogo |
+|---|---|
+| Token ausente, inválido o revocado; usuario/dispositivo global inactivo | 401 según la autenticación vigente |
+| Cuenta no visible, outsider o pertenencia inactiva | 404, sin revelar su existencia |
+| Dispositivo de cuenta ausente, pendiente o revocado | 403 `PERMISSION_DENIED` |
+| Cuenta inactiva, incluso para su propietario | 403 `PERMISSION_DENIED` |
+| Owner o assistant con todos los estados activos | Lectura permitida del release global activo |
+
+El contenido no es una proyección por cuenta, paciente o sección clínica. No modifica `ClinicalPermissions`, `allowedActions`, políticas RBAC/ABAC, auditoría, snapshots, cursores, Change Log ni sincronización. Conocer un registro sanitario o ID de monografía no concede acceso. El release ausente se evalúa solo después de esta autorización y devuelve 503; los objetos ausentes devuelven 404.

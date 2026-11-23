@@ -1,6 +1,8 @@
 # Tareas · P-20261118-01
 
-**Plan:** [plan.md](plan.md). **Estado del plan:** In progress. **Actualizado:** 2026-11-20.
+**Plan:** [plan.md](plan.md). **Estado del plan:** Closed. **Actualizado:** 2026-11-22.
+
+El usuario cerró el plan el 2026-11-22 y decidió no continuar su ejecución. Esta lista conserva el trabajo y la evidencia existentes. Las tareas `Todo` y los checkpoints sin revisión no se marcan terminados o aceptados por el cierre.
 
 Los bloques se ejecutan en el orden en que aparecen. Cada bloque posterior depende del checkpoint anterior. Dentro del bloque, cada tarea depende de la anterior. C13 a C16 se incorporan después de C02 para resolver los críticos antes de retomar C03. C17 a C19 incorporan la tercera revisión después de C06. C20 a C22 incorporan la cuarta revisión después de C09. La quinta añade C23 después de C19 y C24 a C27 después de C22. T01 registra la revisión inicial. C01 sigue pendiente.
 
@@ -198,7 +200,7 @@ Despiece de T11 por recorrido: `etl_cases.py` coordina; `analytics/repository/da
 
 | Tarea | Estado y dueño | Cambio | Aceptación | Prueba focal |
 |---|---|---|---|---|
-| T23 · Unificar los límites publicados del protocolo | Todo · core, sync, HTTP | Compartir en `src/core/constants.py` los topes de cuerpo, operación, lote y página entre capacidades y validación. RG-01. | Los topes anunciados y los aplicados coinciden. Se conservan defaults, esquemas y estados HTTP. | Capacidades, exportador y peticiones con tamaño exacto, una unidad menos y una más. |
+| T23 · Unificar los límites publicados del protocolo | Done · core, sync, HTTP | Compartir en `src/core/constants.py` los topes de cuerpo, operación, lote y página entre capacidades y validación. RG-01. | Los topes anunciados y los aplicados coinciden. Se conservan defaults, esquemas y estados HTTP. | Capacidades, exportador y peticiones con tamaño exacto, una unidad menos y una más. |
 | T24 · Trasladar consultas al dueño de los datos | Todo · analytics, clinical_records, specialties | Mover SQL de aplicación al DAO dueño y exponer resultados tipados entre componentes. Empezar por odontología y retirar el envoltorio que solo desempaqueta el payload. RF-10. Aplicar el control estructural a cada componente al terminar su tarea. | La capa de aplicación queda sin SQL directo ni imports de repositorios ajenos en los recorridos modificados. | Controles de estructura, probes `specialties` y `clinical_analytics`. |
 
 - [ ] Pruebas focales y matriz común registradas. Si toca datos o transacciones, prueba con PostgreSQL aislado.
@@ -313,6 +315,23 @@ Despiece de T11 por recorrido: `etl_cases.py` coordina; `analytics/repository/da
 
 - [ ] Pruebas focales y matriz común registradas. Si toca datos o transacciones, prueba con PostgreSQL aislado.
 - [ ] Revisión del usuario.
+
+## Evidencia de T23 · Límites publicados del protocolo
+
+**Cambio.** `MAX_BATCH_OPERATIONS`, `MAX_BODY_BYTES`, `MAX_OPERATION_BYTES` y `MAX_PAGE_SIZE` viven en `src/core/constants.py` con sus valores literales exactos. Capacidades, middleware de cuerpo, lote, validación por operación y `PageQuery` consumen esas constantes. Se conservan 100 operaciones, 1 MiB, 64 KiB, 500 filas, `page` desde 1 y `shows=100` por defecto.
+
+**Fronteras.** Las pruebas cubren lotes de 99/100/101 operaciones y páginas de 499/500/501. El probe `sync` construye operaciones serializadas de 64 KiB−1, 64 KiB y 64 KiB+1, y cuerpos de 1 MiB−1, 1 MiB y 1 MiB+1. Los dos tamaños admitidos conservan el resultado contractual; el exceso devuelve 413. También conserva el `Content-Length` subestimado y la ausencia de efectos en rechazos.
+
+**Comprobaciones.**
+
+- `test_operations.py`, `test_accounts.py` y `test_foundation.py` → **31 pruebas, OK**.
+- `test-support/sync/check.py` → pasó con PostgreSQL/Keycloak Test y todas las fronteras nuevas.
+- `test-support/contracts/check.py` → pasó; capacidades devuelve los cuatro valores compartidos y conserva 104 acciones, esquemas, ejemplos y referencias.
+- `scripts.export_contracts --check` → sigue señalando `openapi.json`; la exportación temporal demostró que solo cambian `sourceHead` y `sourceSha256`. Los cuerpos públicos no cambian.
+- Suite completa → **262/263 pruebas correctas**, 98,781 s. El único error es el caso previo de `UsersStructureTests` por `src/api/users/repository/dao.py` eliminado; no corresponde a T23.
+- `uv build --offline` y `git diff --check` → correctos. Los archivos temporales de exportación se retiraron.
+
+**Alcance.** Solo T23 está Done. T24 no se inició; C09 conserva sus comprobaciones comunes y revisión del usuario pendientes.
 
 ## Evidencia de C08 · Reloj y sellos heredados
 

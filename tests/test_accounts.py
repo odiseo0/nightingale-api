@@ -13,6 +13,7 @@ from src.api.accounts.domain.accounts import (
     PracticeCreated,
     ProfessionalResponse,
 )
+from src.core.constants import MAX_PAGE_SIZE
 from src.core.schema import BaseModel, PageQuery
 from tests import test_foundation as foundation
 
@@ -70,8 +71,15 @@ class AccountSchemaTests(unittest.TestCase):
 
     def test_page_parameters_keep_existing_defaults_and_reject_old_cursor_fields(self):
         self.assertEqual(PageQuery().model_dump(), {"page": 1, "shows": 100})
-        self.assertEqual(PageQuery(page=2, shows=500).page, 2)
-        for fields in ({"page": 0}, {"shows": 0}, {"shows": 501}, {"cursor": "old"}, {"limit": 100}):
+        self.assertEqual(PageQuery(page=2, shows=MAX_PAGE_SIZE - 1).shows, MAX_PAGE_SIZE - 1)
+        self.assertEqual(PageQuery(page=2, shows=MAX_PAGE_SIZE).page, 2)
+        for fields in (
+            {"page": 0},
+            {"shows": 0},
+            {"shows": MAX_PAGE_SIZE + 1},
+            {"cursor": "old"},
+            {"limit": 100},
+        ):
             with self.subTest(fields=list(fields)):
                 with self.assertRaises(ValidationError):
                     PageQuery(**fields)
