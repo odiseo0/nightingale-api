@@ -21,10 +21,10 @@ La gestión de una cita existente usará acceso limitado a cita/acción e inform
 - Antes de usar APIs de herramientas, consulta el manifiesto y las versiones resueltas. Lee la página oficial de esa versión, registra el enlace y explica cualquier dependencia nueva. No instales ni actualices herramientas dentro de una tarea ajena.
 - No copies código Rust, planes históricos ni instrucciones exclusivas del escritorio. No modifiques otros repositorios sin una instrucción nueva.
 
-Usa [la arquitectura](docs/architecture.md) y [la propiedad de contratos](docs/contracts.md), con `api/users` como referencia de estilo. La arquitectura es hexagonal con empaquetado por componentes. Estas reglas sustituyen las descripciones previas incompatibles:
+Usa [la arquitectura](docs/architecture.md) y [la propiedad de contratos](docs/contracts.md), con `api/authorization` como referencia de estilo. La arquitectura es hexagonal con empaquetado por componentes. Estas reglas sustituyen las descripciones previas incompatibles:
 
 - `infrastructure/` contiene solo endpoints y su configuración. No contiene esquemas, helpers ni adaptadores de proveedores.
-- `application/` contiene casos de uso con funciones y resultados `Ok`/`Err`. No importa SQLAlchemy en ejecución ni consulta, escribe o hace flush sobre sesiones. Puede usar anotaciones de tipos como `users`.
+- `application/` contiene casos de uso con funciones y resultados `Ok`/`Err`. No importa SQLAlchemy en ejecución ni consulta, escribe o hace flush sobre sesiones. Puede usar anotaciones de tipos como `authorization`.
 - `repository/` contiene solo modelos SQLAlchemy y DAOs derivados de `core/db/dao.py`. Las consultas propias son métodos de esos DAOs.
 - `domain/` contiene esquemas, objetos de valor, tipos y errores propios. Todos los esquemas de datos heredan del `BaseModel` del proyecto. No contiene SQL ni acceso a proveedores o generación de credenciales.
 - Separar `authorization` (identidad, credenciales y dispositivos globales) de `accounts` (cuenta, pertenencias, perfil profesional y autorización por cuenta). Entre componentes, consumir casos de uso y tipos de dominio; no importar repositorios ajenos.
@@ -58,4 +58,3 @@ Lee y aplica la skill que corresponda a la tarea:
 - Separa documentación comprobada, pruebas locales, integración con consumidores y pruebas de operación. No declares una función hecha por describirla.
 - Entrega qué cambió, por qué, evidencia y límites pendientes. Actualiza el plan después de comprobar, sin marcar aceptación del usuario por tu cuenta.
 - Conserva una sola fuente editable por contrato. Los artefactos generados y las copias de consulta deben indicar origen y versión.
-- Si el usuario comienza en inglés, responde en inglés salvo que pida español. En inglés aplica ASD-STE100. En ambos idiomas usa palabras cortas, voz activa y frases directas, sin figuras retóricas.

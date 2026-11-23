@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 async def snapshot_accounts(
     db: AsyncSession, context: AccountContext
 ) -> list[SyncItem]:
-    """Read permitted account data inside the caller's coherent capture."""
     account = context.account
     items = [
         SyncItem(

@@ -29,7 +29,7 @@ from src.api.clinical_records.domain.notes import NoteQuery, PatientNoteResponse
 from src.api.encounters.domain.encounters import PatientEncounterResponse
 from src.core.db import DAO
 from src.core.schema import BaseModel
-from src.core.utils.utils import Empty, EmptyType
+from src.core.utils.utils import Empty
 
 from .allergies import PatientAllergyIntolerance, PatientAllergyIntoleranceHistory
 from .conditions import (
