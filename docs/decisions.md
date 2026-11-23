@@ -121,7 +121,7 @@ Comprobaciones futuras del acuerdo: dos personas interesadas no obtienen dos res
 
 **Confirmada el 2026-10-26:** el usuario aprobó implementar T34–T45 dentro del plan vigente. Sustituye la distribución previa incompatible de D04/D09 y arquitectura, sin borrar su historia ni cambiar el modelo físico.
 
-- Referencia de estilo: api/users. infrastructure solo endpoints/configuración; application casos de uso sin acceso directo a SQLAlchemy; repository modelos y DAOs derivados; domain esquemas, objetos de valor, tipos y errores.
+- Referencia de estilo: api/authorization. infrastructure solo endpoints/configuración; application casos de uso sin acceso directo a SQLAlchemy; repository modelos y DAOs derivados; domain esquemas, objetos de valor, tipos y errores.
 - authorization posee identidad, credenciales y dispositivos globales; accounts cuenta, pertenencias, perfil profesional y autorizaciones por cuenta. Entre componentes, casos de uso y tipos de dominio, no repositorios ajenos.
 - Todos los esquemas de datos heredan de la base del proyecto. JSON camelCase y Python snake_case; conservar nombres de protocolos externos y valores exactos de identidad/credenciales.
 - Listas y páginas de snapshot usan page/shows, LIMIT/OFFSET e items/total. Eliminar cursores de página y su configuración. Conservar el avance incremental de sincronización y sus garantías, nunca sustituirlo por OFFSET.
