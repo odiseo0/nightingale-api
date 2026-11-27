@@ -5,9 +5,17 @@ from uuid import UUID
 
 from src.api.accounts.domain.accounts import AccountContext, ProfessionalResponse
 from src.api.services.application.offers_cases import offer_response
-from src.api.services.domain.offers import ServiceOfferResponse
-from src.api.services.domain.services import ServiceResponse
-from src.api.services.repository.dao import dao_offers, dao_services
+from src.api.services.domain.offers import (
+    ServiceOfferPriceResponse,
+    ServiceOfferResponse,
+)
+from src.api.services.domain.services import ServicePriceResponse, ServiceResponse
+from src.api.services.repository.dao import (
+    dao_offer_prices,
+    dao_offers,
+    dao_service_prices,
+    dao_services,
+)
 from src.api.sync.domain.downloads import SyncItem
 from src.core.db import DAOError
 from src.core.utils.utils import Empty
@@ -68,5 +76,27 @@ async def snapshot_services(
             )
             for row in services
         )
+        items.extend(
+            SyncItem(
+                entity_type="service_price",
+                entity_key=row.service_id,
+                entity_version=row.version,
+                state=ServicePriceResponse.model_validate(row),
+            )
+            for row in await dao_service_prices.of_services(db, own)
+        )
+
+    items.extend(
+        SyncItem(
+            entity_type="service_offer_price",
+            entity_key={
+                "professionalId": row.professional_id,
+                "serviceId": row.service_id,
+            },
+            entity_version=row.version,
+            state=ServiceOfferPriceResponse.model_validate(row),
+        )
+        for row in await dao_offer_prices.of_account(db, context.account.id)
+    )
 
     return items

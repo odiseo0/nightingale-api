@@ -146,7 +146,7 @@ Puede recibir acciones financieras concretas:
 - Aprobar o rechazar pagos.
 - Descargar evidencia necesaria.
 
-No hereda acceso a notas, diagnósticos, mediciones o historias clínicas. Los permisos iniciales y la separación exacta de acciones se revisan en §15 y `BI-O05`.
+No hereda acceso a notas, diagnósticos, mediciones o historias clínicas. Los permisos iniciales y la agrupación de acciones quedaron fijados en §15 y [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03).
 
 ### 6.3 Paciente
 
@@ -271,7 +271,7 @@ Así se evita que `open`, `paid` y `cancelled` compitan en un solo campo.
 - Un cargo abierto no cambia paciente, cuenta o identidad.
 - Importe/descripción de un cargo abierto no se reescriben silenciosamente.
 - Un cargo erróneo sin pagos puede cancelarse y, si hace falta, sustituirse por otro vinculado.
-- Si ya tiene pagos, la corrección exige la política de `BI-O08`.
+- Si ya tiene pagos, la corrección sigue [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03) (`BI-O08` resuelto): primero se anulan los pagos con la acción de corrección; el cargo con pagos vigentes no puede cancelarse.
 - Cancelar no borra reportes, evidencias o pagos.
 
 Cancelar/reprogramar una cita no cancela automáticamente el cargo. La política de cobro por ausencia o cancelación es de producto y no se deduce.
@@ -322,6 +322,8 @@ El acceso desde una cita solo cubre cargos vinculados a ella. Un cargo sin cita 
 
 Revocar el enlace impide nuevas lecturas/reportes después del orden de revocación. Un reporte ya aceptado conserva su historia y puede ser revisado por el personal. La consulta posterior del resultado requiere un acceso todavía válido.
 
+Vigencia (`BI-O09` resuelto en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04)): la concesión vive mientras la cita esté activa y hasta 30 días tras la atención o el cierre; el personal puede revocarla en cualquier momento. Cancelar la cita revoca la concesión; reprogramarla la mantiene.
+
 ## 10. Reportes de pago del paciente
 
 ### 10.1 Datos declarados
@@ -337,7 +339,7 @@ El reporte puede incluir:
 - Captura del pago.
 - Identidad de operación para reintentos.
 
-Los campos obligatorios y la forma de referencia se cierran en `BI-O04`. No se solicitan números bancarios completos si no son necesarios.
+Obligatorios (`BI-O04` resuelto en [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02)): cargo, fecha del pago, importe y moneda, método declarado y captura. La referencia es opcional y siempre parcial; la nota breve es opcional. No se solicitan números bancarios completos si no son necesarios.
 
 ### 10.2 Captura obligatoria en el recorrido del paciente
 
@@ -410,7 +412,7 @@ Debe identificarse como constancia administrativa, no factura fiscal. Su conteni
 
 ### 11.4 Retención
 
-Las capturas, comprobantes, copias y eliminación requieren política antes de datos reales. Rechazar un reporte no borra inmediatamente la evidencia. Vencer una suscripción de Nightingale tampoco borra estos documentos.
+Política fijada en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04) (`BI-O11` resuelto), igual que D24: JPG, PNG y PDF, máximo 5 MB, una captura por reporte; comprobantes en PDF generado por API. Capturas, comprobantes y reportes se conservan mientras la cuenta exista; no se borran al rechazar, vencer o cancelar. La eliminación solo ocurre por un proceso administrativo trazado. Copias y restauración siguen la política general de operación antes de datos reales.
 
 ## 12. Revisión por la asistente
 
@@ -493,15 +495,13 @@ Los cálculos usan decimal exacto y una sola moneda por cargo.
 
 ### 13.3 Excedentes
 
-Un pago que supera el saldo no genera crédito ni se aplica a otro cargo automáticamente. La asistente debe rechazarlo, ajustar la revisión conforme a una política aprobada o seguir el procedimiento de `BI-O06`.
+Un pago que supera el saldo no genera crédito ni se aplica a otro cargo automáticamente. Conforme a `BI-O06` (resuelto en [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02)), la asistente lo rechaza con motivo y el paciente presenta un reporte corregido; no existe aprobación recortada ni crédito.
 
 No se permite que dos aprobaciones simultáneas superen el total por leer el mismo saldo anterior.
 
 ### 13.4 Pagos directos del personal
 
-El registro de efectivo u otro pago recibido directamente por la consulta puede ser útil, pero no fue descrito como recorrido principal. Se propone un origen `staff_entry` separado, con permiso y evidencia propios.
-
-Su inclusión inicial y obligaciones quedan en `BI-O07`; no se simula un reporte de paciente para registrarlo.
+El registro de efectivo u otro pago recibido directamente por la consulta queda incluido (`BI-O07` resuelto en [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02)): origen `staff_entry` separado, con permiso y evidencia propios, distinguible en lecturas y analítica. No se simula un reporte de paciente para registrarlo.
 
 ### 13.5 Anulación de pago
 
@@ -527,17 +527,15 @@ Un cargo y sus pagos aplicados comparten moneda. No se resta USD de VES. Si se a
 
 ### 14.3 USD/VES y BCV
 
-Las suscripciones ya usan USD con tasa BCV, pero esa decisión no se extiende automáticamente a pacientes.
+Las suscripciones ya usan USD con tasa BCV; para pacientes la adopción quedó fijada en [D25](decisions.md#d25--monedas-precios-y-vínculos-de-cargos-de-pacientes-t01) (`BI-O01` resuelto):
 
-`BI-O01` debe fijar:
+- Monedas de catálogo/cargo: USD y VES, una sola moneda por precio/cargo.
+- Se admiten cargos USD pagados en VES con conversión explícita previa a aplicar el pago.
+- Tasa: BCV de la fecha del pago declarada y verificada por quien revisa; si ese día no hay publicación, la publicada más reciente anterior (misma regla de fecha/fuente de D22, con configuración e historia propias).
+- Redondeo: decimal exacto, dos decimales, half-up en la conversión VES; el redondeo queda registrado.
+- Datos históricos: el cargo/pago conserva importe USD, tasa, fecha/fuente, equivalente VES y redondeo, sin revalorizar después.
 
-- Monedas de catálogo/cargo.
-- Si se admiten cargos USD pagados en VES.
-- Fecha y fuente de tasa.
-- Redondeo.
-- Datos históricos de conversión.
-
-Si se adopta BCV, el cargo/pago conserva importe USD, tasa, fecha/fuente, equivalente VES y redondeo, sin revalorizar después. Puede reutilizar el patrón de [account-subscriptions.md](account-subscriptions.md), pero mantiene su propia configuración e historia.
+Nulo significa «sin precio definido»; cero es un precio válido (servicio gratuito). Puede reutilizar el patrón de [account-subscriptions.md](account-subscriptions.md), pero mantiene su propia configuración e historia.
 
 ### 14.4 Totales
 
@@ -547,18 +545,20 @@ Las analíticas no suman monedas distintas en un único número. Todo total decl
 
 ### 15.1 Acciones separadas
 
-El catálogo de destino debe distinguir al menos:
+El catálogo distingue tres acciones financieras agrupadas (`BI-O05` resuelto en [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03)):
 
-| Acción conceptual | Permiso necesario |
+| Acción conceptual | Acción del catálogo |
 |---|---|
-| Consultar cargos/saldos | Lectura financiera |
-| Crear/editar borradores | Escritura de cargos |
-| Emitir/cancelar cargo | Administración de cargos |
-| Consultar reportes/evidencias | Lectura de revisión |
-| Aprobar/rechazar reporte | Revisión de pagos |
-| Anular pago | Corrección financiera |
+| Consultar cargos/saldos | `billing_read` |
+| Consultar reportes/evidencias | `billing_read` |
+| Consultar analítica | `billing_read` con alcance de indicadores |
+| Crear/editar borradores | `billing_charges` |
+| Emitir/cancelar cargo | `billing_charges` |
+| Ajuste manual de importe | `billing_charges` |
+| Aprobar/rechazar reporte | `billing_review` |
+| Registrar pago directo (`staff_entry`) | `billing_review` |
+| Anular pago | `billing_review` |
 | Modificar precios | Permiso propio de catálogo/oferta |
-| Consultar analítica | Lectura financiera con alcance de indicadores |
 
 No se usa un único permiso clínico `read_write` para abrir todas estas acciones.
 
@@ -567,7 +567,7 @@ No se usa un único permiso clínico `read_write` para abrir todas estas accione
 - El propietario conserva acceso financiero completo en su cuenta.
 - La asistente que revisa necesita la acción explícita de revisión.
 - Otros asistentes pueden tener solo lectura o ningún acceso.
-- Los valores iniciales para asistentes existentes/nuevos se deciden en `BI-O05`.
+- Los asistentes (nuevos y existentes) no reciben ninguna acción financiera por defecto; el propietario las concede explícitamente (`BI-O05` resuelto en [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03)).
 - Cambiar permisos sigue siendo online, versionado, auditado e invalida capturas/cursores del alcance afectado.
 
 ### 15.3 Objeto y mínimo necesario
@@ -628,7 +628,7 @@ Si se permite crear cargos offline:
 - Un rechazo conserva la intención local.
 - No se marca como pagado por una captura local sin aprobación remota.
 
-La política concreta de borradores/pagos directos offline queda en `BI-O10`.
+La política quedó fijada en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04) (`BI-O10` resuelto): solo los borradores de cargo pueden prepararse offline; reportes, evidencias, aprobaciones/rechazos, anulaciones, `staff_entry` y cambios de permisos son online.
 
 ## 17. Modelo conceptual de datos
 
@@ -731,7 +731,7 @@ No mezclar sin etiqueta:
 - Fecha de pago verificada.
 - Fecha de aprobación.
 
-Cada informe declara cuál usa. “Cobrado en noviembre” puede significar pagos fechados o aprobados en noviembre; el contrato debe escoger y mostrar una.
+Cada informe declara cuál usa. “Cobrado en noviembre” puede significar pagos fechados o aprobados en noviembre. Para el primer panel se escogió (`BI-O12` resuelto en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04)): cargado y saldo por fecha de emisión del cargo; cobrado por fecha de aprobación, declarado así en el contrato.
 
 ### 19.4 Moneda e historia
 
@@ -860,18 +860,18 @@ Estos criterios son requisitos futuros, no pruebas ejecutadas por esta entrega.
 
 | ID | Decisión | Momento necesario |
 |---|---|---|
-| `BI-O01` | Monedas de precios/cargos y adopción de USD/BCV para pacientes | Antes de contratos monetarios |
-| `BI-O02` | Confirmar precio base/oferta y si el paciente ve estimación antes del cargo | Antes de catálogo/Hub |
-| `BI-O03` | Permitir cargos sin cita/atención y ajustes manuales de importe | Antes de creación de cargos |
-| `BI-O04` | Datos obligatorios del reporte y forma de referencia bancaria | Antes del formulario del paciente |
-| `BI-O05` | Permisos iniciales y granularidad para asistentes | Antes de revisión por personal |
-| `BI-O06` | Pagos parciales, excedentes y aplicación a varios cargos | Antes de aprobar esos casos |
-| `BI-O07` | Registro directo de efectivo/pagos por el personal | Antes de `staff_entry` |
-| `BI-O08` | Corrección de cargos con pagos, anulaciones y constancia de reembolso | Antes de correcciones financieras |
-| `BI-O09` | Vigencia/revocación del enlace y efecto de cancelar/reprogramar cita | Antes del contrato del Hub |
-| `BI-O10` | Qué borradores o pagos directos pueden prepararse offline | Antes de sincronización financiera |
-| `BI-O11` | Formatos/tamaños de captura, retención, copias y eliminación | Antes de datos reales |
-| `BI-O12` | Indicadores/fechas exactos del primer panel | Antes del contrato de analítica |
+| ~~`BI-O01`~~ | Resuelto en [D25](decisions.md#d25--monedas-precios-y-vínculos-de-cargos-de-pacientes-t01): USD/VES, conversión BCV instantánea, redondeo half-up | — |
+| ~~`BI-O02`~~ | Resuelto en [D25](decisions.md#d25--monedas-precios-y-vínculos-de-cargos-de-pacientes-t01): base/oferta confirmado, estimación visible no vinculante | — |
+| ~~`BI-O03`~~ | Resuelto en [D25](decisions.md#d25--monedas-precios-y-vínculos-de-cargos-de-pacientes-t01): cargos libres y ajustes manuales con permiso, sin cargo automático | — |
+| ~~`BI-O04`~~ | Resuelto en [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02): mínimo obligatorio, referencia opcional parcial | — |
+| ~~`BI-O05`~~ | Resuelto en [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03): denegado por defecto, tres acciones agrupadas | — |
+| ~~`BI-O06`~~ | Resuelto en [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02): parciales admitidos, excedente rechazado, un pago un cargo | — |
+| ~~`BI-O07`~~ | Resuelto en [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02): `staff_entry` incluido con permiso/evidencia propios | — |
+| ~~`BI-O08`~~ | Resuelto en [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03): anular pagos primero, sin reembolso real ni constancia de devolución | — |
+| ~~`BI-O09`~~ | Resuelto en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04): vigencia ligada a cita + 30 días, cancelar revoca, reprogramar mantiene | — |
+| ~~`BI-O10`~~ | Resuelto en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04): solo borradores offline, resto online | — |
+| ~~`BI-O11`~~ | Resuelto en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04): política D24 (JPG/PNG/PDF, 5 MB, una captura), retención mientras la cuenta exista | — |
+| ~~`BI-O12`~~ | Resuelto en [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04): panel §19.1 completo; cobrado por fecha de aprobación | — |
 
 Estas preguntas no impiden revisar la base. Bloquean solo las funciones que dependan de ellas.
 

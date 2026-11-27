@@ -10,6 +10,7 @@ from src.api.accounts.domain.accounts import (
     AccountDeviceResponse,
     AccountResponse,
     AccountSummary,
+    BillingPermissions,
     BootstrapPracticeInput,
     ClinicalPermissions,
     ClinicalSection,
@@ -306,6 +307,11 @@ async def account_context(
                 diagnostic_reports=membership.diagnostic_reports_access,
                 specialty_templates=membership.specialty_templates_access,
             ),
+            billing_permissions=BillingPermissions(
+                billing_read=membership.billing_read_access,
+                billing_charges=membership.billing_charges_access,
+                billing_review=membership.billing_review_access,
+            ),
         )
     )
 
@@ -423,6 +429,7 @@ async def get_access(
             status=state,
             permission_epoch=epoch.value,
             clinical_permissions=context.clinical_permissions,
+            billing_permissions=context.billing_permissions,
             allowed_actions=published_actions(context),
         )
 

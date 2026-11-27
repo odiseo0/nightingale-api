@@ -2,6 +2,8 @@ from typing import Literal
 
 from src.api.accounts.domain.accounts import (
     AccountContext,
+    BillingAction,
+    BillingPermissions,
     ClinicalLevel,
     ClinicalPermissions,
     ClinicalSection,
@@ -23,6 +25,7 @@ type ObjectRule = Literal[
     "own_professional",
     "own_catalog",
     "own_offer",
+    "billing_charge",
 ]
 
 
@@ -32,6 +35,8 @@ class OperationPolicy(BaseModel):
     object_rule: ObjectRule
     sections: tuple[ClinicalSection, ...] = ()
     required_level: Literal["read_write"] | None = None
+    # Financial grant of D27 required from assistants; the owner always passes.
+    billing: BillingAction | None = None
     changes_scope: bool = False
     # A shared review has two public positions, but only one descriptor.
     publication: tuple[tuple[int, ClinicalSection | None], ...] = ()
@@ -153,13 +158,20 @@ def operation_policies() -> dict[str, OperationPolicy]:
         ),
         ("RevokeAccountDevice RestoreAccountDevice", True, None, "account_device"),
         ("UpdateProfessionalProfile", True, None, "own_professional"),
-        ("CreateService UpdateService SetServiceStatus", True, None, "own_catalog"),
+        ("CreateService UpdateService SetServiceStatus SetServicePrice", True, None, "own_catalog"),
         (
-            "OfferService UpdateServiceOffer SetServiceOfferStatus",
+            "OfferService UpdateServiceOffer SetServiceOfferStatus SetServiceOfferPrice RemoveServiceOfferPrice",
             True,
             None,
             "own_offer",
         ),
+        (
+            "CreatePatientCharge UpdatePatientCharge IssuePatientCharge CancelPatientCharge",
+            False,
+            None,
+            "billing_charge",
+        ),
+        ("SetMemberBillingPermissions", True, None, "membership"),
     )
     policies: dict[str, OperationPolicy] = {}
     position = 0
@@ -173,12 +185,16 @@ def operation_policies() -> dict[str, OperationPolicy]:
                     name=action,
                     owner_only=owner_only,
                     object_rule=object_rule,
+                    billing="billing_charges"
+                    if object_rule == "billing_charge"
+                    else None,
                     changes_scope=action
                     in (
                         "RegisterAccountDevice",
                         "SetAccountStatus",
                         "SetMembershipStatus",
                         "SetMemberClinicalPermissions",
+                        "SetMemberBillingPermissions",
                         "RevokeAccountDevice",
                         "RestoreAccountDevice",
                     ),
@@ -231,6 +247,9 @@ def policy_allows(
         and context.device_status != "active"
     ):
         return False
+
+    if policy.billing is not None:
+        return context.owner or context.billing_permissions.granted(policy.billing)
 
     if policy.sections:
         if section not in policy.sections:
@@ -315,6 +334,7 @@ def projection_audiences() -> dict[str, tuple[str, ...]]:
             "contact_person",
             "patient_contact",
             "service_offer",
+            "service_offer_price",
             "schedule_rule",
             "schedule_exception",
             "schedule_block",
@@ -329,10 +349,12 @@ def projection_audiences() -> dict[str, tuple[str, ...]]:
             entity: ("owner",)
             for entity in [
                 "account_device", "membership", "invitation", "service",
-                "subscription_admin",
+                "service_price", "subscription_admin",
             ]
         }
     )
+    rules["billing_charge"] = ("billing",)
+    rules["billing_payment"] = ("billing",)
     policies = operation_policies()
 
     for entity, action in (
@@ -371,6 +393,7 @@ def projection_allowed(
     owner: bool,
     sections: list[ClinicalSection],
     section: ClinicalSection | None = None,
+    billing: bool = False,
 ) -> bool:
     audiences = projection_audiences().get(entity)
 
@@ -392,6 +415,10 @@ def projection_allowed(
 
     if audience == "owner":
         return owner
+
+    if audience == "billing":
+        # Closed financial audience (D27/D28): never derived from clinical sections.
+        return owner or billing
 
     clinical_section = clinical_audiences().get(audience)
 
@@ -425,4 +452,12 @@ def clinical_permission_values(
         ("clinical_profile" if section == "profile" else section)
         + "_access": permissions.level(section)
         for section in catalog_clinical_sections()
+    }
+
+
+def billing_permission_values(permissions: BillingPermissions) -> dict[str, str]:
+    return {
+        "billing_read_access": permissions.billing_read,
+        "billing_charges_access": permissions.billing_charges,
+        "billing_review_access": permissions.billing_review,
     }

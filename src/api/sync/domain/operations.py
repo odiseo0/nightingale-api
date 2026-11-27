@@ -20,10 +20,12 @@ from src.api.accounts.domain.accounts import (
     AccountDeviceResponse,
     AccountPolicyPayload,
     AccountResponse,
+    BillingPermissionsPayload,
     ClinicalPermissionsPayload,
     CreateInvitationPayload,
     InvitationAcceptanceResult,
     InvitationResponse,
+    MemberBillingPermissionsResponse,
     MemberClinicalPermissionsResponse,
     MemberResponse,
     MembershipStatusPayload,
@@ -37,6 +39,14 @@ from src.api.appointments.domain.appointments import (
     CreateAppointmentPayload,
     EmptyAppointmentPayload,
 )
+from src.api.billing.domain.charges import (
+    CancelPatientChargePayload,
+    ChargeResponse,
+    CreatePatientChargePayload,
+    IssuePatientChargePayload,
+    UpdatePatientChargePayload,
+)
+from src.api.billing.domain.payments import BillingPaymentProjection
 from src.api.care_plans.domain.goals import (
     AddCarePlanActionPayload,
     AddCarePlanGoalPayload,
@@ -156,14 +166,19 @@ from src.api.schedule.domain.schedule import (
 )
 from src.api.services.domain.offers import (
     OfferServicePayload,
+    RemoveServiceOfferPricePayload,
+    ServiceOfferPriceResponse,
     ServiceOfferResponse,
+    SetServiceOfferPricePayload,
     UpdateServiceOfferPayload,
 )
 from src.api.services.domain.services import (
     CreateServicePayload,
     ServicePatch,
+    ServicePriceResponse,
     ServiceResponse,
     ServiceStatusPayload,
+    SetServicePricePayload,
 )
 from src.api.specialties.domain.odontogram import (
     AddDentalTreatmentPayload,
@@ -196,11 +211,20 @@ SERVICE_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateService": CreateServicePayload,
     "UpdateService": ServicePatch,
     "SetServiceStatus": ServiceStatusPayload,
+    "SetServicePrice": SetServicePricePayload,
 }
 OFFER_SCHEMAS: dict[str, type[BaseModel]] = {
     "OfferService": OfferServicePayload,
     "UpdateServiceOffer": UpdateServiceOfferPayload,
     "SetServiceOfferStatus": ServiceStatusPayload,
+    "SetServiceOfferPrice": SetServiceOfferPricePayload,
+    "RemoveServiceOfferPrice": RemoveServiceOfferPricePayload,
+}
+BILLING_CHARGE_SCHEMAS: dict[str, type[BaseModel]] = {
+    "CreatePatientCharge": CreatePatientChargePayload,
+    "UpdatePatientCharge": UpdatePatientChargePayload,
+    "IssuePatientCharge": IssuePatientChargePayload,
+    "CancelPatientCharge": CancelPatientChargePayload,
 }
 RULE_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateScheduleRule": CreateScheduleRulePayload,
@@ -338,6 +362,7 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     "CreateInvitation": CreateInvitationPayload,
     "SetMembershipStatus": MembershipStatusPayload,
     "SetMemberClinicalPermissions": ClinicalPermissionsPayload,
+    "SetMemberBillingPermissions": BillingPermissionsPayload,
     "UpdateAccountDetails": AccountDetailsPatch,
     "UpdateAccountPolicy": AccountPolicyPayload,
     "SetAccountStatus": MembershipStatusPayload,
@@ -363,6 +388,7 @@ OPERATION_SCHEMAS: dict[str, type[BaseModel]] = {
     **CONTACT_SCHEMAS,
     **SERVICE_SCHEMAS,
     **OFFER_SCHEMAS,
+    **BILLING_CHARGE_SCHEMAS,
     **RULE_SCHEMAS,
     **EXCEPTION_SCHEMAS,
     **BLOCK_SCHEMAS,
@@ -477,7 +503,12 @@ type OperationState = (
     | ContactResponse
     | RelationshipResponse
     | ServiceResponse
+    | ServicePriceResponse
     | ServiceOfferResponse
+    | ServiceOfferPriceResponse
+    | MemberBillingPermissionsResponse
+    | ChargeResponse
+    | BillingPaymentProjection
     | ScheduleRuleResponse
     | ScheduleExceptionResponse
     | ScheduleBlockResponse

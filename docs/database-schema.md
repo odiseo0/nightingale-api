@@ -2857,3 +2857,255 @@ Un CHECK de coherencia exige que `approved` tenga fecha, importe y moneda verifi
 - Dos operadores sobre el mismo reporte se serializan con el bloqueo de la fila del reporte y su `version`; el perdedor recibe duplicado o conflicto y la UQ de `subscription_reviews.report_id` es la última línea de defensa.
 - `nightingale_runtime` recibe los privilegios mínimos por DAO; las capturas nunca aparecen en journal, snapshots, logs ni auditoría (§21.2). El detalle de grants se fija en la migración de T13.
 - El downgrade elimina las seis tablas en orden de dependencias y retira las columnas y UQ añadidas a `subscription_periods` y `account_subscriptions`, sin tocar el resto del esquema.
+
+## 19. Facturación de pacientes: precios, cargos y pagos · diseño para revisión C02
+
+Diseño físico del núcleo financiero de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md) según [patient-billing.md](patient-billing.md) y las decisiones [D25](decisions.md#d25--monedas-precios-y-vínculos-de-cargos-de-pacientes-t01), [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02) y [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03). Pendiente de aceptación e implementación. Añade cuatro tablas al esquema `nightingale`, sin modificar tablas existentes. Reportes, revisiones, evidencias, comprobantes y concesiones se diseñan aparte en §20; la FK de origen de cada pago hacia su aprobación se añade con ellas. Los bytes de capturas y comprobantes nunca se guardan en PostgreSQL.
+
+### 19.1 `service_prices`
+
+Una fila por servicio del catálogo con su precio base vigente. Nulo significa «sin precio definido» (no existe fila); cero es un precio válido de servicio gratuito (D25). Las filas no versionan el historial: el cargo copia su instantánea al emitirse y los cambios de catálogo nunca lo reescriben (§8.2 de patient-billing).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `professional_id` | `uuid` | Sí | Sin valor | PK compuesta; parte de FK |
+| `service_id` | `uuid` | Sí | Sin valor | PK compuesta; FK `(professional_id, service_id)` a `services.(professional_id, id)`, RESTRICT |
+| `amount` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor o igual que cero; decimal exacto, sin NaN ni infinito |
+| `currency` | `text` | Sí | Sin valor | CHECK `USD` o `VES` (D25, ISO 4217) |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; aceptación optimista |
+
+PK `(professional_id, service_id)`: un precio base por servicio. Solo el profesional propietario del catálogo lo modifica, con el permiso de catálogo existente (§15.1 de patient-billing).
+
+### 19.2 `service_offer_prices`
+
+Una fila por oferta con precio ajustado. La resolución es: precio de la oferta cuando existe, si no el base del servicio (D25); la estimación al paciente usa la misma resolución y no reserva precio.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `account_id` | `uuid` | Sí | Sin valor | PK compuesta; parte de FK |
+| `professional_id` | `uuid` | Sí | Sin valor | PK compuesta; parte de FK |
+| `service_id` | `uuid` | Sí | Sin valor | PK compuesta; FK `(account_id, professional_id, service_id)` a `professional_services`, RESTRICT |
+| `amount` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor o igual que cero |
+| `currency` | `text` | Sí | Sin valor | CHECK `USD` o `VES` |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; aceptación optimista |
+
+La FK compuesta a la oferta garantiza que solo se ajusta el precio de un servicio efectivamente ofrecido en esa cuenta por ese profesional. Retirar el ajuste (borrar la fila) devuelve la resolución al precio base sin tocar cargos emitidos.
+
+### 19.3 `patient_charges`
+
+Una fila por cargo con sus instantáneas. Nunca se genera por crear/completar/cancelar citas o atenciones: toda fila nace de una acción explícita del personal (D25). Un cargo libre no exige cita, atención ni servicio, pero siempre pertenece a una cuenta y un paciente.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | Parte de FKs compuestas; el cargo no cruza cuentas |
+| `patient_id` | `uuid` | Sí | Sin valor | FK `(account_id, patient_id)` a `account_patients`, RESTRICT |
+| `appointment_id` | `uuid` | No | Nulo | FK `(account_id, appointment_id, patient_id)` a `appointments.(account_id, id, patient_id)`, RESTRICT si presente; garantiza la misma cuenta y paciente |
+| `encounter_id` | `uuid` | No | Nulo | FK `(account_id, encounter_id, patient_id)` a `clinical_encounters.(account_id, id, patient_id)`, RESTRICT si presente; garantiza la misma cuenta y paciente |
+| `service_id` | `uuid` | No | Nulo | Referencia informativa al servicio de origen; sin FK de precio: la instantánea manda |
+| `description` | `text` | Sí | Sin valor | CHECK no vacío; instantánea de la descripción al emitir |
+| `amount` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor o igual que cero; ajuste manual solo con `billing_charges` (D25) |
+| `currency` | `text` | Sí | Sin valor | CHECK `USD` o `VES`; los pagos aplicados comparten esta moneda |
+| `price_source` | `text` | Sí | Sin valor | CHECK `offer`, `base` o `manual`; origen de la instantánea |
+| `status` | `text` | Sí | `draft` | CHECK `draft`, `issued` o `cancelled` |
+| `issued_at` | `timestamptz` | No | Nulo | CHECK finito si presente; obligatorio con `issued`/`cancelled` |
+| `cancelled_at` | `timestamptz` | No | Nulo | CHECK finito si presente; obligatorio con `cancelled` |
+| `cancellation_reason` | `text` | No | Nulo | CHECK no vacío si presente; obligatorio al cancelar |
+| `created_by` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; aceptación optimista |
+
+UQ `(id, account_id)` como destino de las FK compuestas de pagos, reportes y concesiones. CHECK de coherencia: `draft` no tiene `issued_at`; `issued` tiene `issued_at` y no `cancelled_at`; `cancelled` tiene ambos y motivo. Vínculos coherentes: las FK compuestas por cuenta impiden cruzar cuenta; la aplicación valida además que la cita/atención pertenece al mismo paciente del cargo. Índices `(account_id, patient_id, created_at)` para la lista por paciente y `(account_id, status, created_at)` para la bandeja. Borrador no es visible al paciente: las proyecciones y concesiones solo admiten `issued`/`cancelled`.
+
+### 19.4 `charge_histories`
+
+Una fila por cambio relevante del cargo: creación, edición de borrador, ajuste manual, emisión, cancelación y correcciones. Las filas son inmutables y nunca se borran al cancelar (§8.5).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `charge_id` | `uuid` | Sí | Sin valor | Parte de FK compuesta |
+| `account_id` | `uuid` | Sí | Sin valor | FK `(charge_id, account_id)` a `patient_charges.(id, account_id)`, RESTRICT |
+| `action` | `text` | Sí | Sin valor | CHECK `created`, `draft_updated`, `amount_adjusted`, `issued`, `cancelled` o `corrected` |
+| `charge_version` | `integer` | Sí | Sin valor | CHECK positivo; versión resultante del cambio |
+| `actor_id` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT |
+| `reason` | `text` | No | Nulo | CHECK no vacío si presente; obligatorio en ajuste, cancelación y corrección |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+Índice `(charge_id, created_at)` para la historia ordenada. No guarda payloads completos: la fila del cargo y sus versiones son la fuente; la historia registra acción, actor, motivo e instante.
+
+### 19.5 `patient_payments`
+
+Una fila por pago administrativo vigente o anulado. D26 fija un pago aplicado a un solo cargo, por lo que la aplicación es una columna y no una tabla separada; la lista conceptual `payment_applications` de §17 de patient-billing queda resuelta así. La UQ de `origin_report_id` (§20.3) garantiza que un reporte aprobado produce como máximo un pago ordinario.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | Parte de FK compuesta |
+| `charge_id` | `uuid` | Sí | Sin valor | FK `(charge_id, account_id)` a `patient_charges.(id, account_id)`, RESTRICT |
+| `patient_id` | `uuid` | Sí | Sin valor | FK `(account_id, patient_id)` a `account_patients`, RESTRICT; coherente con el cargo |
+| `origin` | `text` | Sí | Sin valor | CHECK `patient_report` o `staff_entry` (D26) |
+| `origin_report_id` | `uuid` | No | Nulo | FK a `patient_payment_reports.id`, RESTRICT si presente; obligatorio con `patient_report`, nulo con `staff_entry` |
+| `amount_usd` | `numeric(12,2)` | No | Nulo | CHECK mayor que cero si presente; importe en USD cuando hay conversión |
+| `amount` | `numeric(14,2)` | Sí | Sin valor | CHECK mayor que cero; importe verificado en la moneda del cargo |
+| `currency` | `text` | Sí | Sin valor | CHECK `USD` o `VES`; debe igualar la moneda del cargo |
+| `exchange_rate` | `numeric(18,6)` | No | Nulo | CHECK mayor que cero si presente; tasa BCV instantánea de la conversión (D25) |
+| `exchange_rate_date` | `date` | No | Nulo | CHECK finito si presente; fecha de publicación aplicada |
+| `exchange_rate_source` | `text` | No | Nulo | CHECK no vacío si presente; fuente registrada |
+| `paid_on` | `date` | Sí | Sin valor | CHECK finito; fecha del pago verificada |
+| `method` | `text` | Sí | Sin valor | CHECK no vacío |
+| `reference_last4` | `text` | No | Nulo | CHECK 4 dígitos si presente; texto, conserva ceros; sin unicidad |
+| `status` | `text` | Sí | `active` | CHECK `active` o `annulled` |
+| `annulled_at` | `timestamptz` | No | Nulo | CHECK finito si presente; obligatorio con `annulled` |
+| `annulled_by` | `uuid` | No | Nulo | FK a `app_users.id`, RESTRICT si presente; obligatorio con `annulled` |
+| `annulment_reason` | `text` | No | Nulo | CHECK no vacío si presente; obligatorio con `annulled`; no afirma devolución (D27) |
+| `registered_by` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT; revisor que aprobó o registró |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo |
+
+Un CHECK de coherencia exige que la conversión sea completa o ausente: `exchange_rate`, `exchange_rate_date`, `exchange_rate_source` y `amount_usd` presentes juntos solo cuando el pago verificado fue VES aplicado a un cargo USD (D25); nada se revaloriza después. Otro CHECK liga `origin` con `origin_report_id`. El saldo vigente es `totalDelCargo - suma(pagos active)`; los anulados dejan de sumar sin borrar historia (§13.5). Índices `(account_id, charge_id, status)` para el cálculo de saldo y `(account_id, created_at)` para analítica.
+
+### 19.6 Integridad, concurrencia y permisos
+
+- El saldo se coordina bloqueando la fila del cargo (`SELECT ... FOR UPDATE`) dentro de la transacción que aprueba o registra el pago: dos aprobaciones simultáneas no pueden exceder el total ni duplicar el pago (§13.3); la UQ de origen y el CHECK de moneda son la última línea de defensa.
+- Un cargo con pagos `active` no puede cancelarse: la cancelación verifica dentro del mismo bloqueo que no existan pagos vigentes; corregir exige anularlos primero (D27).
+- La moneda del pago debe igualar la del cargo; la conversión VES→USD es explícita y previa, con redondeo half-up a dos decimales registrado (D25).
+- Toda escritura usa DAOs `commit=False` dentro de la transacción del caso de uso; pago, historia, auditoría, recibo y journal confirman juntos.
+- `nightingale_runtime` recibe los privilegios mínimos por DAO; el detalle de grants se fija en la migración de T11/T12. El rol operativo no ejecuta DDL.
+- El downgrade elimina las cuatro tablas en orden de dependencias sin tocar el resto del esquema.
+
+## 20. Facturación de pacientes: reportes, revisiones, evidencias y concesiones · diseño para revisión C02
+
+Completa el diseño físico de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md) según [patient-billing.md](patient-billing.md) y las decisiones [D26](decisions.md#d26--reportes-de-pago-parciales-excedentes-y-pagos-directos-t02), [D27](decisions.md#d27--permisos-financieros-iniciales-y-correcciones-t03) y [D28](decisions.md#d28--concesión-del-paciente-offline-archivos-y-primer-panel-t04). Pendiente de aceptación e implementación. Añade cinco tablas al esquema `nightingale` y la UQ de origen en `patient_payments` (§20.3). Los bytes de capturas y comprobantes viven en almacenamiento privado fuera de la base, del journal y de los logs; solo se guardan metadatos y referencia interna.
+
+### 20.1 `billing_exchange_rates`
+
+Tasas BCV propias de facturación por cuenta (D25: configuración e historia propias, sin reutilizar la tabla global de suscripciones). La selección usa la fecha del pago verificada y, si no hay publicación ese día, la más reciente anterior (misma regla de D22).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | UQ con `rate_date`; FK a `accounts.id`, RESTRICT |
+| `rate_date` | `date` | Sí | Sin valor | UQ con `account_id`; CHECK finito |
+| `rate_ves_per_usd` | `numeric(18,6)` | Sí | Sin valor | CHECK mayor que cero |
+| `source` | `text` | Sí | Sin valor | CHECK no vacío; origen administrativo de la tasa |
+| `registered_by` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+UQ `(account_id, rate_date)`: una tasa por cuenta y fecha. Las tasas históricas se conservan; ninguna aprobación confirmada se recalcula.
+
+### 20.2 `patient_payment_reports`
+
+Una fila por presentación del paciente. Los datos declarados son inmutables tras presentar; los verificados viven solo en `billing_reviews` (§12.2 de patient-billing). Presentar nunca altera el saldo.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | Parte de FKs compuestas |
+| `charge_id` | `uuid` | Sí | Sin valor | FK `(charge_id, account_id)` a `patient_charges.(id, account_id)`, RESTRICT |
+| `patient_id` | `uuid` | Sí | Sin valor | FK `(account_id, patient_id)` a `account_patients`, RESTRICT; coherente con el cargo |
+| `grant_id` | `uuid` | Sí | Sin valor | FK a `patient_billing_grants.id`, RESTRICT; concesión con la que se presentó |
+| `status` | `text` | Sí | `pending` | CHECK `pending`, `approved` o `rejected` |
+| `declared_paid_on` | `date` | Sí | Sin valor | CHECK finito; obligatorio (D26) |
+| `declared_amount` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor que cero; obligatorio |
+| `declared_currency` | `text` | Sí | Sin valor | CHECK `USD` o `VES`; obligatorio |
+| `declared_method` | `text` | Sí | Sin valor | CHECK no vacío; obligatorio |
+| `declared_reference_last4` | `text` | No | Nulo | CHECK 4 dígitos si presente; opcional y siempre parcial (D26); sin unicidad |
+| `declared_note` | `text` | No | Nulo | CHECK no vacío si presente; opcional |
+| `previous_report_id` | `uuid` | No | Nulo | FK a `patient_payment_reports.id`, RESTRICT; cadena de nueva presentación tras rechazo |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; coordinación de revisión concurrente |
+
+UQ `(id, account_id)` como destino de la FK de `patient_payments.origin_report_id`. Las coincidencias de importe/fecha/referencia solo generan advertencia al revisor, nunca rechazo ni borrado automático (§10.5). Índices `(account_id, status, created_at)` para la bandeja de pendientes y `(charge_id, created_at)` para la historia del cargo. La idempotencia de presentación usa el recibo de operación existente: un reintento con la misma identidad recupera el mismo reporte sin duplicar captura ni efecto.
+
+### 20.3 `patient_payment_evidence` y FK de origen del pago
+
+Una fila por captura; D28 fija una captura por reporte, con la política de formatos de D24. Solo metadatos.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `report_id` | `uuid` | Sí | Sin valor | UQ; FK a `patient_payment_reports.id`, RESTRICT |
+| `storage_key` | `text` | Sí | Sin valor | UQ; nombre interno generado por API; nunca URL pública |
+| `content_type` | `text` | Sí | Sin valor | CHECK `image/jpeg`, `image/png` o `application/pdf` (D28/D24) |
+| `size_bytes` | `integer` | Sí | Sin valor | CHECK positivo y no mayor que 5242880 (5 MB) |
+| `sha256` | `text` | Sí | Sin valor | CHECK 64 hex minúsculos |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+La fila solo se inserta cuando la carga terminó y su vínculo es válido; una carga fallida no deja evidencia ni efecto. La captura es obligatoria en el recorrido del paciente (§10.2): la aceptación del reporte exige su evidencia en la misma operación.
+
+`patient_payments` (§19.5) recibe `origin_report_id` con UQ: una aprobación produce como máximo un pago ordinario, y la carrera entre dos revisores pierde contra la restricción aunque eluda la coordinación de aplicación. `staff_entry` no usa esta vía: su `origin_report_id` es nulo y su actor queda en `registered_by`.
+
+### 20.4 `billing_reviews`
+
+Una fila por decisión del personal sobre un reporte. La UQ sobre `report_id` hace imposible decidir dos veces; una corrección del paciente es una presentación nueva encadenada (§10.4).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `report_id` | `uuid` | Sí | Sin valor | UQ; FK a `patient_payment_reports.id`, RESTRICT |
+| `account_id` | `uuid` | Sí | Sin valor | La revisión no cruza cuentas; coherencia validada con el reporte |
+| `reviewer_id` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT; revisor real con `billing_review` (D27) |
+| `decision` | `text` | Sí | Sin valor | CHECK `approved` o `rejected` |
+| `verified_paid_on` | `date` | No | Nulo | CHECK finito si presente; obligatorio al aprobar |
+| `verified_amount` | `numeric(12,2)` | No | Nulo | CHECK mayor que cero si presente; obligatorio al aprobar |
+| `verified_currency` | `text` | No | Nulo | CHECK `USD` o `VES` si presente; obligatorio al aprobar |
+| `billing_exchange_rate_id` | `uuid` | No | Nulo | FK a `billing_exchange_rates.id`, RESTRICT; tasa aplicada cuando el pago verificado es VES para un cargo USD |
+| `internal_note` | `text` | No | Nulo | CHECK no vacío si presente; nunca se proyecta al paciente (§12.2) |
+| `reason` | `text` | No | Nulo | CHECK no vacío si presente; obligatorio al rechazar; sin datos bancarios completos |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+Un CHECK de coherencia exige que `approved` tenga fecha, importe y moneda verificados, y que `rejected` tenga motivo. Los datos verificados no sobrescriben lo declarado. La aprobación confirma en una sola transacción: revisión, estado del reporte, pago con `origin_report_id`, saldo verificado bajo el bloqueo del cargo, historia, auditoría, recibo y grupo del journal.
+
+### 20.5 `payment_receipts`
+
+Una fila por comprobante administrativo no fiscal generado tras la aprobación. La instantánea del contenido se conserva; cambios posteriores de nombres o anulaciones no lo reescriben, y el estado posterior se consulta por el pago (§11.3, D27).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | Parte de FK compuesta |
+| `payment_id` | `uuid` | Sí | Sin valor | UQ; FK a `patient_payments.id`, RESTRICT; un comprobante por pago |
+| `storage_key` | `text` | Sí | Sin valor | UQ; PDF generado por API (D28); nunca URL pública |
+| `content_type` | `text` | Sí | `application/pdf` | CHECK `application/pdf` |
+| `size_bytes` | `integer` | Sí | Sin valor | CHECK positivo |
+| `sha256` | `text` | Sí | Sin valor | CHECK 64 hex minúsculos |
+| `issued_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+El comprobante identifica pago, cargo, concepto, importe/moneda verificados, fechas y método/referencia parcial permitida, y se rotula como constancia administrativa: no es factura fiscal ni constancia de devolución (D26/D27). La descarga se reautoriza en cada solicitud; conocer `storage_key` no concede acceso.
+
+### 20.6 `patient_billing_grants`
+
+Una fila por concesión de acceso limitado del paciente. No crea cuenta general de paciente ni pertenencia: es el soporte mínimo de D11/D16 ampliado por D28. El secreto del enlace se entrega una vez; solo se guarda su huella.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | Parte de FKs compuestas |
+| `patient_id` | `uuid` | Sí | Sin valor | FK `(account_id, patient_id)` a `account_patients`, RESTRICT |
+| `appointment_id` | `uuid` | No | Nulo | FK `(account_id, appointment_id)` a `appointments`, RESTRICT; ancla de vigencia cuando la concesión nace de una cita |
+| `charge_id` | `uuid` | No | Nulo | FK `(charge_id, account_id)` a `patient_charges.(id, account_id)`, RESTRICT; objeto concreto cubierto |
+| `token_hash` | `text` | Sí | Sin valor | UQ; CHECK 64 hex minúsculos; nunca el secreto en claro |
+| `actions` | `text[]` | Sí | Sin valor | CHECK no vacío y subconjunto de `read_charge`, `submit_report`, `read_result`, `read_receipt` |
+| `expires_at` | `timestamptz` | Sí | Sin valor | CHECK finito; vigencia ligada a la cita con máximo 30 días tras atención/cierre (D28) |
+| `revoked_at` | `timestamptz` | No | Nulo | CHECK finito si presente; nulo = no revocada |
+| `created_by` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+Un CHECK exige al menos un objeto (`appointment_id` o `charge_id`): la concesión es siempre por objeto concreto, nunca por paciente en abstracto. Un cargo sin cita requiere su propia concesión sobre el cargo (§9.4). Cancelar la cita revoca las concesiones ancladas a ella en la misma operación; reprogramarla no las toca (D28). Conocer el UUID de la concesión no autoriza: la validación exige huella coincidente, vigencia, no revocación y acción incluida. Índices `(account_id, patient_id)` y `(appointment_id)` para revocación por cita.
+
+### 20.7 Integridad, concurrencia y permisos
+
+- Presentar reporte confirma en una transacción: reporte, metadatos de evidencia, recibo de operación y auditoría; los bytes se escriben fuera de la transacción y un fallo posterior deja a lo sumo un archivo huérfano sin efecto (§11.1).
+- Dos revisores sobre el mismo reporte se serializan con el bloqueo de la fila del reporte y su `version`; la UQ de `billing_reviews.report_id` y la de `patient_payments.origin_report_id` son la última línea de defensa.
+- Capturas, comprobantes, secretos de enlace y referencias bancarias nunca aparecen en journal, snapshots, deltas, SSE, logs ni auditoría; solo metadatos y proyecciones mínimas (§20.2 de patient-billing).
+- La revocación de la concesión o del permiso financiero impide nuevas lecturas después de su orden; las respuestas perdidas se recuperan por el recibo idempotente y la consulta autorizada.
+- `nightingale_runtime` recibe los privilegios mínimos por DAO; el detalle de grants se fija en la migración de T12.
+- El downgrade elimina las cinco tablas en orden de dependencias y retira la UQ añadida a `patient_payments`, sin tocar el resto del esquema.

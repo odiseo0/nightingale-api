@@ -167,6 +167,22 @@ class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
 
         return row
 
+    async def set_billing_permissions(
+        self,
+        db: AsyncSession,
+        row: AccountMembership,
+        permissions: dict[str, str],
+        now: datetime,
+    ) -> AccountMembership:
+        for name, value in permissions.items():
+            setattr(row, name, value)
+
+        row.version += 1
+        row.date_updated = now
+        await self.flush(db)
+
+        return row
+
     async def create_membership(
         self,
         db: AsyncSession,

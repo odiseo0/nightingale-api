@@ -19,13 +19,16 @@ from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.services.domain.offers import (
     OfferServicePayload,
+    RemoveServiceOfferPricePayload,
+    ServiceOfferPriceResponse,
     ServiceOfferProjection,
     ServiceOfferQuery,
     ServiceOfferResponse,
+    SetServiceOfferPricePayload,
     UpdateServiceOfferPayload,
 )
 from src.api.services.domain.services import ServiceStatusPayload
-from src.api.services.repository.dao import dao_offers, dao_services
+from src.api.services.repository.dao import dao_offer_prices, dao_offers, dao_services
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel
@@ -117,6 +120,10 @@ async def apply_offer_operation(
         and isinstance(payload, UpdateServiceOfferPayload)
         or action == "SetServiceOfferStatus"
         and isinstance(payload, ServiceStatusPayload)
+        or action == "SetServiceOfferPrice"
+        and isinstance(payload, SetServiceOfferPricePayload)
+        or action == "RemoveServiceOfferPrice"
+        and isinstance(payload, RemoveServiceOfferPricePayload)
     ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
@@ -143,6 +150,63 @@ async def apply_offer_operation(
     row = await dao_offers.get_by(
         db, where=key, execution_options={"populate_existing": True}
     )
+
+    if isinstance(data, SetServiceOfferPricePayload | RemoveServiceOfferPricePayload):
+        # The offer must exist; only its own account adjusts its price (D25/D27).
+        if row is Empty:
+            return Err(AccountObjectNotFound())
+
+        price = await dao_offer_prices.by_offer(
+            db, context.account.id, professional_id, service_id
+        )
+
+        if isinstance(data, RemoveServiceOfferPricePayload):
+            if price is Empty:
+                return Err(AccountRuleError("NO_CHANGES", row.version))
+
+            if price.version != expected_version:
+                return Err(AccountRuleError("VERSION_CONFLICT", price.version))
+
+            removed = await dao_offer_prices.remove_price(
+                db, context.account.id, professional_id, service_id
+            )
+            state = ServiceOfferPriceResponse.model_validate(removed)
+        else:
+            if price is Empty:
+                if expected_version != 0:
+                    return Err(AccountRuleError("VERSION_CONFLICT"))
+            elif price.version != expected_version:
+                return Err(AccountRuleError("VERSION_CONFLICT", price.version))
+
+            price = await dao_offer_prices.apply_price(
+                db,
+                context.account.id,
+                professional_id,
+                service_id,
+                data.amount,
+                data.currency,
+            )
+            state = ServiceOfferPriceResponse.model_validate(price)
+
+        public_key = {name: str(value) for name, value in entity_key.items()}
+
+        return Ok(
+            AccountEffect(
+                state,
+                state.version,
+                [
+                    AccountChange(
+                        "service_offer_price",
+                        public_key,
+                        state,
+                        state.version,
+                        "members",
+                    )
+                ],
+                False,
+            )
+        )
+
     if action == "OfferService":
         if expected_version != 0:
             return Err(AccountRuleError("VERSION_CONFLICT"))

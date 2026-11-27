@@ -289,6 +289,41 @@ La planificación usa las reglas de `planning-task-breakdown`; datasets, bibliot
 - **Pagos atípicos (`SU-O10`):** solo se aprueba como periodo completo un reporte cuyo importe verificado cubre el importe debido. Pagos parciales o excedentes no se aprueban: el operador los rechaza con motivo y el cliente presenta un reporte corregido. Varios periodos requieren un reporte por periodo. Las coincidencias de referencia parcial generan advertencia al operador, nunca rechazo ni borrado automático.
 - **Cambio de plan (`SU-O11`):** sin prorrateo. El nuevo plan y su precio aplican al siguiente periodo aprobado; el tiempo pagado del plan anterior se conserva completo. Un plan inferior exige cumplir el límite de asientos o la política de exceso de D21.
 
+### D25 · Monedas, precios y vínculos de cargos de pacientes (T01)
+
+**Decidido por el usuario el 2026-11-27** durante la ejecución de T01 de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md). Cierra `BI-O01`–`BI-O03` de [patient-billing.md](patient-billing.md); no autoriza por sí solo código, migraciones ni contratos.
+
+- **Monedas (`BI-O01`):** precios de catálogo y cargos de pacientes admiten USD y VES. Cada precio/cargo declara una sola moneda ISO 4217; nunca se suman ni restan monedas distintas ni se revaloriza historia.
+- **Conversión USD/VES (`BI-O01`):** se admiten cargos USD pagados en VES. La conversión es explícita y previa a aplicar el pago, con la tasa BCV de la fecha del pago declarada y verificada por quien revisa (misma regla de fecha/fuente de D22, con configuración e historia propias de facturación). El pago conserva importe USD, tasa, fecha/fuente, equivalente VES y redondeo; nada se revaloriza después.
+- **Precisión y redondeo (`BI-O01`):** importes con decimal exacto (nunca punto flotante binario), dos decimales; el redondeo de la conversión VES es half-up a dos decimales y queda registrado junto a la tasa. Nulo significa «sin precio definido»; cero es un precio válido (servicio gratuito) y no equivale a nulo.
+- **Precio base/oferta (`BI-O02`):** se confirma la resolución base/oferta: el precio de la oferta de la cuenta sustituye al precio base del profesional cuando existe. El paciente puede ver una estimación no vinculante antes de que exista cargo; la estimación no crea obligación ni reserva precio. El cargo emitido copia descripción, importe, moneda, tasa y origen en instantánea; cambios posteriores del catálogo no alteran cargos.
+- **Vínculos y ajustes (`BI-O03`):** se permiten cargos sin cita/atención (cargo libre) y ajustes manuales del importe, ambos solo con el permiso financiero correspondiente y registrados en la historia del cargo. Nunca hay cargo automático por crear, completar o cancelar citas o atenciones.
+
+### D26 · Reportes de pago, parciales/excedentes y pagos directos (T02)
+
+**Decidido por el usuario el 2026-11-27** durante la ejecución de T02 de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md). Cierra `BI-O04`, `BI-O06` y `BI-O07` de [patient-billing.md](patient-billing.md); no autoriza por sí solo código, migraciones ni contratos.
+
+- **Datos del reporte (`BI-O04`):** obligatorios: cargo, fecha del pago, importe y moneda, método declarado y captura válida. La referencia es opcional y siempre parcial (por ejemplo, últimos dígitos); la nota breve es opcional. Nunca se solicitan números bancarios completos.
+- **Parciales y excedentes (`BI-O06`):** se admiten varios pagos aprobados sobre un cargo mientras la suma de pagos vigentes no supere el total. Un pago que excede el saldo no se aprueba: la asistente lo rechaza con motivo y el paciente presenta un reporte corregido. Un pago se aplica a un solo cargo; no genera crédito ni se aplica a otros cargos automáticamente. Dos aprobaciones simultáneas no pueden exceder el total (coordinación de saldo en PostgreSQL).
+- **Pagos directos (`BI-O07`):** se incluye el origen `staff_entry` para efectivo u otros pagos recibidos por la consulta, con permiso propio y evidencia propia; nunca se simula un reporte del paciente. Comparte las mismas reglas de moneda, saldo y efecto único, y su origen queda distinguible en lecturas y analítica.
+
+### D27 · Permisos financieros iniciales y correcciones (T03)
+
+**Decidido por el usuario el 2026-11-27** durante la ejecución de T03 de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md). Cierra `BI-O05` y `BI-O08` de [patient-billing.md](patient-billing.md); no autoriza por sí solo código, migraciones ni contratos.
+
+- **Valores iniciales (`BI-O05`):** asistentes nuevos y existentes no reciben ninguna acción financiera por defecto; el propietario concede cada acción explícitamente. El propietario conserva acceso financiero completo en su cuenta. Ningún permiso clínico concede acciones financieras ni viceversa.
+- **Granularidad (`BI-O05`):** el catálogo agrupa la autorización financiera de pacientes en tres acciones: `billing_read` (consultar cargos/saldos, reportes/evidencias en lectura y analítica autorizada), `billing_charges` (crear/editar borradores, emitir y cancelar cargos, ajustes manuales de D25) y `billing_review` (revisar reportes, aprobar/rechazar, registrar `staff_entry` y anular pagos/corregir). Modificar precios sigue con el permiso propio de catálogo/oferta. Estas acciones sustituyen la tabla granular de §15.1.
+- **Corrección con pagos (`BI-O08`):** un cargo con pagos vigentes no puede cancelarse; primero se anulan los pagos con la acción de corrección, motivo, actor e instante, conservando reporte, evidencia, comprobante e historia. Anular un pago lo excluye del saldo vigente y no afirma devolución de fondos; no existe reembolso real ni constancia de devolución en esta etapa. Los comprobantes emitidos conservan su instantánea y muestran el estado posterior.
+
+### D28 · Concesión del paciente, offline, archivos y primer panel (T04)
+
+**Decidido por el usuario el 2026-11-27** durante la ejecución de T04 de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md). Cierra `BI-O09`–`BI-O12` de [patient-billing.md](patient-billing.md); no autoriza por sí solo código, migraciones ni contratos.
+
+- **Concesión (`BI-O09`):** la concesión del enlace vive mientras la cita esté activa y hasta 30 días después de la atención o el cierre de la cita; el personal puede revocarla en cualquier momento. Cancelar la cita revoca la concesión (un reporte ya presentado conserva su historia y su revisión); reprogramar la cita la mantiene. El secreto del enlace se almacena con huella, nunca en claro, y conocer el UUID no concede nada.
+- **Offline (`BI-O10`):** solo los borradores de cargo pueden prepararse offline, como operaciones tipadas que API revalida al sincronizar (precio, objeto, permiso y versión vigentes; un rechazo conserva la intención local). Reportes del paciente, carga/descarga de evidencia, aprobación/rechazo, anulaciones, pagos directos `staff_entry` y cambios de permisos son online. La copia local nunca prueba saldo ni permiso vigente.
+- **Archivos (`BI-O11`):** misma política de capturas de D24: JPG, PNG y PDF; máximo 5 MB por archivo; una captura por reporte. Los comprobantes son PDF generado por API. Capturas, comprobantes y reportes se conservan mientras la cuenta exista; no se borran al rechazar, vencer o cancelar. La eliminación solo ocurre por un proceso administrativo trazado. Copias de seguridad y restauración siguen la política general de operación antes de datos reales.
+- **Primer panel (`BI-O12`):** los siete indicadores de §19.1 (total cargado, total cobrado, saldo pendiente, pendiente de revisión, pagos parciales, cargos pagados, anulaciones). Fechas: cargado y saldo por fecha de emisión del cargo; cobrado por fecha de aprobación, declarada así en el contrato. Totales siempre separados por moneda, sin revalorizar VES histórico; pendientes no cuentan como cobrado y anulados no suman al vigente.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |

@@ -38,7 +38,13 @@ async def check_contracts(runtime, administrative, client, tokens):
     from src.api.sync.domain.downloads import ChangePage, SnapshotResponse, SyncItem
     from src.api.sync.domain.events import StreamEvent
     from src.api.sync.application import events_cases
-    from src.api.sync.domain.operations import OperationBatchResult, OperationEnvelope, SERVICE_SCHEMAS, OFFER_SCHEMAS
+    from src.api.sync.domain.operations import (
+        BILLING_CHARGE_SCHEMAS,
+        OFFER_SCHEMAS,
+        SERVICE_SCHEMAS,
+        OperationBatchResult,
+        OperationEnvelope,
+    )
     from src.core import Ok
     from src.core.constants import (
         MAX_BATCH_OPERATIONS,
@@ -161,7 +167,11 @@ async def check_contracts(runtime, administrative, client, tokens):
     assert (await operation({**registration, "operationId": str(uuid7()), "entityKey": assistant["deviceId"]}, assistant)).status == "accepted"
     response = await client.get(base + "/access", headers=access.authorization(assistant))
     access.expect(response, 200)
-    owner_only = (set(capabilities.online_only_actions) | set(SERVICE_SCHEMAS) | set(OFFER_SCHEMAS) | {"UpdateProfessionalProfile"}) - {"RegisterAccountDevice"}
+    # Billing actions need the explicit D27 grant; an assistant without it never
+    # sees them, exactly like the owner-only administrative actions.
+    owner_only = (set(capabilities.online_only_actions) | set(SERVICE_SCHEMAS) | set(OFFER_SCHEMAS)
+                  | set(BILLING_CHARGE_SCHEMAS)
+                  | {"UpdateProfessionalProfile", "SetMemberBillingPermissions"}) - {"RegisterAccountDevice"}
     assert set(response.json()["allowedActions"]) == set(capabilities.operation_catalog) - owner_only
     access.expect(await client.get(base + "/members", headers=access.authorization(assistant)), 403)
 

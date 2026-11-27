@@ -234,3 +234,13 @@ Diseño de [P-20261122-01-vademecum-read-api](../tasks/P-20261122-01-vademecum-r
 | Owner o assistant con todos los estados activos | Lectura permitida del release global activo |
 
 El contenido no es una proyección por cuenta, paciente o sección clínica. No modifica `ClinicalPermissions`, `allowedActions`, políticas RBAC/ABAC, auditoría, snapshots, cursores, Change Log ni sincronización. Conocer un registro sanitario o ID de monografía no concede acceso. El release ausente se evalúa solo después de esta autorización y devuelve 503; los objetos ausentes devuelven 404.
+
+## Facturación de pacientes · diseño para C03 (2026-11-27)
+
+El componente `billing` añade tres ámbitos de acceso separados (D25–D28, diseño HTTP en [api-v1.md](api-v1.md) §15):
+
+- **Personal:** las rutas bajo `A/billing` exigen las acciones financieras agrupadas `billing_read`, `billing_charges` y `billing_review` (D27). El propietario las tiene todas; los asistentes nuevos y existentes no reciben ninguna por defecto y el propietario las concede explícitamente. Ningún permiso clínico abre finanzas ni una acción financiera abre contenido clínico; la autorización precede a la existencia del objeto y lo ajeno devuelve 404 uniforme.
+- **Paciente:** las rutas bajo `/v1/patient/billing` usan el secreto opaco de una concesión `patient_billing_grants`, sin cuenta de paciente ni token de dispositivo. La concesión es por objeto concreto (cita o cargo) y acción (`read_charge`, `submit_report`, `read_result`, `read_receipt`); solo se persiste la huella del secreto. Vigencia ligada a la cita con máximo 30 días tras atención/cierre; cancelar la cita revoca, reprogramar mantiene (D28). Enlace vencido, revocado, ajeno o sin la acción devuelve 404 `NOT_FOUND` sin revelar existencia; conocer el UUID no autoriza.
+- **Precios:** la escritura de precios base/oferta sigue con el permiso propio de catálogo/oferta, no con las acciones de facturación.
+
+Las capturas y comprobantes se descargan solo con reautorización por petición; nunca aparecen en journal, snapshots, deltas, SSE, logs ni auditoría. La observación interna de la revisión no se proyecta al paciente.

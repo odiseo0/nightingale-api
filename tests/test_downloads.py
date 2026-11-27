@@ -105,15 +105,20 @@ class DownloadSchemaTests(unittest.TestCase):
         audience_type = get_type_hints(AccountChange)["audience"]
         audiences = set(get_args(audience_type))
         administrative = {"members", "owner"}
-        self.assertEqual(audiences, administrative | set(CLINICAL_AUDIENCES))
+        # The closed financial audience of D27/D28 is never derived from clinical
+        # sections; its read filtering is wired by the billing sync task (T24).
+        financial = {"billing"}
+        self.assertEqual(audiences, administrative | financial | set(CLINICAL_AUDIENCES))
         self.assertFalse(administrative & set(CLINICAL_AUDIENCES))
-        self.assertEqual(set(CLINICAL_AUDIENCES.values()), set(get_args(get_type_hints(AccountChange)["audience"])[2:]) and {
+        self.assertEqual(set(CLINICAL_AUDIENCES.values()), set(get_args(get_type_hints(AccountChange)["audience"])[2:-1]) and {
             "profile", "conditions", "allergies", "encounters", "notes",
             "measurements", "immunizations", "antecedents", "declared_medications", "care_plans", "diagnostic_reports", "specialty_templates",
         })
         for audience in administrative:
             for sections in ([], ["conditions"]):
                 self.assertTrue(clinical_change_allowed(audience, sections))
+        for sections in ([], ["conditions"], ["notes"]):
+            self.assertFalse(clinical_change_allowed("billing", sections))
         for audience, section in CLINICAL_AUDIENCES.items():
             self.assertTrue(clinical_change_allowed(audience, [section]))
             self.assertFalse(clinical_change_allowed(audience, [s for s in CLINICAL_AUDIENCES.values() if s != section]))

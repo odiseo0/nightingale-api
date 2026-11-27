@@ -131,8 +131,10 @@ class AccessMatrixTests(unittest.TestCase):
                 InvalidateDentalTreatment""".split()
             owner_actions = """CreateInvitation RevokeInvitation SetMembershipStatus SetMemberClinicalPermissions
                 UpdateAccountDetails UpdateAccountPolicy SetAccountStatus RevokeAccountDevice RestoreAccountDevice
-                UpdateProfessionalProfile CreateService UpdateService SetServiceStatus OfferService
-                UpdateServiceOffer SetServiceOfferStatus""".split()
+                UpdateProfessionalProfile CreateService UpdateService SetServiceStatus SetServicePrice OfferService
+                UpdateServiceOffer SetServiceOfferStatus SetServiceOfferPrice RemoveServiceOfferPrice
+                CreatePatientCharge UpdatePatientCharge IssuePatientCharge CancelPatientCharge
+                SetMemberBillingPermissions""".split()
 
             async def check():
                 account_id, user_id, device_id = [uuid7() for _ in range(3)]
@@ -140,7 +142,9 @@ class AccessMatrixTests(unittest.TestCase):
                 actor = SimpleNamespace(user_id=user_id, device_id=device_id)
                 membership = SimpleNamespace(**{name + '_access': 'read_write' for name in
                     ('clinical_profile', 'conditions', 'allergies', 'encounters', 'notes',
-                     'measurements', 'immunizations', 'antecedents', 'declared_medications', 'care_plans', 'diagnostic_reports', 'specialty_templates')})
+                     'measurements', 'immunizations', 'antecedents', 'declared_medications', 'care_plans', 'diagnostic_reports', 'specialty_templates')},
+                    **{name + '_access': 'none' for name in
+                    ('billing_read', 'billing_charges', 'billing_review')})
                 count = 0
                 for owner in (False, True):
                     for account_state in ('active', 'inactive'):

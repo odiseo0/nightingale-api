@@ -11,7 +11,8 @@ class AccountChangeSchemaTests(unittest.TestCase):
         from src.api.accounts.domain.policies import clinical_permission_values, operation_policies, scope_changes
 
         expected = {"RegisterAccountDevice", "AcceptInvitation", "SetAccountStatus", "SetMembershipStatus",
-                    "SetMemberClinicalPermissions", "RevokeAccountDevice", "RestoreAccountDevice"}
+                    "SetMemberClinicalPermissions", "SetMemberBillingPermissions",
+                    "RevokeAccountDevice", "RestoreAccountDevice"}
         self.assertEqual({name for name in operation_policies() if scope_changes(name)}, expected)
         self.assertFalse(scope_changes("UnknownAction"))
         values = clinical_permission_values(ClinicalPermissions(clinical_profile="none", notes="read"))

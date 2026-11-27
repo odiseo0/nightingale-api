@@ -10,6 +10,15 @@ from src.api.audit.infrastructure.audit_api import router as audit_router
 from src.api.authorization.infrastructure.authorization_api import (
     router as authorization_router,
 )
+from src.api.billing.infrastructure.charges_api import router as billing_charges_router
+from src.api.billing.infrastructure.metrics_api import router as billing_metrics_router
+from src.api.billing.infrastructure.patient_api import router as billing_patient_router
+from src.api.billing.infrastructure.payments_api import (
+    router as billing_payments_router,
+)
+from src.api.billing.infrastructure.rates_api import router as billing_rates_router
+from src.api.billing.infrastructure.reports_api import router as billing_reports_router
+from src.api.billing.infrastructure.reviews_api import router as billing_reviews_router
 from src.api.care_plans.infrastructure.care_plans_api import (
     router as care_plans_router,
 )
@@ -110,6 +119,13 @@ router.include_router(allergies_router)
 router.include_router(patients_router)
 router.include_router(contacts_router)
 router.include_router(services_router)
+router.include_router(billing_charges_router)
+router.include_router(billing_patient_router)
+router.include_router(billing_payments_router)
+router.include_router(billing_metrics_router)
+router.include_router(billing_reports_router)
+router.include_router(billing_reviews_router)
+router.include_router(billing_rates_router)
 router.include_router(schedule_router)
 router.include_router(appointments_router)
 router.include_router(medications_router)

@@ -276,6 +276,14 @@ Actor/dispositivo no se aceptan en payload. UUID de nuevas entidades procede del
 | OfferService | {professionalId,serviceId} | durationMinutesOverride? (nulo por defecto). | propietario profesional | Crea relación con cuenta de ruta, propiedad común comprobada y status active. |
 | UpdateServiceOffer | {professionalId,serviceId} | durationMinutesOverride requerido, nulo o entero 1–1440. | propietario profesional | Nulo vuelve a base para reservas futuras; no cambia snapshots. |
 | SetServiceOfferStatus | {professionalId,serviceId} | status active / inactive. | propietario profesional | Solo oferta de esta cuenta; sin cancelar citas. |
+| SetServicePrice | serviceId | amount (texto decimal ≥ 0; cero = gratuito),currency USD / VES. | propietario profesional | Precio base del catálogo propio; versión optimista (0 al crear); proyecta `service_price` al propietario; nunca reescribe cargos emitidos. |
+| SetServiceOfferPrice | {professionalId,serviceId} | amount,currency. | propietario de la oferta | Ajuste de la oferta existente; sustituye al base en la resolución; proyecta `service_offer_price` a miembros. |
+| RemoveServiceOfferPrice | {professionalId,serviceId} | {} | propietario de la oferta | Retira el ajuste y devuelve la resolución al precio base; 409 sin ajuste. |
+| CreatePatientCharge | chargeId nuevo | patientId,appointmentId?,encounterId?,serviceId?,description?,amount?,currency?,adjustReason?. | billing_charges | Sin importe resuelve el precio vigente y congela instantánea; ajuste manual exige motivo; vínculos por cuenta/paciente; nunca automático desde citas/atenciones; preparable offline (D28). |
+| UpdatePatientCharge | chargeId | Patch de description,amount,currency,adjustReason. | billing_charges | Solo `draft` (`CHARGE_NOT_DRAFT`); ajuste con motivo marca `manual`. |
+| IssuePatientCharge | chargeId | {} | billing_charges | Emite con instantánea definitiva; visible para concesiones y proyección `billing`. |
+| CancelPatientCharge | chargeId | reason. | billing_charges | 409 `CHARGE_HAS_ACTIVE_PAYMENTS` con pagos vigentes (D27); conserva historia y pagos. |
+| SetMemberBillingPermissions | userId miembro | billingPermissions{billingRead,billingCharges,billingReview} none / granted. | propietario | Denegado por defecto (D27); versionado, auditado e invalida capturas del alcance. |
 | CreateScheduleRule | ruleId nuevo | professionalId,isoWeekday,localStartMinute,localEndMinute,validFrom,validUntil?. | miembro | Regla de cuenta; active; límites y UQ con NULLS NOT DISTINCT del esquema. |
 | UpdateScheduleRule | ruleId | Patch de isoWeekday,localStartMinute,localEndMinute,validFrom,validUntil. | miembro | No cambia profesional/cuenta; rechaza incompatibilidad con cita vigente. |
 | SetScheduleRuleStatus | ruleId | status active / inactive. | miembro | Conserva fila; valida disponibilidad después del cambio. |
@@ -869,3 +877,134 @@ La indisponibilidad comercial nunca se presenta como credencial inválida (§17.
 El snapshot/delta añade una proyección comercial mínima por audiencia (§18 de la especificación): la entidad `subscription` (audiencia `members`) lleva `planCode`, `status`, `currentPeriodEndsAt`, `graceEndsAt`, `subscriptionVersion` y `updatedAt`; la entidad `subscription_admin` (audiencia `owner`) añade `seats{used, limit}`. Reportes, tasas, motivos de revisión y evidencias no aparecen en snapshot, delta, SSE, journal, logs ni métricas. La versión comercial es independiente de `permissionEpoch` salvo que una política cambie el alcance de lectura. El reloj del cliente no extiende vigencia; la política offline aplica el fin de gracia comunicado por el servidor (D24).
 
 El delta (`change_log`) solo registra los cambios comerciales causados por operaciones del personal con recibo (la primera presentación que crea la relación, acción `SubmitPaymentReport`). Las decisiones del operador no tienen dispositivo de miembro y por tanto no generan fila de delta: los consumidores recuperan aprobaciones y rechazos mediante la captura (snapshot), que siempre refleja el estado vigente.
+
+## 15. Diseño de facturación de pacientes para C03
+
+Diseño de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md) según [patient-billing.md](patient-billing.md) y las decisiones D25–D28. Pendiente de aceptación e implementación; no cambia `contractVersion` ni las rutas existentes. Física en [database-schema.md](database-schema.md) §§19–20.
+
+### 15.1 Actores y acceso
+
+Tres ámbitos separados que nunca se mezclan en una misma ruta:
+
+- **Personal:** rutas bajo `A/billing` con token de dispositivo y pertenencia activa. Exigen las acciones financieras agrupadas de D27: `billing_read` (consultas y analítica), `billing_charges` (borradores, emisión, cancelación y ajustes) y `billing_review` (revisión, aprobación/rechazo, `staff_entry`, anulaciones y tasas). El propietario las tiene todas; los asistentes solo lo concedido explícitamente. Ningún permiso clínico abre estas rutas ni estas rutas abren contenido clínico. La autorización precede a la existencia del objeto: un cargo, reporte, pago o evidencia de otra cuenta devuelve el mismo 404 `NOT_FOUND` que uno inexistente.
+- **Paciente:** rutas bajo `/v1/patient/billing` con el secreto opaco de una concesión `patient_billing_grants` (D28) en `Authorization: Bearer`. No hay cuenta de paciente ni token de dispositivo. API valida huella, vigencia, revocación y acción incluida (`read_charge`, `submit_report`, `read_result`, `read_receipt`); un enlace vencido, revocado o ajeno devuelve el mismo 404 `NOT_FOUND` sin revelar existencia. Conocer el UUID de la concesión no autoriza nada.
+- **Precios:** la escritura de precios base/oferta usa el permiso propio de catálogo/oferta existente (D27), no las acciones de facturación.
+
+### 15.2 Rutas del personal
+
+Las escrituras son online, con `operationId` UUIDv7 generado por el cliente para idempotencia y recuperación de respuesta perdida, igual que §14.2; los borradores offline llegan como operaciones tipadas del lote de sync (D28) y se revalidan al aceptarse.
+
+| Método | Ruta | Acción | Respuesta | Entrada / comportamiento |
+|---|---|---|---|---|
+| PUT | `A/services/{service_id}/price` | catálogo | `ServicePriceResponse` | `ServicePricePutRequest{operationId, expectedVersion, amount, currency}`; precio base del profesional propietario; `amount` texto decimal ≥ 0 (cero = gratuito) |
+| PUT | `A/professional-services/{professional_id}/{service_id}/price` | oferta | `OfferPriceResponse` | `OfferPricePutRequest{operationId, expectedVersion, amount, currency}`; ajuste de la oferta; DELETE de la misma ruta retira el ajuste y vuelve al base |
+| GET | `A/billing/price-resolution` | `billing_read` | `PriceResolutionResponse` | `serviceId` (+ oferta de la cuenta); devuelve `source` (`offer`, `base`) o 404 `PRICE_NOT_DEFINED` si no hay precio |
+| GET | `A/billing/charges` | `billing_read` | `PaginatedResponse<ChargeResponse>` | `page`, `shows`, filtros `patientId`, `status`, `currency`, `from`, `until` por emisión |
+| GET | `A/billing/charges/{charge_id}` | `billing_read` | `ChargeDetailResponse` | cargo, saldo, historia y pagos vigentes/anulados |
+| GET | `A/billing/reports` | `billing_review` | `PaginatedResponse<PaymentReviewItemResponse>` | bandeja; `page`, `shows`, filtros `status`, `chargeId`, `patientId`, `from`, `until`; orden `(createdAt, id)` |
+| GET | `A/billing/reports/{report_id}` | `billing_review` | `PaymentReviewDetailResponse` | declaración completa, metadatos de evidencia, cadena de presentaciones y advertencias de coincidencia de referencia parcial (nunca rechazo automático) |
+| GET | `A/billing/reports/{report_id}/evidence` | `billing_review` | archivo | descarga reautorizada en cada petición; `Content-Disposition` con nombre generado |
+| POST | `A/billing/reports/{report_id}/approval` | `billing_review` | `ApprovalResultResponse` | `BillingApprovalRequest{operationId, expectedVersion, verifiedPaidOn, verifiedAmount, verifiedCurrency, billingExchangeRateId?}`; confirma revisión, estado, pago, saldo bajo bloqueo del cargo, historia, recibo, auditoría y journal en una transacción; 409 `REPORT_NOT_PENDING`; 422 `PAYMENT_EXCEEDS_BALANCE` si excede el saldo (D26) |
+| POST | `A/billing/reports/{report_id}/rejection` | `billing_review` | `PaymentReviewItemResponse` | `RejectionRequest{operationId, expectedVersion, reason}`; sin pago ni cambio de saldo; permite nueva presentación |
+| POST | `A/billing/charges/{charge_id}/payments` | `billing_review` | `PaymentResponse` | `DirectPaymentRequest{operationId, expectedVersion, paidOn, amount, currency, method, referenceLast4?, evidenceNote}`; origen `staff_entry` distinguible; misma coordinación de saldo; 422 `PAYMENT_EXCEEDS_BALANCE` |
+| POST | `A/billing/payments/{payment_id}/annulment` | `billing_review` | `PaymentResponse` | `PaymentAnnulmentRequest{operationId, expectedVersion, reason}`; el pago deja de sumar al vigente; no afirma devolución (D27) |
+| GET | `A/billing/payments/{payment_id}/receipt` | `billing_read` | archivo | comprobante PDF no fiscal; descarga reautorizada |
+| GET | `A/billing/exchange-rates` | `billing_review` | `PaginatedResponse<BillingRateResponse>` | `page`, `shows`, rango `from`/`until` por `rateDate` |
+| POST | `A/billing/exchange-rates` | `billing_review` | `BillingRateResponse` | `BillingRateCreateRequest{operationId, rateDate, rateVesPerUsd, source}`; 201; 409 `RATE_DATE_EXISTS` |
+| POST | `A/billing/grants` | `billing_review` | `GrantIssuedResponse` | `GrantCreateRequest{operationId, patientId, appointmentId?, chargeId?, actions}`; al menos un objeto; entrega el secreto una sola vez; vigencia según D28 |
+| POST | `A/billing/grants/{grant_id}/revocation` | `billing_review` | `GrantResponse` | revoca de inmediato; el reporte ya presentado conserva su historia |
+| GET | `A/billing/grants` | `billing_read` | `PaginatedResponse<GrantResponse>` | `page`, `shows`, filtros `patientId`, `chargeId`, `status`; sin huellas ni secretos |
+| GET | `A/billing/metrics` | `billing_read` | `BillingMetricsResponse` | los siete indicadores de §19.1 de la especificación con fechas de D28; filtros `from`, `until`, `professionalId`, `serviceId`, `patientId`, `currency`; totales separados por moneda |
+
+### 15.3 Rutas del paciente
+
+Prefijo `/v1/patient/billing`, `Authorization: Bearer <secreto de concesión>`. La proyección es mínima (§9.3 de la especificación): sin notas internas, sin otros cargos, sin contenido clínico.
+
+| Método | Ruta | Acción de concesión | Respuesta | Entrada / comportamiento |
+|---|---|---|---|---|
+| GET | `/v1/patient/billing/charge` | `read_charge` | `PatientChargeResponse` | descripción, importe, moneda, saldo, estado de revisión; solo el cargo de la concesión; estimación no vinculante disponible antes del cargo emitido (D25) cuando la concesión nace de una cita con servicio |
+| POST | `/v1/patient/billing/reports` | `submit_report` | `PatientReportResponse` | multipart: campos declarados obligatorios de D26 (`paidOn`, `amount`, `currency`, `method`) más captura obligatoria (JPG/PNG/PDF, máx. 5 MB, firma real) en la misma operación; `operationId` para idempotencia; 201 deja `pending` sin cambiar saldo |
+| GET | `/v1/patient/billing/reports` | `read_result` | `PaginatedResponse<PatientReportResponse>` | solo reportes presentados con esta concesión o sobre el mismo objeto |
+| GET | `/v1/patient/billing/reports/{report_id}` | `read_result` | `PatientReportDetailResponse` | estado y resultado visible: aprobado con datos mínimos del pago o motivo seguro de rechazo; nunca observación interna |
+| GET | `/v1/patient/billing/payments/{payment_id}/receipt` | `read_receipt` | archivo | comprobante no fiscal del pago aplicado a su cargo |
+
+Presentar crea `pending` y nunca aprueba ni altera el saldo. Tras un rechazo, el paciente presenta de nuevo con `previousReportId`; un reporte aprobado no se reabre. La respuesta perdida se recupera repitiendo con el mismo `operationId` o consultando `read_result`.
+
+### 15.4 Modelos públicos
+
+| Modelo | Campos |
+|---|---|
+| `ChargeResponse` | `chargeId`, `patientId`, `appointmentId?`, `encounterId?`, `serviceId?`, `description`, `amount`, `currency`, `priceSource` (`offer`, `base`, `manual`), `status` (`draft`, `issued`, `cancelled`), `balance{paid, outstanding, state}` con `state` en `unpaid`, `partially_paid`, `paid`, `issuedAt?`, `cancelledAt?`, `createdAt`, `version` |
+| `ChargeDetailResponse` | lo anterior más `history[]` (acción, actor, motivo, instante) y `payments[]` (pago, origen, estado) |
+| `PriceResolutionResponse` | `serviceId`, `source`, `amount`, `currency`, `resolvedAt`; nunca reserva precio |
+| `PaymentReviewItemResponse` | `reportId`, `chargeId`, `patientId`, `status`, `declared{paidOn, amount, currency, method, referenceLast4?, note?}`, `evidence` metadatos, `previousReportId?`, `createdAt`, `version` |
+| `PaymentReviewDetailResponse` | lo anterior más `review{decision, reviewer, decidedAt, verified?, internalNote?, reason?}` nulo mientras `pending` |
+| `ApprovalResultResponse` | `reportId`, `decision`, `payment{paymentId, amount, currency, status}`, `charge{chargeId, balance}`, `duplicate` para recuperación idempotente |
+| `PaymentResponse` | `paymentId`, `chargeId`, `origin` (`patient_report`, `staff_entry`), `amount`, `currency`, `exchangeRate?`, `exchangeRateDate?`, `exchangeRateSource?`, `paidOn`, `method`, `referenceLast4?`, `status`, `registeredBy`, `createdAt`, `version` |
+| `PatientChargeResponse` | `description`, `amount`, `currency`, `balance{outstanding, state}`, `issuedAt`, `reviewState` del último reporte propio |
+| `PatientReportResponse` | `reportId`, `status`, `declared{paidOn, amount, currency, method}`, `createdAt` |
+| `PatientReportDetailResponse` | lo anterior más `result{decision, decidedAt, payment{amount, currency, paidOn}?, reason?}` nulo mientras `pending` |
+| `GrantCreateRequest` | `operationId`, `patientId`, `appointmentId?`, `chargeId?`, `actions` subconjunto no vacío de `read_charge`, `submit_report`, `read_result`, `read_receipt` |
+| `GrantIssuedResponse` | `grantId`, `secret` (una sola vez), `actions`, `expiresAt`; `Cache-Control: no-store` |
+| `GrantResponse` | `grantId`, `patientId`, `appointmentId?`, `chargeId?`, `actions`, `expiresAt`, `revokedAt?`, `status` (`active`, `expired`, `revoked`) |
+| `BillingRateResponse` | `rateId`, `rateDate`, `rateVesPerUsd`, `source`, `registeredAt` |
+| `BillingMetricsResponse` | `charged`, `collected`, `outstanding`, `pendingReview`, `partiallyPaid`, `paidCharges`, `annulments`; cada importe como lista por moneda `{currency, amount}`; `basis{chargedBy: issueDate, collectedBy: approvalDate}` (D28), `from`, `until` |
+
+Los importes viajan como texto decimal con dos fracciones y las tasas con hasta seis; nunca punto flotante binario. Nulo significa «sin precio definido» y cero un precio gratuito válido (D25). La evidencia y los comprobantes nunca exponen `storageKey` ni URL.
+
+### 15.5 Errores específicos
+
+Además de los códigos vigentes (401, 403, 404 uniforme, 409 versión/duplicado, 422 validación):
+
+| Código | HTTP | Significado |
+|---|---|---|
+| `PRICE_NOT_DEFINED` | 404 | el servicio no tiene precio base ni de oferta; distinto de precio cero |
+| `CHARGE_NOT_DRAFT` | 409 | la edición exige estado `draft` |
+| `CHARGE_NOT_ISSUED` | 409 | la operación exige un cargo emitido |
+| `CHARGE_HAS_ACTIVE_PAYMENTS` | 409 | cancelación con pagos vigentes; anular primero (D27) |
+| `PAYMENT_EXCEEDS_BALANCE` | 422 | el importe verificado excede el saldo; corresponde rechazo (D26) |
+| `REPORT_NOT_PENDING` | 409 | el reporte ya fue aprobado o rechazado |
+| `EVIDENCE_ALREADY_PRESENT` | 409 | el reporte ya tiene su captura |
+| `RATE_DATE_EXISTS` | 409 | ya existe tasa para esa fecha en la cuenta |
+| `GRANT_OBJECT_REQUIRED` | 422 | la concesión exige cita o cargo concreto |
+
+Un enlace vencido, revocado, ajeno o con acción no concedida devuelve 404 `NOT_FOUND`, nunca un código que confirme la existencia del objeto (D28).
+
+### 15.6 Idempotencia, transacciones y archivos
+
+- Aprobación, pago directo y anulación confirman en una sola transacción: decisión/pago, saldo verificado bajo el bloqueo de la fila del cargo, historia, recibo de operación, auditoría y grupo del journal. Las lecturas de archivos y cualquier red ocurren fuera.
+- La presentación del paciente confirma reporte, metadatos de evidencia, recibo y auditoría juntos; los bytes se escriben fuera de la transacción y un fallo posterior deja a lo sumo un archivo huérfano sin efecto.
+- Una respuesta perdida se recupera con el mismo `operationId` sin duplicar reporte, captura, pago ni efecto; `duplicate: true` identifica la recuperación.
+- Las descargas de evidencia y comprobante se reautorizan en cada petición; los bytes nunca viajan en snapshot, delta, SSE, journal, logs ni auditoría.
+
+La proyección de sincronización, las audiencias financieras y la analítica se diseñan en T08 y se documentarán en la sección siguiente.
+
+## 16. Diseño de sincronización y analítica de facturación para C03
+
+Diseño de T08 de [P-20261117-03-patient-billing](../tasks/P-20261117-03-patient-billing/plan.md). Pendiente de aceptación e implementación; extiende §7–§8 sin cambiar las reglas existentes de snapshot/delta/SSE.
+
+### 16.1 Audiencia financiera
+
+Se añade la audiencia cerrada `billing`, separada de `members`, `owner` y las audiencias clínicas (§16.1 de la especificación). Solo los miembros con `billing_read` vigente reciben las proyecciones financieras en su alcance; la revisión completa (bandeja, declaración, evidencia) no se proyecta y sigue siendo consulta online con `billing_review`.
+
+| Entidad | Audiencia | Campos proyectados |
+|---|---|---|
+| `billing_charge` | `billing` | `chargeId`, `patientId`, `appointmentId?`, `description`, `amount`, `currency`, `status`, `balance{paid, outstanding, state}`, `issuedAt?`, `chargeVersion`, `updatedAt` |
+| `billing_payment` | `billing` | `paymentId`, `chargeId`, `patientId`, `origin` (`patient_report`, `staff_entry`), `amount`, `currency`, `status`, `paidOn`, `registeredBy`, `updatedAt` |
+
+Borradores (`draft`) no se proyectan a ninguna audiencia: solo cargos emitidos o cancelados. Capturas, comprobantes, referencias bancarias, notas internas, tasas y secretos de concesión nunca aparecen en snapshot, delta, SSE, journal, logs ni métricas; los grupos invisibles permiten avanzar el cursor sin cuerpos (§16.2). Un cambio de permiso financiero invalida las capturas/cursores del alcance afectado igual que un cambio de permisos clínico.
+
+### 16.2 Delta y recuperación
+
+El `change_log` registra los cambios financieros causados por operaciones del lote con recibo: creación/edición/emisión/cancelación de cargos. **Decisión descubierta en la implementación (T24):** `change_log` exige un recibo de operación de un miembro con dispositivo (misma restricción documentada en §14.6), por lo que la aprobación, el rechazo, el `staff_entry` y la anulación —rutas HTTP con `operationId`, sin recibo de lote— **no generan fila de delta**: los consumidores los recuperan por la captura (snapshot), que siempre refleja cargos con saldo y pagos vigentes/anulados. Las presentaciones del paciente con concesión tampoco generan delta (sin dispositivo de miembro) y se recuperan por la bandeja online y el snapshot. Una aprobación con aviso perdido se recupera por snapshot sin duplicar el pago. Las concesiones y sus revocaciones no se proyectan: su gestión y validación son online.
+
+### 16.3 Propiedad de integración
+
+- `billing` posee cargos, reportes, pagos, comprobantes, tasas y concesiones. La concesión del paciente vive en `billing`; ningún otro componente la interpreta.
+- `services` resuelve el precio efectivo mediante un caso de uso público; `billing` consume ese caso y congela la instantánea en el cargo. Ningún componente importa repositorios ajenos.
+- `appointments`/`encounters` solo aportan validación de vínculo (misma cuenta/paciente) por casos/tipos públicos; crear/completar/cancelar citas o atenciones nunca genera cargos.
+- La cancelación de una cita revoca sus concesiones ancladas dentro de la misma aceptación (D28), coordinada por el caso de uso de citas con el caso público de `billing`.
+
+### 16.4 Analítica
+
+El primer panel (D28) se sirve con `GET A/billing/metrics` (§15.2) sobre consultas acotadas de la base operativa: siete indicadores, filtros cerrados, totales por moneda sin revalorizar, cargado/saldo por fecha de emisión y cobrado por fecha de aprobación. Los indicadores no leen evidencias ni contenido clínico y exigen `billing_read`. La analítica histórica pesada pertenece al componente `analytics` y su PostgreSQL separado; si el volumen lo exige, `billing` emitirá hechos mínimos (cuenta, tipo de hecho, importe, moneda, fechas, referencias) hacia el cursor ETL existente, sin capturas ni datos bancarios. Ninguna necesidad de gráficos habilita consultas sin límite sobre la transacción operativa.

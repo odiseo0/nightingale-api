@@ -8,6 +8,9 @@ from src.api.subscriptions.domain.money import Money
 from src.api.subscriptions.domain.periods import Periodicity
 from src.api.subscriptions.domain.plans import PlanCode
 from src.core.schema import BaseModel
+from src.core.services.private_evidence import (
+    detect_content_type as _detect_content_type,
+)
 
 ReportStatus = Literal["pending", "approved", "rejected"]
 
@@ -83,17 +86,9 @@ def resubmission(report: PaymentReport, new_report_id: UUID) -> PaymentReport:
 
 
 def detect_content_type(content: bytes) -> str | None:
-    """Real file signature, never the client Content-Type (OWASP upload rules)."""
-    if content.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
-
-    if content.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png"
-
-    if content.startswith(b"%PDF-"):
-        return "application/pdf"
-
-    return None
+    """Kept as the subscriptions-facing name; the signatures live in the shared
+    private-evidence support used by both domains (D24/D28)."""
+    return _detect_content_type(content)
 
 
 class PaymentReportCreateRequest(ReportModel):

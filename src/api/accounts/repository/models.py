@@ -44,6 +44,9 @@ class AccountMembership(Date, Base):
     care_plans_access: Mapped[str] = mapped_column(Text, server_default="read_write")
     diagnostic_reports_access: Mapped[str] = mapped_column(Text, server_default="read_write")
     specialty_templates_access: Mapped[str] = mapped_column(Text, server_default="read_write")
+    billing_read_access: Mapped[str] = mapped_column(Text, server_default="none")
+    billing_charges_access: Mapped[str] = mapped_column(Text, server_default="none")
+    billing_review_access: Mapped[str] = mapped_column(Text, server_default="none")
 
 
 class Professional(Date, Base):

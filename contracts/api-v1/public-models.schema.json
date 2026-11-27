@@ -33,6 +33,14 @@
           "title": "Allowedactions",
           "type": "array"
         },
+        "billingPermissions": {
+          "$ref": "#/$defs/BillingPermissions",
+          "default": {
+            "billingCharges": "none",
+            "billingRead": "none",
+            "billingReview": "none"
+          }
+        },
         "clinicalPermissions": {
           "$ref": "#/$defs/ClinicalPermissions"
         },
@@ -816,6 +824,51 @@
       "title": "ApprovalRequest",
       "type": "object"
     },
+    "ApprovalResult": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "balance": {
+          "title": "Balance"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "decision": {
+          "title": "Decision",
+          "type": "string"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "paymentId": {
+          "format": "uuid",
+          "title": "Paymentid",
+          "type": "string"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "decision",
+        "paymentId",
+        "amount",
+        "currency",
+        "balance"
+      ],
+      "title": "ApprovalResult",
+      "type": "object"
+    },
     "ApprovalResultResponse": {
       "additionalProperties": false,
       "properties": {
@@ -1071,6 +1124,35 @@
       "title": "AvailabilityResponse",
       "type": "object"
     },
+    "BalanceView": {
+      "additionalProperties": false,
+      "properties": {
+        "outstanding": {
+          "title": "Outstanding",
+          "type": "string"
+        },
+        "paid": {
+          "title": "Paid",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "unpaid",
+            "partially_paid",
+            "paid"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "paid",
+        "outstanding",
+        "state"
+      ],
+      "title": "BalanceView",
+      "type": "object"
+    },
     "BcvRateCreateRequest": {
       "additionalProperties": false,
       "properties": {
@@ -1169,6 +1251,458 @@
         "registeredAt"
       ],
       "title": "BcvRateResponse",
+      "type": "object"
+    },
+    "BillingAccess": {
+      "enum": [
+        "none",
+        "granted"
+      ],
+      "type": "string"
+    },
+    "BillingApprovalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "internalNote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Internalnote"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
+        },
+        "verifiedAmount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Verifiedamount"
+        },
+        "verifiedCurrency": {
+          "title": "Verifiedcurrency",
+          "type": "string"
+        },
+        "verifiedPaidOn": {
+          "format": "date",
+          "title": "Verifiedpaidon",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "verifiedPaidOn",
+        "verifiedAmount",
+        "verifiedCurrency",
+        "method"
+      ],
+      "title": "BillingApprovalRequest",
+      "type": "object"
+    },
+    "BillingMetricsResponse": {
+      "description": "D28 panel: charged/outstanding by issue date, collected by approval\n(registration) date; totals always per currency, never revalued.",
+      "properties": {
+        "annulments": {
+          "items": {
+            "$ref": "#/$defs/CurrencyAmount"
+          },
+          "title": "Annulments",
+          "type": "array"
+        },
+        "basisChargedBy": {
+          "default": "issueDate",
+          "title": "Basischargedby",
+          "type": "string"
+        },
+        "basisCollectedBy": {
+          "default": "approvalDate",
+          "title": "Basiscollectedby",
+          "type": "string"
+        },
+        "charged": {
+          "items": {
+            "$ref": "#/$defs/CurrencyAmount"
+          },
+          "title": "Charged",
+          "type": "array"
+        },
+        "collected": {
+          "items": {
+            "$ref": "#/$defs/CurrencyAmount"
+          },
+          "title": "Collected",
+          "type": "array"
+        },
+        "from_": {
+          "format": "date-time",
+          "title": "From",
+          "type": "string"
+        },
+        "outstanding": {
+          "items": {
+            "$ref": "#/$defs/CurrencyAmount"
+          },
+          "title": "Outstanding",
+          "type": "array"
+        },
+        "paidCharges": {
+          "title": "Paidcharges",
+          "type": "integer"
+        },
+        "partiallyPaid": {
+          "title": "Partiallypaid",
+          "type": "integer"
+        },
+        "pendingReview": {
+          "title": "Pendingreview",
+          "type": "integer"
+        },
+        "until": {
+          "format": "date-time",
+          "title": "Until",
+          "type": "string"
+        }
+      },
+      "required": [
+        "charged",
+        "collected",
+        "outstanding",
+        "pendingReview",
+        "partiallyPaid",
+        "paidCharges",
+        "annulments",
+        "from_",
+        "until"
+      ],
+      "title": "BillingMetricsResponse",
+      "type": "object"
+    },
+    "BillingPaymentProjection": {
+      "additionalProperties": false,
+      "description": "Financial delta/snapshot projection by reference (§16.1); never bytes,\nbank data, internal notes or conversion internals.",
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "patient_report",
+            "staff_entry"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "paymentId": {
+          "format": "uuid",
+          "title": "Paymentid",
+          "type": "string"
+        },
+        "registeredBy": {
+          "format": "uuid",
+          "title": "Registeredby",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "annulled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "paymentId",
+        "chargeId",
+        "patientId",
+        "origin",
+        "amount",
+        "currency",
+        "status",
+        "paidOn",
+        "registeredBy",
+        "updatedAt"
+      ],
+      "title": "BillingPaymentProjection",
+      "type": "object"
+    },
+    "BillingPermissions": {
+      "description": "Financial actions of D27; assistants get nothing until granted explicitly.",
+      "properties": {
+        "billingCharges": {
+          "$ref": "#/$defs/BillingAccess",
+          "default": "none"
+        },
+        "billingRead": {
+          "$ref": "#/$defs/BillingAccess",
+          "default": "none"
+        },
+        "billingReview": {
+          "$ref": "#/$defs/BillingAccess",
+          "default": "none"
+        }
+      },
+      "title": "BillingPermissions",
+      "type": "object"
+    },
+    "BillingRateCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "rateDate": {
+          "format": "date",
+          "title": "Ratedate",
+          "type": "string"
+        },
+        "rateVesPerUsd": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Ratevesperusd"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "rateDate",
+        "rateVesPerUsd",
+        "source"
+      ],
+      "title": "BillingRateCreateRequest",
+      "type": "object"
+    },
+    "BillingRateResponse": {
+      "properties": {
+        "rateDate": {
+          "format": "date",
+          "title": "Ratedate",
+          "type": "string"
+        },
+        "rateId": {
+          "format": "uuid",
+          "title": "Rateid",
+          "type": "string"
+        },
+        "rateVesPerUsd": {
+          "title": "Ratevesperusd",
+          "type": "string"
+        },
+        "registeredAt": {
+          "format": "date-time",
+          "title": "Registeredat",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rateId",
+        "rateDate",
+        "rateVesPerUsd",
+        "source",
+        "registeredAt"
+      ],
+      "title": "BillingRateResponse",
+      "type": "object"
+    },
+    "BillingRejectionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "internalNote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Internalnote"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "reason"
+      ],
+      "title": "BillingRejectionRequest",
+      "type": "object"
+    },
+    "Body_submitPatientPaymentReport": {
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Amount"
+        },
+        "capture": {
+          "contentMediaType": "application/octet-stream",
+          "title": "Capture",
+          "type": "string"
+        },
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
+        }
+      },
+      "required": [
+        "operationId",
+        "chargeId",
+        "paidOn",
+        "amount",
+        "currency",
+        "method",
+        "capture"
+      ],
+      "title": "Body_submitPatientPaymentReport",
       "type": "object"
     },
     "Body_uploadPaymentReportEvidence": {
@@ -2671,6 +3205,138 @@
       "title": "ChangePage",
       "type": "object"
     },
+    "ChargeResponse": {
+      "additionalProperties": false,
+      "description": "Authorized projection of a charge; drafts never reach the patient (§15.4).",
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "appointmentId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentid"
+        },
+        "balance": {
+          "$ref": "#/$defs/BalanceView"
+        },
+        "cancelledAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cancelledat"
+        },
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Encounterid"
+        },
+        "issuedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Issuedat"
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "priceSource": {
+          "enum": [
+            "offer",
+            "base",
+            "manual"
+          ],
+          "title": "Pricesource",
+          "type": "string"
+        },
+        "serviceId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Serviceid"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "issued",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "chargeId",
+        "patientId",
+        "description",
+        "amount",
+        "currency",
+        "priceSource",
+        "status",
+        "balance",
+        "createdAt",
+        "version"
+      ],
+      "title": "ChargeResponse",
+      "type": "object"
+    },
     "ClinicalDate": {
       "type": "string"
     },
@@ -3347,6 +4013,24 @@
       "title": "ContactResponse",
       "type": "object"
     },
+    "CurrencyAmount": {
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "currency",
+        "amount"
+      ],
+      "title": "CurrencyAmount",
+      "type": "object"
+    },
     "CurrentPeriodView": {
       "additionalProperties": false,
       "properties": {
@@ -3781,56 +4465,6 @@
         "version"
       ],
       "title": "DeclaredMedicationResponse",
-      "type": "object"
-    },
-    "DeclaredPayment": {
-      "additionalProperties": false,
-      "description": "What the client states; immutable after submission (§12.5).",
-      "properties": {
-        "amount": {
-          "$ref": "#/$defs/Money-Output"
-        },
-        "method": {
-          "minLength": 1,
-          "title": "Method",
-          "type": "string"
-        },
-        "note": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Note"
-        },
-        "paidOn": {
-          "format": "date",
-          "title": "Paidon",
-          "type": "string"
-        },
-        "referenceLast4": {
-          "anyOf": [
-            {
-              "pattern": "^[0-9]{4}$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Referencelast4"
-        }
-      },
-      "required": [
-        "paidOn",
-        "amount",
-        "method"
-      ],
-      "title": "DeclaredPayment",
       "type": "object"
     },
     "DefaultAppointmentWindow": {
@@ -5088,36 +5722,77 @@
       "title": "DiagnosticReportResultResponse",
       "type": "object"
     },
-    "EvidenceView": {
+    "DirectPaymentRequest": {
       "additionalProperties": false,
+      "description": "Cash or other payment received directly by the practice (staff_entry);\nnever a simulated patient report (D26).",
       "properties": {
-        "contentType": {
-          "title": "Contenttype",
+        "amount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Amount"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
           "type": "string"
         },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Sha256",
+        "evidenceNote": {
+          "minLength": 1,
+          "title": "Evidencenote",
           "type": "string"
         },
-        "sizeBytes": {
-          "exclusiveMinimum": 0.0,
-          "title": "Sizebytes",
+        "expectedVersion": {
+          "title": "Expectedversion",
           "type": "integer"
         },
-        "uploadedAt": {
-          "format": "date-time",
-          "title": "Uploadedat",
+        "method": {
+          "minLength": 1,
+          "title": "Method",
           "type": "string"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
         }
       },
       "required": [
-        "contentType",
-        "sizeBytes",
-        "sha256",
-        "uploadedAt"
+        "operationId",
+        "expectedVersion",
+        "paidOn",
+        "amount",
+        "currency",
+        "method",
+        "evidenceNote"
       ],
-      "title": "EvidenceView",
+      "title": "DirectPaymentRequest",
       "type": "object"
     },
     "ExpiringSubscription": {
@@ -5167,6 +5842,206 @@
         "code"
       ],
       "title": "FieldError",
+      "type": "object"
+    },
+    "GrantCreateRequest": {
+      "additionalProperties": false,
+      "description": "Staff request for a limited patient link; the client operationId becomes\nthe grant id, so a retry never creates a second grant.",
+      "properties": {
+        "actions": {
+          "items": {
+            "enum": [
+              "read_charge",
+              "submit_report",
+              "read_result",
+              "read_receipt"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Actions",
+          "type": "array"
+        },
+        "appointmentId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentid"
+        },
+        "chargeId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Chargeid"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "patientId",
+        "actions"
+      ],
+      "title": "GrantCreateRequest",
+      "type": "object"
+    },
+    "GrantIssuedResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "enum": [
+              "read_charge",
+              "submit_report",
+              "read_result",
+              "read_receipt"
+            ],
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "title": "Expiresat",
+          "type": "string"
+        },
+        "grantId": {
+          "format": "uuid",
+          "title": "Grantid",
+          "type": "string"
+        },
+        "secret": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Secret"
+        }
+      },
+      "required": [
+        "grantId",
+        "secret",
+        "actions",
+        "expiresAt"
+      ],
+      "title": "GrantIssuedResponse",
+      "type": "object"
+    },
+    "GrantResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "enum": [
+              "read_charge",
+              "submit_report",
+              "read_result",
+              "read_receipt"
+            ],
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "appointmentId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Appointmentid"
+        },
+        "chargeId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Chargeid"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "title": "Expiresat",
+          "type": "string"
+        },
+        "grantId": {
+          "format": "uuid",
+          "title": "Grantid",
+          "type": "string"
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "revokedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Revokedat"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "expired",
+            "revoked"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "grantId",
+        "patientId",
+        "actions",
+        "expiresAt",
+        "status"
+      ],
+      "title": "GrantResponse",
       "type": "object"
     },
     "GrantedPeriodResult": {
@@ -5610,6 +6485,29 @@
         "items"
       ],
       "title": "MeasurementSummaryResponse",
+      "type": "object"
+    },
+    "MemberBillingPermissionsResponse": {
+      "properties": {
+        "billingPermissions": {
+          "$ref": "#/$defs/BillingPermissions"
+        },
+        "membershipVersion": {
+          "title": "Membershipversion",
+          "type": "integer"
+        },
+        "userId": {
+          "format": "uuid7",
+          "title": "Userid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "userId",
+        "billingPermissions",
+        "membershipVersion"
+      ],
+      "title": "MemberBillingPermissionsResponse",
       "type": "object"
     },
     "MemberClinicalPermissionsResponse": {
@@ -6859,7 +7757,22 @@
           "$ref": "#/$defs/ServiceResponse"
         },
         {
+          "$ref": "#/$defs/ServicePriceResponse"
+        },
+        {
           "$ref": "#/$defs/ServiceOfferResponse"
+        },
+        {
+          "$ref": "#/$defs/ServiceOfferPriceResponse"
+        },
+        {
+          "$ref": "#/$defs/MemberBillingPermissionsResponse"
+        },
+        {
+          "$ref": "#/$defs/ChargeResponse"
+        },
+        {
+          "$ref": "#/$defs/BillingPaymentProjection"
         },
         {
           "$ref": "#/$defs/ScheduleRuleResponse"
@@ -7024,12 +7937,12 @@
           "type": "string"
         },
         "declared": {
-          "$ref": "#/$defs/DeclaredPayment"
+          "$ref": "#/$defs/src__api__subscriptions__domain__reports__DeclaredPayment"
         },
         "evidence": {
           "anyOf": [
             {
-              "$ref": "#/$defs/EvidenceView"
+              "$ref": "#/$defs/src__api__subscriptions__domain__reports__EvidenceView"
             },
             {
               "type": "null"
@@ -7067,7 +7980,7 @@
         },
         "referenceWarnings": {
           "items": {
-            "$ref": "#/$defs/ReferenceWarning"
+            "$ref": "#/$defs/src__api__subscriptions__domain__reports__ReferenceWarning"
           },
           "title": "Referencewarnings",
           "type": "array"
@@ -7166,12 +8079,12 @@
           "type": "string"
         },
         "declared": {
-          "$ref": "#/$defs/DeclaredPayment"
+          "$ref": "#/$defs/src__api__subscriptions__domain__reports__DeclaredPayment"
         },
         "evidence": {
           "anyOf": [
             {
-              "$ref": "#/$defs/EvidenceView"
+              "$ref": "#/$defs/src__api__subscriptions__domain__reports__EvidenceView"
             },
             {
               "type": "null"
@@ -7574,6 +8487,28 @@
       "title": "PaginatedResponse[AuditEventResponse]",
       "type": "object"
     },
+    "PaginatedResponse_BillingRateResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BillingRateResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[BillingRateResponse]",
+      "type": "object"
+    },
     "PaginatedResponse_CarePlanActionHistoryResponse_": {
       "properties": {
         "items": {
@@ -7748,6 +8683,28 @@
         "total"
       ],
       "title": "PaginatedResponse[CarePlanReviewResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ChargeResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ChargeResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ChargeResponse]",
       "type": "object"
     },
     "PaginatedResponse_ClinicalHistoryEntry_": {
@@ -8056,6 +9013,28 @@
         "total"
       ],
       "title": "PaginatedResponse[DiagnosticReportResultResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_GrantResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/GrantResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[GrantResponse]",
       "type": "object"
     },
     "PaginatedResponse_InvitationResponse_": {
@@ -8540,6 +9519,28 @@
         "total"
       ],
       "title": "PaginatedResponse[ProfessionalResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_ReviewItem_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ReviewItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[ReviewItem]",
       "type": "object"
     },
     "PaginatedResponse_ScheduleBlockResponse_": {
@@ -9295,6 +10296,95 @@
         "changedAt"
       ],
       "title": "PatientBirthDateChangeResponse",
+      "type": "object"
+    },
+    "PatientChargePage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientChargeView"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PatientChargePage",
+      "type": "object"
+    },
+    "PatientChargeView": {
+      "additionalProperties": false,
+      "description": "Minimal patient projection (§9.3): no internal notes, no other charges,\nno clinical content.",
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "balanceState": {
+          "enum": [
+            "unpaid",
+            "partially_paid",
+            "paid"
+          ],
+          "title": "Balancestate",
+          "type": "string"
+        },
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "issuedAt": {
+          "format": "date-time",
+          "title": "Issuedat",
+          "type": "string"
+        },
+        "outstanding": {
+          "title": "Outstanding",
+          "type": "string"
+        },
+        "reviewState": {
+          "anyOf": [
+            {
+              "enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reviewstate"
+        }
+      },
+      "required": [
+        "chargeId",
+        "description",
+        "amount",
+        "currency",
+        "outstanding",
+        "balanceState",
+        "issuedAt"
+      ],
+      "title": "PatientChargeView",
       "type": "object"
     },
     "PatientConditionHistoryResponse": {
@@ -11197,6 +12287,270 @@
       "title": "PatientProfileResponse",
       "type": "object"
     },
+    "PatientReportDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declaredAmount": {
+          "title": "Declaredamount",
+          "type": "string"
+        },
+        "declaredCurrency": {
+          "title": "Declaredcurrency",
+          "type": "string"
+        },
+        "declaredMethod": {
+          "title": "Declaredmethod",
+          "type": "string"
+        },
+        "declaredPaidOn": {
+          "format": "date",
+          "title": "Declaredpaidon",
+          "type": "string"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PatientReportResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "status",
+        "declaredPaidOn",
+        "declaredAmount",
+        "declaredCurrency",
+        "declaredMethod",
+        "createdAt"
+      ],
+      "title": "PatientReportDetail",
+      "type": "object"
+    },
+    "PatientReportPage": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PatientReportView"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PatientReportPage",
+      "type": "object"
+    },
+    "PatientReportResult": {
+      "additionalProperties": false,
+      "description": "Visible outcome only: never the internal note nor the reviewer identity.",
+      "properties": {
+        "decidedAt": {
+          "format": "date-time",
+          "title": "Decidedat",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "approved",
+            "rejected"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "paymentAmount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Paymentamount"
+        },
+        "paymentCurrency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Paymentcurrency"
+        },
+        "paymentPaidOn": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Paymentpaidon"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "decision",
+        "decidedAt"
+      ],
+      "title": "PatientReportResult",
+      "type": "object"
+    },
+    "PatientReportView": {
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declaredAmount": {
+          "title": "Declaredamount",
+          "type": "string"
+        },
+        "declaredCurrency": {
+          "title": "Declaredcurrency",
+          "type": "string"
+        },
+        "declaredMethod": {
+          "title": "Declaredmethod",
+          "type": "string"
+        },
+        "declaredPaidOn": {
+          "format": "date",
+          "title": "Declaredpaidon",
+          "type": "string"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "status",
+        "declaredPaidOn",
+        "declaredAmount",
+        "declaredCurrency",
+        "declaredMethod",
+        "createdAt"
+      ],
+      "title": "PatientReportView",
+      "type": "object"
+    },
+    "PaymentAnnulmentRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "reason"
+      ],
+      "title": "PaymentAnnulmentRequest",
+      "type": "object"
+    },
     "PaymentReportCreateRequest": {
       "additionalProperties": false,
       "properties": {
@@ -11292,12 +12646,12 @@
           "type": "string"
         },
         "declared": {
-          "$ref": "#/$defs/DeclaredPayment"
+          "$ref": "#/$defs/src__api__subscriptions__domain__reports__DeclaredPayment"
         },
         "evidence": {
           "anyOf": [
             {
-              "$ref": "#/$defs/EvidenceView"
+              "$ref": "#/$defs/src__api__subscriptions__domain__reports__EvidenceView"
             },
             {
               "type": "null"
@@ -11384,12 +12738,12 @@
           "type": "string"
         },
         "declared": {
-          "$ref": "#/$defs/DeclaredPayment"
+          "$ref": "#/$defs/src__api__subscriptions__domain__reports__DeclaredPayment"
         },
         "evidence": {
           "anyOf": [
             {
-              "$ref": "#/$defs/EvidenceView"
+              "$ref": "#/$defs/src__api__subscriptions__domain__reports__EvidenceView"
             },
             {
               "type": "null"
@@ -11455,6 +12809,133 @@
         "version"
       ],
       "title": "PaymentReportResponse",
+      "type": "object"
+    },
+    "PaymentResponse": {
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "balance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BalanceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "exchangeRate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exchangerate"
+        },
+        "exchangeRateDate": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exchangeratedate"
+        },
+        "exchangeRateSource": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exchangeratesource"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "patient_report",
+            "staff_entry"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "paymentId": {
+          "format": "uuid",
+          "title": "Paymentid",
+          "type": "string"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
+        },
+        "registeredBy": {
+          "format": "uuid",
+          "title": "Registeredby",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "paymentId",
+        "chargeId",
+        "origin",
+        "amount",
+        "currency",
+        "paidOn",
+        "method",
+        "status",
+        "registeredBy",
+        "createdAt",
+        "version"
+      ],
+      "title": "PaymentResponse",
       "type": "object"
     },
     "PendingReportsSummary": {
@@ -11689,6 +13170,41 @@
       "title": "PlanVersionSummaryView",
       "type": "object"
     },
+    "PriceResolutionResponse": {
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "resolvedAt": {
+          "format": "date-time",
+          "title": "Resolvedat",
+          "type": "string"
+        },
+        "serviceId": {
+          "format": "uuid",
+          "title": "Serviceid",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "serviceId",
+        "source",
+        "amount",
+        "currency",
+        "resolvedAt"
+      ],
+      "title": "PriceResolutionResponse",
+      "type": "object"
+    },
     "ProfessionalResponse": {
       "properties": {
         "createdAt": {
@@ -11920,48 +13436,6 @@
         "entered-in-error"
       ],
       "type": "string"
-    },
-    "ReferenceWarning": {
-      "additionalProperties": false,
-      "description": "Partial-reference coincidences only warn the operator; they never\nreject or delete anything by themselves (§12.6, D24).",
-      "properties": {
-        "accountId": {
-          "format": "uuid",
-          "title": "Accountid",
-          "type": "string"
-        },
-        "declaredAmount": {
-          "$ref": "#/$defs/Money-Output"
-        },
-        "declaredPaidOn": {
-          "format": "date",
-          "title": "Declaredpaidon",
-          "type": "string"
-        },
-        "reportId": {
-          "format": "uuid",
-          "title": "Reportid",
-          "type": "string"
-        },
-        "status": {
-          "enum": [
-            "pending",
-            "approved",
-            "rejected"
-          ],
-          "title": "Status",
-          "type": "string"
-        }
-      },
-      "required": [
-        "reportId",
-        "accountId",
-        "status",
-        "declaredPaidOn",
-        "declaredAmount"
-      ],
-      "title": "ReferenceWarning",
-      "type": "object"
     },
     "RejectionRequest": {
       "additionalProperties": false,
@@ -12254,6 +13728,253 @@
         "version"
       ],
       "title": "ReportAttachmentResponse",
+      "type": "object"
+    },
+    "ReviewDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declared": {
+          "$ref": "#/$defs/src__api__billing__domain__payments__DeclaredPayment"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src__api__billing__application__review_cases__EvidenceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "referenceWarnings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/src__api__billing__application__review_cases__ReferenceWarning"
+          },
+          "title": "Referencewarnings",
+          "type": "array"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "resubmissions": {
+          "default": [],
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Resubmissions",
+          "type": "array"
+        },
+        "review": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reportId",
+        "chargeId",
+        "patientId",
+        "status",
+        "declared",
+        "createdAt",
+        "version"
+      ],
+      "title": "ReviewDetail",
+      "type": "object"
+    },
+    "ReviewItem": {
+      "additionalProperties": false,
+      "properties": {
+        "chargeId": {
+          "format": "uuid",
+          "title": "Chargeid",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declared": {
+          "$ref": "#/$defs/src__api__billing__domain__payments__DeclaredPayment"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/src__api__billing__application__review_cases__EvidenceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reportId",
+        "chargeId",
+        "patientId",
+        "status",
+        "declared",
+        "createdAt",
+        "version"
+      ],
+      "title": "ReviewItem",
+      "type": "object"
+    },
+    "ReviewOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "decidedAt": {
+          "format": "date-time",
+          "title": "Decidedat",
+          "type": "string"
+        },
+        "decision": {
+          "title": "Decision",
+          "type": "string"
+        },
+        "internalNote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Internalnote"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "reviewerId": {
+          "format": "uuid",
+          "title": "Reviewerid",
+          "type": "string"
+        },
+        "verifiedAmount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedamount"
+        },
+        "verifiedCurrency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedcurrency"
+        },
+        "verifiedPaidOn": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verifiedpaidon"
+        }
+      },
+      "required": [
+        "decision",
+        "reviewerId",
+        "decidedAt"
+      ],
+      "title": "ReviewOutcome",
       "type": "object"
     },
     "ReviewOutcomeView": {
@@ -12763,6 +14484,75 @@
       "title": "SeriesResponse",
       "type": "object"
     },
+    "ServiceOfferPriceResponse": {
+      "properties": {
+        "accountId": {
+          "format": "uuid7",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "serviceId": {
+          "format": "uuid7",
+          "title": "Serviceid",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "professionalId",
+        "serviceId",
+        "amount",
+        "currency",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ServiceOfferPriceResponse",
+      "type": "object"
+    },
     "ServiceOfferResponse": {
       "properties": {
         "accountId": {
@@ -12866,6 +14656,69 @@
         "version"
       ],
       "title": "ServiceOfferResponse",
+      "type": "object"
+    },
+    "ServicePriceResponse": {
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Createdat"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "professionalId": {
+          "format": "uuid7",
+          "title": "Professionalid",
+          "type": "string"
+        },
+        "serviceId": {
+          "format": "uuid7",
+          "title": "Serviceid",
+          "type": "string"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updatedat"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "professionalId",
+        "serviceId",
+        "amount",
+        "currency",
+        "createdAt",
+        "updatedAt",
+        "version"
+      ],
+      "title": "ServicePriceResponse",
       "type": "object"
     },
     "ServiceResponse": {
@@ -14208,6 +16061,252 @@
       ],
       "title": "VerifiedAmount",
       "type": "object"
+    },
+    "src__api__billing__application__review_cases__EvidenceView": {
+      "additionalProperties": false,
+      "properties": {
+        "contentType": {
+          "title": "Contenttype",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "sizeBytes": {
+          "title": "Sizebytes",
+          "type": "integer"
+        },
+        "uploadedAt": {
+          "format": "date-time",
+          "title": "Uploadedat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contentType",
+        "sizeBytes",
+        "sha256",
+        "uploadedAt"
+      ],
+      "title": "EvidenceView",
+      "type": "object"
+    },
+    "src__api__billing__application__review_cases__ReferenceWarning": {
+      "additionalProperties": false,
+      "description": "A partial-reference coincidence only warns the reviewer; it never\nrejects or deletes anything by itself (§10.5).",
+      "properties": {
+        "declaredAmount": {
+          "title": "Declaredamount",
+          "type": "string"
+        },
+        "declaredPaidOn": {
+          "format": "date",
+          "title": "Declaredpaidon",
+          "type": "string"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "status",
+        "declaredPaidOn",
+        "declaredAmount"
+      ],
+      "title": "ReferenceWarning",
+      "type": "object"
+    },
+    "src__api__billing__domain__payments__DeclaredPayment": {
+      "additionalProperties": false,
+      "description": "What the patient states; immutable after submission (§10.4, D26).",
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
+        }
+      },
+      "required": [
+        "paidOn",
+        "amount",
+        "currency",
+        "method"
+      ],
+      "title": "DeclaredPayment",
+      "type": "object"
+    },
+    "src__api__subscriptions__domain__reports__DeclaredPayment": {
+      "additionalProperties": false,
+      "description": "What the client states; immutable after submission (§12.5).",
+      "properties": {
+        "amount": {
+          "$ref": "#/$defs/Money-Output"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
+        }
+      },
+      "required": [
+        "paidOn",
+        "amount",
+        "method"
+      ],
+      "title": "DeclaredPayment",
+      "type": "object"
+    },
+    "src__api__subscriptions__domain__reports__EvidenceView": {
+      "additionalProperties": false,
+      "properties": {
+        "contentType": {
+          "title": "Contenttype",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "sizeBytes": {
+          "exclusiveMinimum": 0.0,
+          "title": "Sizebytes",
+          "type": "integer"
+        },
+        "uploadedAt": {
+          "format": "date-time",
+          "title": "Uploadedat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contentType",
+        "sizeBytes",
+        "sha256",
+        "uploadedAt"
+      ],
+      "title": "EvidenceView",
+      "type": "object"
+    },
+    "src__api__subscriptions__domain__reports__ReferenceWarning": {
+      "additionalProperties": false,
+      "description": "Partial-reference coincidences only warn the operator; they never\nreject or delete anything by themselves (§12.6, D24).",
+      "properties": {
+        "accountId": {
+          "format": "uuid",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "declaredAmount": {
+          "$ref": "#/$defs/Money-Output"
+        },
+        "declaredPaidOn": {
+          "format": "date",
+          "title": "Declaredpaidon",
+          "type": "string"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "accountId",
+        "status",
+        "declaredPaidOn",
+        "declaredAmount"
+      ],
+      "title": "ReferenceWarning",
+      "type": "object"
     }
   },
   "$id": "urn:nightingale:public-models:1.3",
@@ -14225,7 +16324,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "4c2d06accf315e04f3b1ba10ae5ad770da790a8e",
-    "sourceSha256": "1af44c7b790519e3755a099f2ec3cc3bff3cc9cedb4dc6f8a595a0bbc8937eec"
+    "sourceHead": "5aeab3c53021b9bb8075bae0e1bc9e819f826fce",
+    "sourceSha256": "131f1af9708159a67a0729da9bf39dc4786f0451dd7593031403625343da3e68"
   }
 }

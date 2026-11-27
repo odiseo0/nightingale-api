@@ -1,9 +1,11 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal, TypedDict
 from uuid import UUID
 
 from pydantic import UUID7, AwareDatetime, ConfigDict, Field
 
+from src.api.billing.domain.money import Currency
 from src.api.services.domain.services import ServiceQuery
 from src.core.schema import AdministrativeResponse, BaseModel
 
@@ -53,6 +55,28 @@ class ServiceOfferResponse(AdministrativeResponse):
     status: Literal["active", "inactive"]
     service_status: Literal["active", "inactive"]
     service_version: int
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    version: int
+
+
+class SetServiceOfferPricePayload(BaseModel):
+    amount: Decimal = Field(ge=0, decimal_places=2, allow_inf_nan=False)
+    currency: Currency
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RemoveServiceOfferPricePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ServiceOfferPriceResponse(AdministrativeResponse):
+    account_id: UUID7
+    professional_id: UUID7
+    service_id: UUID7
+    amount: Decimal
+    currency: Currency
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int

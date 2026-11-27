@@ -18,15 +18,24 @@ from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleErr
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.authorization import AuthenticatedActor
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
+from src.api.billing.domain.money import Money
+from src.api.billing.domain.pricing import ResolvedPrice, resolve_price
 from src.api.services.application.offers_cases import offer_response
 from src.api.services.domain.services import (
     CreateServicePayload,
     ServicePatch,
+    ServicePriceResponse,
     ServiceQuery,
     ServiceResponse,
     ServiceStatusPayload,
+    SetServicePricePayload,
 )
-from src.api.services.repository.dao import dao_offers, dao_services
+from src.api.services.repository.dao import (
+    dao_offer_prices,
+    dao_offers,
+    dao_service_prices,
+    dao_services,
+)
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel
@@ -87,6 +96,8 @@ async def apply_service_operation(
         and isinstance(payload, ServicePatch)
         or action == "SetServiceStatus"
         and isinstance(payload, ServiceStatusPayload)
+        or action == "SetServicePrice"
+        and isinstance(payload, SetServicePricePayload)
     ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
 
@@ -107,6 +118,30 @@ async def apply_service_operation(
 
     if isinstance(scope, Err):
         return scope
+
+    if isinstance(data, SetServicePricePayload):
+        # Only the professional who owns the catalog sets its base price (D25/D27).
+        price = await dao_service_prices.by_service(db, professional_id, row.id)
+
+        if price is Empty:
+            if expected_version != 0:
+                return Err(AccountRuleError("VERSION_CONFLICT"))
+        elif price.version != expected_version:
+            return Err(AccountRuleError("VERSION_CONFLICT", price.version))
+
+        price = await dao_service_prices.apply_price(
+            db, professional_id, row.id, data.amount, data.currency
+        )
+        state = ServicePriceResponse.model_validate(price)
+        targets = await catalog_accounts(db, context.actor.user_id, context.account.id)
+        changes = [
+            AccountChange(
+                "service_price", str(entity_key), state, state.version, "owner", target
+            )
+            for target in targets
+        ]
+
+        return Ok(AccountEffect(state, state.version, changes, False))
 
     if isinstance(data, CreateServicePayload):
         if expected_version != 0:
@@ -188,3 +223,41 @@ async def read_catalog(
         }
 
     return Ok(response)
+
+
+async def resolve_service_price(
+    db: AsyncSession, account_id: UUID, professional_id: UUID, service_id: UUID
+) -> ResolvedPrice | None:
+    """Effective price of a service in one account for billing charges (D25).
+
+    Public case consumed by billing; the offer price replaces the professional
+    base when present. None means «no price defined» — distinct from a valid
+    zero (free) price. The result never reserves the price: the charge freezes
+    its own snapshot.
+    """
+    offer = await dao_offer_prices.by_offer(db, account_id, professional_id, service_id)
+    base = await dao_service_prices.by_service(db, professional_id, service_id)
+
+    return resolve_price(
+        None if offer is Empty else Money(amount=offer.amount, currency=offer.currency),
+        None if base is Empty else Money(amount=base.amount, currency=base.currency),
+    )
+
+
+async def charge_service_reference(
+    db: AsyncSession, account_id: UUID, service_id: UUID
+) -> dict[str, object] | None:
+    """Service name and professional of an offer in the account, for charge
+    snapshots (billing consumes this public case; D25). None when the account
+    does not offer the service."""
+    row = await dao_offers.for_account_service(db, account_id, service_id)
+
+    if row is Empty:
+        return None
+
+    service = await dao_services.get(db, service_id)
+
+    if service is Empty:
+        return None
+
+    return {"professional_id": row.professional_id, "name": service.name}

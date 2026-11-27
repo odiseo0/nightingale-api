@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import (
@@ -9,6 +10,7 @@ from pydantic import (
     model_validator,
 )
 
+from src.api.billing.domain.money import Currency
 from src.core.schema import AdministrativeResponse, BaseModel, PageQuery
 
 
@@ -64,6 +66,24 @@ class ServiceResponse(AdministrativeResponse):
     name: str
     default_duration_minutes: int
     status: Literal["active", "inactive"]
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    version: int
+
+
+class SetServicePricePayload(BaseModel):
+    # Zero is a valid free price; «no price» is the absence of the row (D25).
+    amount: Decimal = Field(ge=0, decimal_places=2, allow_inf_nan=False)
+    currency: Currency
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ServicePriceResponse(AdministrativeResponse):
+    professional_id: UUID7
+    service_id: UUID7
+    amount: Decimal
+    currency: Currency
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int

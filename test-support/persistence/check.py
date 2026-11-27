@@ -194,7 +194,7 @@ async def check_timestamp_inventory(connection: asyncpg.Connection) -> None:
             OR (table_schema='analytics' AND table_name='etl_state' AND column_name='updated_at'))
             AND column_default='CURRENT_TIMESTAMP'
     """)
-    assert defaults == 99
+    assert defaults == 114
     assert await connection.fetchval(
         "SELECT to_regproc('nightingale.set_row_updated_at')"
     ) is None

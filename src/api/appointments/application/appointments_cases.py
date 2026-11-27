@@ -49,6 +49,23 @@ if TYPE_CHECKING:
     from src.api.appointments.repository.models import Appointment, AppointmentHistory
 
 
+async def grant_anchor_appointment(
+    db: AsyncSession, account_id: UUID, patient_id: UUID, appointment_id: UUID
+):
+    """Appointment end instant for a billing grant anchored to it (D28); None
+    when the appointment does not belong to that account and patient."""
+    appointment = await dao_appointments.get(db, appointment_id)
+
+    if (
+        appointment is Empty
+        or appointment.account_id != account_id
+        or appointment.patient_id != patient_id
+    ):
+        return None
+
+    return appointment.ends_at
+
+
 async def encounter_appointment(
     db: AsyncSession, account_id: UUID, patient_id: UUID, appointment_id: UUID | None
 ) -> bool:
@@ -226,6 +243,16 @@ async def apply_appointment_operation(
             else None
         )
         await record_history(db, context, state, history_action, now, reason)
+
+        if action == "CancelAppointment":
+            # Cancelling the appointment revokes its anchored billing grants in
+            # the same acceptance; rescheduling keeps them (D28). Local import:
+            # billing already consumes this module's public cases.
+            from src.api.billing.application.grant_cases import (
+                revoke_appointment_grants,
+            )
+
+            await revoke_appointment_grants(db, context.account.id, entity_key, now)
 
         return Ok(
             AccountEffect(

@@ -44,6 +44,7 @@ from src.api.audit.application.audit_cases import record_control, record_operati
 from src.api.audit.domain.audit import ControlAudit, OperationAudit
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
+from src.api.billing.application.charge_cases import apply_charge_operation
 from src.api.care_plans.application.plan_cases import apply_care_plan_operation
 from src.api.clinical_records.application.access_cases import (
     clinical_result_allowed,
@@ -101,6 +102,7 @@ from src.api.sync.domain.operations import (
     ALLERGY_SCHEMAS,
     ANTECEDENT_SCHEMAS,
     APPOINTMENT_SCHEMAS,
+    BILLING_CHARGE_SCHEMAS,
     BLOCK_SCHEMAS,
     CARE_PLAN_SCHEMAS,
     CONDITION_SCHEMAS,
@@ -571,6 +573,9 @@ async def accept_operation(
         if operation.action in SERVICE_SCHEMAS:
             entity_type = "service"
 
+        if operation.action in BILLING_CHARGE_SCHEMAS:
+            entity_type = "billing_charge"
+
         if operation.action in OFFER_SCHEMAS:
             entity_type = "service_offer"
 
@@ -606,6 +611,7 @@ async def accept_operation(
                 or operation.action in DENTAL_SCHEMAS
                 or operation.action in OFFER_SCHEMAS
                 or operation.action in SERVICE_SCHEMAS
+                or operation.action in BILLING_CHARGE_SCHEMAS
                 or operation.action in CONTACT_SCHEMAS
                 or operation.action
                 in (
@@ -687,6 +693,17 @@ async def accept_operation(
                     (
                         SERVICE_SCHEMAS,
                         lambda: apply_service_operation(
+                            db,
+                            context,
+                            operation.action,
+                            operation.entity_key,
+                            operation.expected_version,
+                            payload,
+                        ),
+                    ),
+                    (
+                        BILLING_CHARGE_SCHEMAS,
+                        lambda: apply_charge_operation(
                             db,
                             context,
                             operation.action,

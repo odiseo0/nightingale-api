@@ -1,4 +1,3 @@
-import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid7
@@ -6,10 +5,7 @@ from uuid import UUID, uuid7
 from src.api.accounts.application.accounts_cases import get_account_context
 from src.api.accounts.domain.errors import AccountNotFound
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
-from src.api.subscriptions.domain.reports import (
-    EVIDENCE_MAX_BYTES,
-    detect_content_type,
-)
+from src.api.subscriptions.domain.reports import EVIDENCE_MAX_BYTES
 from src.api.subscriptions.repository.dao import (
     dao_payment_reports,
     dao_report_evidence,
@@ -17,6 +13,7 @@ from src.api.subscriptions.repository.dao import (
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.services import report_storage
+from src.core.services.private_evidence import validate_capture
 from src.core.utils.utils import Empty
 
 if TYPE_CHECKING:
@@ -55,15 +52,12 @@ UploadError = InvalidCredential | AccountNotFound | AccessDenied | StoreError
 
 
 def _check_content(content: bytes) -> Result[tuple[str, str], EvidenceRejected]:
-    if len(content) == 0 or len(content) > EVIDENCE_MAX_BYTES:
-        return Err(EvidenceRejected("invalid_size"))
+    checked = validate_capture(content, EVIDENCE_MAX_BYTES)
 
-    content_type = detect_content_type(content)
+    if isinstance(checked, Err):
+        return Err(EvidenceRejected(checked.error.reason))
 
-    if content_type is None:
-        return Err(EvidenceRejected("invalid_type"))
-
-    return Ok((content_type, hashlib.sha256(content).hexdigest()))
+    return checked
 
 
 async def _report_state(

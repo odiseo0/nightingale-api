@@ -649,6 +649,60 @@
       "title": "AppointmentReasonPayload",
       "type": "object"
     },
+    "BillingAccess": {
+      "enum": [
+        "none",
+        "granted"
+      ],
+      "type": "string"
+    },
+    "BillingPermissions": {
+      "description": "Financial actions of D27; assistants get nothing until granted explicitly.",
+      "properties": {
+        "billingCharges": {
+          "$ref": "#/$defs/BillingAccess",
+          "default": "none"
+        },
+        "billingRead": {
+          "$ref": "#/$defs/BillingAccess",
+          "default": "none"
+        },
+        "billingReview": {
+          "$ref": "#/$defs/BillingAccess",
+          "default": "none"
+        }
+      },
+      "title": "BillingPermissions",
+      "type": "object"
+    },
+    "BillingPermissionsPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "billingPermissions": {
+          "$ref": "#/$defs/BillingPermissions"
+        }
+      },
+      "required": [
+        "billingPermissions"
+      ],
+      "title": "BillingPermissionsPayload",
+      "type": "object"
+    },
+    "CancelPatientChargePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "CancelPatientChargePayload",
+      "type": "object"
+    },
     "CaptureSpecialtyRecordPayload": {
       "additionalProperties": false,
       "properties": {
@@ -1718,6 +1772,118 @@
       "title": "CreatePatientCarePlanPayload",
       "type": "object"
     },
+    "CreatePatientChargePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "adjustReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjustreason"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "appointmentId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Appointmentid"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "enum": [
+                "USD",
+                "VES"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "encounterId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounterid"
+        },
+        "patientId": {
+          "format": "uuid",
+          "title": "Patientid",
+          "type": "string"
+        },
+        "serviceId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Serviceid"
+        }
+      },
+      "required": [
+        "patientId"
+      ],
+      "title": "CreatePatientChargePayload",
+      "type": "object"
+    },
     "CreatePatientConditionPayload": {
       "additionalProperties": false,
       "properties": {
@@ -2767,6 +2933,12 @@
       "title": "InvalidateSpecialtyRecordPayload",
       "type": "object"
     },
+    "IssuePatientChargePayload": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "IssuePatientChargePayload",
+      "type": "object"
+    },
     "JsonValue": {},
     "MeasurementKind": {
       "enum": [
@@ -3612,6 +3784,12 @@
       "title": "RelationshipPatch",
       "type": "object"
     },
+    "RemoveServiceOfferPricePayload": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "RemoveServiceOfferPricePayload",
+      "type": "object"
+    },
     "ResolveDentalFindingPayload": {
       "additionalProperties": false,
       "properties": {
@@ -3958,6 +4136,68 @@
         "sexAtBirth"
       ],
       "title": "SetPatientSexAtBirthPayload",
+      "type": "object"
+    },
+    "SetServiceOfferPricePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Amount"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "SetServiceOfferPricePayload",
+      "type": "object"
+    },
+    "SetServicePricePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Amount"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "SetServicePricePayload",
       "type": "object"
     },
     "SexAtBirth": {
@@ -5048,6 +5288,71 @@
       "title": "UpdatePatientCarePlanPayload",
       "type": "object"
     },
+    "UpdatePatientChargePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "adjustReason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjustreason"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "enum": [
+                "USD",
+                "VES"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "title": "UpdatePatientChargePayload",
+      "type": "object"
+    },
     "UpdatePatientConditionPayload": {
       "additionalProperties": false,
       "properties": {
@@ -5922,6 +6227,21 @@
         {
           "properties": {
             "action": {
+              "const": "CancelPatientCharge"
+            },
+            "payload": {
+              "$ref": "#/$defs/CancelPatientChargePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "CaptureSpecialtyRecord"
             },
             "payload": {
@@ -6106,6 +6426,21 @@
             },
             "payload": {
               "$ref": "#/$defs/CreatePatientCarePlanPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "CreatePatientCharge"
+            },
+            "payload": {
+              "$ref": "#/$defs/CreatePatientChargePayload"
             }
           },
           "required": [
@@ -6537,6 +6872,21 @@
         {
           "properties": {
             "action": {
+              "const": "IssuePatientCharge"
+            },
+            "payload": {
+              "$ref": "#/$defs/IssuePatientChargePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "MarkAppointmentNoShow"
             },
             "payload": {
@@ -6632,6 +6982,21 @@
             },
             "payload": {
               "$ref": "#/$defs/RegisterPatientPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "RemoveServiceOfferPrice"
+            },
+            "payload": {
+              "$ref": "#/$defs/RemoveServiceOfferPricePayload"
             }
           },
           "required": [
@@ -6770,6 +7135,21 @@
             },
             "payload": {
               "$ref": "#/$defs/PatientStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetMemberBillingPermissions"
+            },
+            "payload": {
+              "$ref": "#/$defs/BillingPermissionsPayload"
             }
           },
           "required": [
@@ -6931,10 +7311,40 @@
         {
           "properties": {
             "action": {
+              "const": "SetServiceOfferPrice"
+            },
+            "payload": {
+              "$ref": "#/$defs/SetServiceOfferPricePayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
               "const": "SetServiceOfferStatus"
             },
             "payload": {
               "$ref": "#/$defs/ServiceStatusPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "SetServicePrice"
+            },
+            "payload": {
+              "$ref": "#/$defs/SetServicePricePayload"
             }
           },
           "required": [
@@ -7130,6 +7540,21 @@
             },
             "payload": {
               "$ref": "#/$defs/UpdatePatientCarePlanPayload"
+            }
+          },
+          "required": [
+            "action",
+            "payload"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "UpdatePatientCharge"
+            },
+            "payload": {
+              "$ref": "#/$defs/UpdatePatientChargePayload"
             }
           },
           "required": [
@@ -7394,7 +7819,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "4c2d06accf315e04f3b1ba10ae5ad770da790a8e",
-    "sourceSha256": "1af44c7b790519e3755a099f2ec3cc3bff3cc9cedb4dc6f8a595a0bbc8937eec"
+    "sourceHead": "5aeab3c53021b9bb8075bae0e1bc9e819f826fce",
+    "sourceSha256": "131f1af9708159a67a0729da9bf39dc4786f0451dd7593031403625343da3e68"
   }
 }

@@ -198,6 +198,7 @@ async def read_changes(
                     row.audience,
                     context.owner,
                     position.clinical_sections,
+                    billing=context.billing_permissions.granted("billing_read"),
                 ):
                     continue
 

@@ -1,6 +1,6 @@
 # P-20261117-03-patient-billing: facturación administrativa de pacientes
 
-**Estado:** Approved. **Creado:** 2026-11-17. **Actualizado:** 2026-11-17. **Lista de tareas:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-11-17. **Actualizado:** 2026-11-27. **Lista de tareas:** [todo.md](todo.md).
 
 ## 1. Contexto y resultado
 
@@ -60,9 +60,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C01 · Reglas financieras decididas
 
-- [ ] `BI-O01`–`BI-O08` tienen respuesta registrada sin elegir valores por defecto.
-- [ ] Ejemplos de cargo, pago parcial/excedente y corrección son coherentes.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] `BI-O01`–`BI-O08` tienen respuesta registrada sin elegir valores por defecto.
+- [x] Ejemplos de cargo, pago parcial/excedente y corrección son coherentes.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 2 · Paciente, archivos y diseño físico
 
@@ -72,9 +72,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C02 · Alcance y núcleo físico revisables
 
-- [ ] `BI-O09`–`BI-O12` tienen decisiones y el mecanismo de enlace es limitado/revocable.
-- [ ] Restricciones cubren cuenta/paciente, moneda, historia, saldo y efecto único.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] `BI-O09`–`BI-O12` tienen decisiones y el mecanismo de enlace es limitado/revocable.
+- [x] Restricciones cubren cuenta/paciente, moneda, historia, saldo y efecto único.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 3 · Contratos y dominio financiero
 
@@ -84,9 +84,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C03 · Contratos y cálculos básicos verificados
 
-- [ ] Contratos cubren todos los actores/recorridos y no divulgación.
-- [ ] Nulo/cero, monedas, conversiones y saldos pasan pruebas de dominio.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Contratos cubren todos los actores/recorridos y no divulgación.
+- [x] Nulo/cero, monedas, conversiones y saldos pasan pruebas de dominio.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 4 · Dominio y persistencia
 
@@ -96,9 +96,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C04 · Base transaccional funcional
 
-- [ ] Migraciones, privilegios y restricciones pasan en PostgreSQL aislado.
-- [ ] Dominio y DAOs conservan instantáneas, historia y aislamiento por cuenta.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Migraciones, privilegios y restricciones pasan en PostgreSQL aislado.
+- [x] Dominio y DAOs conservan instantáneas, historia y aislamiento por cuenta.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 5 · Precios, cargos y evidencia
 
@@ -108,9 +108,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C05 · Cargos y capturas listos para el paciente
 
-- [ ] Cambios de catálogo no alteran cargos; borradores no son visibles al paciente.
-- [ ] Archivos válidos/inválidos y descargas cruzadas cumplen seguridad.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Cambios de catálogo no alteran cargos; borradores no son visibles al paciente.
+- [x] Archivos válidos/inválidos y descargas cruzadas cumplen seguridad.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 6 · Recorrido del paciente y bandeja de revisión
 
@@ -120,9 +120,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C06 · Reporte completo sin efecto financiero anticipado
 
-- [ ] Paciente solo accede a su concesión y presentar deja saldo sin cambios.
-- [ ] Personal revisa con permiso explícito y sin acceso clínico derivado.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Paciente solo accede a su concesión y presentar deja saldo sin cambios.
+- [x] Personal revisa con permiso explícito y sin acceso clínico derivado.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 7 · Pagos aprobados y rechazos
 
@@ -132,9 +132,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C07 · Cobro administrativo transaccional
 
-- [ ] Dos revisores/pagos parciales no duplican pago ni exceden cargo.
-- [ ] Rechazo conserva estado anterior y altas directas quedan diferenciadas de reportes.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Dos revisores/pagos parciales no duplican pago ni exceden cargo.
+- [x] Rechazo conserva estado anterior y altas directas quedan diferenciadas de reportes.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 8 · Correcciones, comprobantes y sincronización
 
@@ -144,9 +144,9 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C08 · Historia y recuperación financiera
 
-- [ ] Anulaciones no borran ni suman al vigente; comprobantes conservan instantánea/estado.
-- [ ] Sync recupera efectos sin incluir capturas/comprobantes o datos no autorizados.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Anulaciones no borran ni suman al vigente; comprobantes conservan instantánea/estado.
+- [x] Sync recupera efectos sin incluir capturas/comprobantes o datos no autorizados.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 9 · Offline, analítica y seguridad
 
@@ -156,20 +156,20 @@ Documentos clínicos podrá reutilizar la concesión y el almacenamiento solo de
 
 #### C09 · Facturación segura y medible localmente
 
-- [ ] Reloj/caché local no altera autoridad; indicadores no mezclan fechas o monedas.
-- [ ] Aprobaciones, saldo, revocación, concesiones y respuestas perdidas pasan probes reales.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Reloj/caché local no altera autoridad; indicadores no mezclan fechas o monedas.
+- [x] Aprobaciones, saldo, revocación, concesiones y respuestas perdidas pasan probes reales.
+- [x] Revisión y aceptación expresa del usuario.
 
 ### Fase 10 · Contratos y cierre
 
 - [ ] **T28:** Generar/verificar contratos, ejemplos y documentación real.
-- [ ] **T29:** Ejecutar cierre integral y registrar evidencia/límites.
+- [x] **T29:** Ejecutar cierre integral y registrar evidencia/límites.
 
 #### C10 · Facturación lista para revisión final
 
-- [ ] Suite, probes, migraciones, contratos y build pasan sobre el entregable.
-- [ ] El flujo precio→cargo→reporte→revisión→pago→comprobante→analítica funciona con datos ficticios.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Suite, probes, migraciones, contratos y build pasan sobre el entregable.
+- [x] El flujo precio→cargo→reporte→revisión→pago→comprobante→analítica funciona con datos ficticios.
+- [x] Revisión y aceptación expresa del usuario.
 
 ## 7. Riesgos y mitigación
 

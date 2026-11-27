@@ -159,6 +159,37 @@ class ClinicalPermissionsPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+type BillingAccess = Literal["none", "granted"]
+type BillingAction = Literal["billing_read", "billing_charges", "billing_review"]
+
+
+class BillingPermissions(BaseModel):
+    """Financial actions of D27; assistants get nothing until granted explicitly."""
+
+    billing_read: BillingAccess = "none"
+    billing_charges: BillingAccess = "none"
+    billing_review: BillingAccess = "none"
+
+    def granted(self, action: BillingAction) -> bool:
+        return {
+            "billing_read": self.billing_read,
+            "billing_charges": self.billing_charges,
+            "billing_review": self.billing_review,
+        }[action] == "granted"
+
+
+class BillingPermissionsPayload(BaseModel):
+    billing_permissions: BillingPermissions
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MemberBillingPermissionsResponse(BaseModel):
+    user_id: UUID7
+    billing_permissions: BillingPermissions
+    membership_version: int
+
+
 class MemberClinicalPermissionsResponse(BaseModel):
     user_id: UUID7
     clinical_permissions: ClinicalPermissions
@@ -174,6 +205,7 @@ class AccessResponse(BaseModel):
     permission_epoch: int
     allowed_actions: list[str]
     clinical_permissions: ClinicalPermissions
+    billing_permissions: BillingPermissions = BillingPermissions()
 
 
 class ProfessionalResponse(AdministrativeResponse):
@@ -274,6 +306,7 @@ class AccountChange:
         "clinical_care_plans",
         "clinical_diagnostic_reports",
         "clinical_specialty_templates",
+        "billing",
     ] = "owner"
     account_id: UUID | None = None
     previous_starts_at: datetime | None = None
@@ -337,4 +370,7 @@ class AccountContext:
     owner: bool
     clinical_permissions: ClinicalPermissions = dataclass_field(
         default_factory=ClinicalPermissions
+    )
+    billing_permissions: BillingPermissions = dataclass_field(
+        default_factory=BillingPermissions
     )

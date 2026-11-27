@@ -12,10 +12,6 @@ from pydantic import (
 )
 
 from src.api.accounts.domain.accounts import ClinicalSection
-from src.api.subscriptions.domain.subscriptions import (
-    SubscriptionAdminProjection,
-    SubscriptionProjection,
-)
 from src.api.appointments.domain.appointments import AppointmentHistoryProjection
 from src.api.care_plans.domain.goals import (
     CarePlanActionResponse,
@@ -47,6 +43,10 @@ from src.api.specialties.domain.odontogram import (
 )
 from src.api.specialties.domain.records import SpecialtyRecordResponse
 from src.api.specialties.domain.templates import SpecialtyTemplateResponse
+from src.api.subscriptions.domain.subscriptions import (
+    SubscriptionAdminProjection,
+    SubscriptionProjection,
+)
 from src.api.sync.domain import operations as projections
 from src.api.sync.domain.operations import OperationState
 from src.core.schema import BaseModel
@@ -63,7 +63,11 @@ PROJECTION_SCHEMAS: dict[str, type[BaseModel]] = {
     "contact_person": projections.ContactResponse,
     "patient_contact": projections.RelationshipResponse,
     "service": projections.ServiceResponse,
+    "service_price": projections.ServicePriceResponse,
     "service_offer": projections.ServiceOfferResponse,
+    "service_offer_price": projections.ServiceOfferPriceResponse,
+    "billing_charge": projections.ChargeResponse,
+    "billing_payment": projections.BillingPaymentProjection,
     "schedule_rule": projections.ScheduleRuleResponse,
     "schedule_exception": projections.ScheduleExceptionResponse,
     "schedule_block": projections.ScheduleBlockResponse,

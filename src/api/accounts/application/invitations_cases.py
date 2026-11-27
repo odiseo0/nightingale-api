@@ -9,18 +9,25 @@ from src.api.accounts.domain.accounts import (
     AccountContext,
     AccountEffect,
     AccountResponse,
+    BillingPermissions,
+    BillingPermissionsPayload,
     ClinicalPermissions,
     ClinicalPermissionsPayload,
     CreateInvitationPayload,
     InvitationAcceptanceResult,
     InvitationQuery,
     InvitationResponse,
+    MemberBillingPermissionsResponse,
     MemberClinicalPermissionsResponse,
     MemberResponse,
     MembershipStatusPayload,
 )
 from src.api.accounts.domain.errors import AccountObjectNotFound, AccountRuleError
-from src.api.accounts.domain.policies import clinical_permission_values, scope_changes
+from src.api.accounts.domain.policies import (
+    billing_permission_values,
+    clinical_permission_values,
+    scope_changes,
+)
 from src.api.accounts.repository.dao import (
     dao_account_devices,
     dao_accounts,
@@ -137,10 +144,65 @@ async def apply_invitation_operation(
             "CreateInvitation",
             "SetMembershipStatus",
             "SetMemberClinicalPermissions",
+            "SetMemberBillingPermissions",
         )
         and payload.model_fields_set
     ):
         return Err(AccountRuleError("VALIDATION_ERROR"))
+
+    if action == "SetMemberBillingPermissions":
+        if not isinstance(payload, BillingPermissionsPayload):
+            return Err(AccountRuleError("VALIDATION_ERROR"))
+
+        if entity_key == context.account.owner_user_id:
+            return Err(AccessDenied())
+
+        membership = await dao_memberships.get_by(
+            db,
+            where={"account_id": context.account.id, "user_id": entity_key},
+            for_update=True,
+            execution_options={"populate_existing": True},
+        )
+
+        if membership is Empty:
+            return Err(AccountObjectNotFound())
+
+        if membership.version != expected_version:
+            return Err(AccountRuleError("VERSION_CONFLICT", membership.version))
+
+        data = BillingPermissions(**payload.billing_permissions.model_dump())
+        changes = billing_permission_values(data)
+
+        if all(getattr(membership, name) == value for name, value in changes.items()):
+            return Err(AccountRuleError("NO_CHANGES", membership.version))
+
+        membership = await dao_memberships.set_billing_permissions(
+            db, membership, changes, now
+        )
+        state = MemberBillingPermissionsResponse(
+            user_id=membership.user_id,
+            billing_permissions=data,
+            membership_version=membership.version,
+        )
+        users = await identified_users(db, [entity_key])
+        member = MemberResponse(
+            user_id=entity_key,
+            display_name=users[entity_key].display_name,
+            role="assistant",
+            status=membership.status,
+            created_at=membership.date_added,
+            updated_at=membership.date_updated,
+            version=membership.version,
+        )
+
+        return Ok(
+            AccountEffect(
+                state,
+                state.membership_version,
+                [AccountChange("membership", str(entity_key), member, member.version)],
+                scope_changes(action),
+            )
+        )
 
     if action == "SetMemberClinicalPermissions":
         if not isinstance(payload, ClinicalPermissionsPayload):

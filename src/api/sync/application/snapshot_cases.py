@@ -12,7 +12,6 @@ from src.api.accounts.application.snapshot_cases import snapshot_accounts
 from src.api.accounts.domain.accounts import AccountContext, ProfessionalResponse
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.accounts.domain.policies import projection_allowed, sync_scope_matches
-from src.api.subscriptions.application.projection_cases import snapshot_subscription
 from src.api.appointments.application.snapshot_cases import snapshot_appointments
 from src.api.appointments.domain.appointments import (
     AppointmentHistoryProjection,
@@ -21,6 +20,14 @@ from src.api.appointments.domain.appointments import (
 from src.api.audit.application.audit_cases import record_control
 from src.api.audit.domain.audit import ControlAudit
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
+from src.api.billing.application.projection_cases import snapshot_billing
+from src.api.care_plans.application.snapshot_cases import snapshot_care_plans
+from src.api.care_plans.domain.goals import (
+    CarePlanActionResponse,
+    CarePlanGoalResponse,
+    CarePlanReviewResponse,
+)
+from src.api.care_plans.domain.plans import CarePlanResponse
 from src.api.clinical_records.application.snapshot_cases import snapshot_clinical
 from src.api.clinical_records.domain.allergies import PatientAllergyIntoleranceResponse
 from src.api.clinical_records.domain.antecedents import PatientAntecedentResponse
@@ -30,41 +37,34 @@ from src.api.clinical_records.domain.conditions import (
     PatientConditionResponse,
 )
 from src.api.clinical_records.domain.immunizations import PatientImmunizationResponse
-from src.api.care_plans.domain.goals import (
-    CarePlanActionResponse,
-    CarePlanGoalResponse,
-    CarePlanReviewResponse,
+from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
+from src.api.clinical_records.domain.notes import PatientNoteResponse
+from src.api.diagnostic_results.application.snapshot_cases import (
+    snapshot_diagnostic_reports,
 )
-from src.api.care_plans.domain.plans import CarePlanResponse
 from src.api.diagnostic_results.domain.reports import DiagnosticReportResponse
 from src.api.diagnostic_results.domain.results import (
     DiagnosticReportResultResponse,
     ReportAttachmentResponse,
+)
+from src.api.encounters.application.snapshot_cases import snapshot_encounters
+from src.api.encounters.domain.encounters import PatientEncounterResponse
+from src.api.medications.application.snapshot_cases import (
+    snapshot_declared_medications,
+)
+from src.api.medications.domain.medications import DeclaredMedicationResponse
+from src.api.patients.application.snapshot_cases import snapshot_patients
+from src.api.schedule.application.snapshot_cases import snapshot_schedule
+from src.api.services.application.snapshot_cases import snapshot_services
+from src.api.specialties.application.snapshot_cases import (
+    snapshot_specialty_templates,
 )
 from src.api.specialties.domain.odontogram import (
     DentalFindingResponse,
     DentalTreatmentResponse,
 )
 from src.api.specialties.domain.records import SpecialtyRecordResponse
-from src.api.specialties.domain.templates import SpecialtyTemplateResponse
-from src.api.medications.domain.medications import DeclaredMedicationResponse
-from src.api.clinical_records.domain.measurements import PatientMeasurementResponse
-from src.api.clinical_records.domain.notes import PatientNoteResponse
-from src.api.encounters.application.snapshot_cases import snapshot_encounters
-from src.api.care_plans.application.snapshot_cases import snapshot_care_plans
-from src.api.diagnostic_results.application.snapshot_cases import (
-    snapshot_diagnostic_reports,
-)
-from src.api.specialties.application.snapshot_cases import (
-    snapshot_specialty_templates,
-)
-from src.api.medications.application.snapshot_cases import (
-    snapshot_declared_medications,
-)
-from src.api.encounters.domain.encounters import PatientEncounterResponse
-from src.api.patients.application.snapshot_cases import snapshot_patients
-from src.api.schedule.application.snapshot_cases import snapshot_schedule
-from src.api.services.application.snapshot_cases import snapshot_services
+from src.api.subscriptions.application.projection_cases import snapshot_subscription
 from src.api.sync.application.operations_cases import authorized_context
 from src.api.sync.domain.downloads import (
     SnapshotRequest,
@@ -254,13 +254,21 @@ async def create_snapshot(
             )
         )
         items.extend(await snapshot_schedule(db, context, window))
+        items.extend(await snapshot_billing(db, context))
         items.extend(appointments)
         items.extend(clinical_items)
         items = [
-            item for item in items
+            item
+            for item in items
             if projection_allowed(
-                item.entity_type, None, context.owner, clinical_sections,
-                item.state.section if isinstance(item.state, ClinicalSectionReviewResponse) else None,
+                item.entity_type,
+                None,
+                context.owner,
+                clinical_sections,
+                item.state.section
+                if isinstance(item.state, ClinicalSectionReviewResponse)
+                else None,
+                billing=context.billing_permissions.granted("billing_read"),
             )
         ]
         items.sort(
@@ -359,11 +367,12 @@ async def snapshot_context(
         return Err(AccountObjectNotFound())
 
     if not release:
-        if (
-            not sync_scope_matches(
-                context, row.audience, row.clinical_sections,
-                row.permission_epoch, head.permission_epoch,
-            )
+        if not sync_scope_matches(
+            context,
+            row.audience,
+            row.clinical_sections,
+            row.permission_epoch,
+            head.permission_epoch,
         ):
             return Err(SyncReadError("SNAPSHOT_SCOPE_CHANGED"))
 

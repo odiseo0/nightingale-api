@@ -19,6 +19,8 @@ Para el modelo de datos operativo cubierto, [database-schema.md](database-schema
 
 Suscripciones de cuenta (2026-11-26): el diseño HTTP de cuenta y operador vive en [api-v1.md](api-v1.md) §14 como fuente única hasta su implementación; la física en database-schema.md §§17–18 y las decisiones en D21–D24. Las rutas de operador son contrato de API igual que las de cuenta; ningún artefacto del Hub las duplica.
 
+Facturación de pacientes (2026-11-27): el diseño HTTP del personal y del paciente vive en [api-v1.md](api-v1.md) §15 como fuente única hasta su implementación; la física en database-schema.md §§19–20, el acceso en [access-design.md](access-design.md) y las decisiones en D25–D28. Las rutas del paciente con concesión son contrato de API; el Hub solo las consume y no duplica reglas de saldo, revisión ni concesión.
+
 La precedencia depende del tema: SRS y decisiones funcionales confirmadas fijan requisitos del producto; API posee la aceptación remota y todos los contratos y funciones de servidor del Hub; Hub posee su interfaz web; escritorio posee comandos, SQLite y operación local. [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) sustituye el reparto previo de API pública, accesos, reglas y solicitudes en un servidor del Hub. La copia del escritorio ya trasladada es antecedente; las fuentes originales y sus versiones figuran en [sources.md](sources.md). Las propuestas no sustituyen acuerdos confirmados.
 
 ## Operaciones y resultados

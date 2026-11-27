@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from src.api.accounts.domain.accounts import ClinicalPermissions
+from src.api.accounts.domain.accounts import BillingPermissions, ClinicalPermissions
 from src.api.accounts.domain.policies import operation_policies, policy_allows, published_actions
 from src.api.sync.application.capabilities_cases import get_capabilities
 from src.api.sync.domain.operations import BLOCK_SCHEMAS, OFFER_SCHEMAS, SERVICE_SCHEMAS
@@ -15,9 +15,11 @@ class AuthorizationPolicyTests(unittest.TestCase):
         self.assertEqual(policies["UpdateProfessionalProfile"].object_rule, "own_professional")
 
     def context(self, *, owner=False, account="active", device="active", **permissions):
+        billing = permissions.pop("billing_permissions", BillingPermissions())
         return SimpleNamespace(
             owner=owner, account=SimpleNamespace(status=account), device_status=device,
             clinical_permissions=ClinicalPermissions(**permissions),
+            billing_permissions=billing,
         )
 
     def test_catalog_covers_transport_and_keeps_private_invitation_acceptance(self):
@@ -31,8 +33,9 @@ class AuthorizationPolicyTests(unittest.TestCase):
     def test_owner_only_rules_match_administrative_matrix(self):
         expected = set("""CreateInvitation RevokeInvitation SetMembershipStatus SetMemberClinicalPermissions
             UpdateAccountDetails UpdateAccountPolicy SetAccountStatus RevokeAccountDevice RestoreAccountDevice
-            UpdateProfessionalProfile CreateService UpdateService SetServiceStatus OfferService
-            UpdateServiceOffer SetServiceOfferStatus""".split())
+            UpdateProfessionalProfile CreateService UpdateService SetServiceStatus SetServicePrice OfferService
+            UpdateServiceOffer SetServiceOfferStatus SetServiceOfferPrice RemoveServiceOfferPrice
+            SetMemberBillingPermissions""".split())
         policies = operation_policies()
         self.assertEqual({name for name, rule in policies.items() if rule.owner_only}, expected)
         for action in expected:
