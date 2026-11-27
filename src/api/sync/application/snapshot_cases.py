@@ -12,6 +12,7 @@ from src.api.accounts.application.snapshot_cases import snapshot_accounts
 from src.api.accounts.domain.accounts import AccountContext, ProfessionalResponse
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.accounts.domain.policies import projection_allowed, sync_scope_matches
+from src.api.subscriptions.application.projection_cases import snapshot_subscription
 from src.api.appointments.application.snapshot_cases import snapshot_appointments
 from src.api.appointments.domain.appointments import (
     AppointmentHistoryProjection,
@@ -179,6 +180,7 @@ async def create_snapshot(
             readable_clinical_sections(context) if request.include_clinical else []
         )
         items = await snapshot_accounts(db, context)
+        items.extend(await snapshot_subscription(db, context))
         appointments = await snapshot_appointments(db, context, window)
         clinical_items = await snapshot_clinical(db, context, clinical_sections)
 

@@ -12,6 +12,10 @@ from pydantic import (
 )
 
 from src.api.accounts.domain.accounts import ClinicalSection
+from src.api.subscriptions.domain.subscriptions import (
+    SubscriptionAdminProjection,
+    SubscriptionProjection,
+)
 from src.api.appointments.domain.appointments import AppointmentHistoryProjection
 from src.api.care_plans.domain.goals import (
     CarePlanActionResponse,
@@ -65,6 +69,8 @@ PROJECTION_SCHEMAS: dict[str, type[BaseModel]] = {
     "schedule_block": projections.ScheduleBlockResponse,
     "appointment": projections.AppointmentResponse,
     "appointment_history": AppointmentHistoryProjection,
+    "subscription": SubscriptionProjection,
+    "subscription_admin": SubscriptionAdminProjection,
     "patient_clinical_profile": ClinicalProfileResponse,
     "patient_condition": PatientConditionResponse,
     "patient_clinical_section_review": ClinicalSectionReviewResponse,

@@ -37,7 +37,7 @@ Cada aprobación debe dejar una historia completa: plan y precio aplicados, tasa
 | `SU-D08` | Todos los planes tienen las mismas capacidades, ilimitadas salvo asientos | No se crea una matriz de funciones por plan ni límites de pacientes, citas o documentos |
 | `SU-D09` | Los planes son médico independiente, consultorio pequeño y centro médico | El plan distingue la oferta comercial y los asientos; no implementa por sí solo nuevas funciones operativas |
 
-Los valores de precio, límites de asientos, duración de la gracia y reglas aún abiertas no se inventan en esta especificación.
+Precios y límites de asientos quedaron fijados en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01) (2026-11-26). La duración de la gracia y las demás reglas abiertas no se inventan en esta especificación.
 
 ## 3. Alcance y exclusiones
 
@@ -140,7 +140,7 @@ No obtiene por defecto:
 - Capacidad para modificar profesionales o dispositivos.
 - Acceso SQL directo.
 
-La autenticación, recuperación, alta y revocación del operador permanecen abiertas en `SU-O01`. No se reutiliza un token del personal con un claim que lo convierta en administrador global.
+La autenticación, recuperación, alta y revocación del operador quedaron **decididas el 2026-11-26 en [D23](decisions.md#d23--operador-de-nightingale-identidad-ciclo-de-vida-y-canal-t03)** (`SU-O01` y `SU-O12` cerradas): Keycloak con identidad separada del personal, credencial opaca revocable en API, ciclo de vida gestionado como componente de la propia API por operadores con la acción separada (alta inicial por flujo administrativo de despliegue; recuperación = revocar y emitir nueva credencial), y canal en rutas de la misma aplicación FastAPI. No se reutiliza un token del personal con un claim que lo convierta en administrador global.
 
 ### 6.4 Paciente
 
@@ -156,7 +156,15 @@ El paciente no participa en las suscripciones de Nightingale. Un reporte de pago
 | `small_practice` | Consultorio pequeño | Precio y límite de asientos |
 | `medical_center` | Centro médico | Precio y límite de asientos |
 
-Los códigos son conceptuales; no crean todavía una enumeración pública. Cada plan exige:
+Los códigos son conceptuales; no crean todavía una enumeración pública. Precios y límites iniciales decididos en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01) (2026-11-26):
+
+| Plan | Asientos | 30 días | Un año |
+|---|---:|---:|---:|
+| Médico independiente | 2 | USD 18 | USD 100 |
+| Consultorio pequeño | 5 | USD 24 | USD 240 |
+| Centro médico | 20 | USD 75 | USD 500 |
+
+Cada plan exige:
 
 - Nombre y descripción comercial.
 - Estado de disponibilidad para nuevas suscripciones.
@@ -207,7 +215,7 @@ Un asiento corresponde a una **pertenencia humana activa y única dentro de la c
 | Paciente o contacto | No | No es integrante de la cuenta |
 | Operador de Nightingale | No | No pertenece al equipo de la cuenta |
 
-Esta regla requiere confirmación en `SU-O02`. Los números de asientos de cada plan también están pendientes.
+Esta regla quedó **confirmada el 2026-11-26 en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01)** (`SU-O02` cerrada). Los límites por plan son 2, 5 y 20 asientos según §7.1.
 
 ### 8.2 Operaciones que comprueban el límite
 
@@ -236,7 +244,7 @@ Si una cuenta queda por encima del límite por una reducción de plan o correcci
 - Se impiden nuevas incorporaciones/reactivaciones hasta volver al límite.
 - El propietario recibe una señal administrativa clara.
 
-El tratamiento del exceso ya existente requiere confirmación en `SU-O08`; no implica revocar permisos clínicos.
+El tratamiento del exceso quedó **confirmado el 2026-11-26 en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01)** (`SU-O08` cerrada): se aplican las reglas anteriores sin desactivación automática.
 
 ## 9. Moneda, precios y tasa BCV
 
@@ -292,9 +300,9 @@ La regla debe fijar:
 - Qué ocurre si el cliente declara una fecha dudosa.
 - Quién puede corregir una tasa antes de aprobar.
 
-**Propuesta para revisión:** usar la fecha del pago declarada y verificada. Si no hay publicación ese día, usar la tasa publicada más reciente anterior. Si no se puede verificar la fecha del pago, el operador no aprueba automáticamente con una tasa elegida por el cliente; registra la decisión conforme a una política administrativa.
+**Regla decidida el 2026-11-26 en [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02)** (`SU-O03` cerrada): se usa la tasa BCV de la fecha del pago declarada y verificada por el operador. Si ese día no hay publicación, se usa la tasa publicada más reciente anterior. Si la fecha del pago no es verificable, el operador no aprueba automáticamente con una tasa elegida por el cliente; registra la decisión conforme a la política administrativa.
 
-Esta propuesta no sustituye `SU-O03`.
+Las monedas de pago admitidas son **VES y USD**; la aprobación conserva importe y moneda efectivamente verificados.
 
 ### 9.4 Conservación histórica
 
@@ -310,9 +318,7 @@ Los informes posteriores no recalculan pagos antiguos con la tasa actual. Una co
 
 ### 9.5 Diferencias de importe
 
-Pago insuficiente, excedente, abono parcial, pagos combinados o diferencias por redondeo no se resuelven automáticamente. El operador debe seguir una política explícita. Hasta decidirla, solo se aprueba como periodo completo un reporte cuyo importe verificado satisface el importe debido según la regla aprobada.
-
-No se infiere un crédito a favor ni se aplica el excedente a otro periodo sin decisión.
+Pago insuficiente, excedente, abono parcial, pagos combinados o diferencias por redondeo quedaron **decididos el 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04)** (`SU-O10` cerrada): solo se aprueba como periodo completo un reporte cuyo importe verificado cubre el importe debido. Los pagos parciales o excedentes se rechazan con motivo y el cliente presenta un reporte corregido. Varios periodos requieren un reporte por periodo. No se infiere un crédito a favor ni se aplica el excedente a otro periodo.
 
 ## 10. Suscripción y estados
 
@@ -385,12 +391,7 @@ Propuesta: calcular 30 días civiles en `America/Caracas` desde el inicio acorda
 
 ### 11.3 Periodo anual
 
-“Un año” todavía admite dos interpretaciones:
-
-- 365 días.
-- Misma fecha civil del año siguiente, con una regla para 29 de febrero.
-
-La elección se mantiene en `SU-O04`. No se usará una duración variable sin documentar el resultado.
+**Decidido el 2026-11-26 en [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02)** (`SU-O04` cerrada): un año es el **año civil** en `America/Caracas`. El periodo termina en la misma fecha civil del año siguiente; un inicio el 29 de febrero termina el 28 de febrero del año siguiente.
 
 ### 11.4 Renovación anticipada
 
@@ -405,9 +406,7 @@ La cotización puede tener fecha/tasa distinta del inicio del periodo. Ambas fec
 
 ### 11.5 Renovación tardía
 
-Si ya terminó todo el periodo y la gracia, se debe fijar el nuevo inicio. Propuesta: usar el instante de aprobación del servidor salvo una corrección administrativa justificada. No se concede retroactividad ilimitada por una fecha declarada del cliente.
-
-La alternativa de mantener continuidad desde el vencimiento anterior requiere decisión porque puede cobrar tiempo sin servicio o crear una deuda implícita.
+**Decidido el 2026-11-26 en [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02)** (`SU-O06` cerrada): el nuevo inicio es el instante de aprobación del servidor, salvo una corrección administrativa justificada. No se concede retroactividad por una fecha declarada del cliente.
 
 ### 11.6 Una aprobación, un efecto
 
@@ -485,7 +484,7 @@ La captura:
 - Se vincula a cuenta y reporte mediante una referencia interna.
 - No se entrega mediante una URL pública permanente.
 
-Los límites concretos de bytes, dimensiones y formatos quedan para el diseño HTTP de archivos.
+Los límites concretos quedaron **decididos el 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04)** (`SU-O09` cerrada): formatos JPG, PNG y PDF; máximo 5 MB por archivo; una captura por reporte.
 
 ### 13.2 Descarga
 
@@ -500,7 +499,7 @@ Conocer `storageKey`, UUID o nombre de archivo no concede acceso. No se incluyen
 
 Una carga fallida o un archivo huérfano no activa nada. El reporte solo referencia evidencia cuya carga terminó y cuyo vínculo es válido.
 
-La retención, eliminación, copias y restauración se definen antes de datos reales (`SU-O09`). Rechazar un reporte no borra inmediatamente su evidencia.
+La retención quedó **decidida el 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04)** (`SU-O09` cerrada): la evidencia y los reportes se conservan mientras la cuenta exista; no se borran al rechazar ni al vencer la suscripción; la eliminación solo ocurre por un proceso administrativo trazado. Copias y restauración siguen la política general de operación antes de datos reales.
 
 ## 14. Revisión y aprobación
 
@@ -571,14 +570,7 @@ Un plan inferior exige que el consumo de asientos cumpla el nuevo límite o la p
 
 ### 16.2 Prorrateo
 
-No se calcula automáticamente crédito por días restantes ni diferencia entre planes. Si se permite cambiar antes del vencimiento, se debe acordar:
-
-- Inicio del nuevo precio.
-- Tratamiento del periodo anterior.
-- Crédito o pago adicional.
-- Renovaciones posteriores.
-
-Hasta entonces, la opción mínima propuesta es aplicar el nuevo plan al siguiente periodo aprobado.
+**Decidido el 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04)** (`SU-O11` cerrada): no hay prorrateo ni crédito por días restantes. El cambio de plan se aplica al siguiente periodo aprobado; el tiempo pagado del plan anterior se conserva completo.
 
 ### 16.3 Cancelación
 
@@ -615,14 +607,13 @@ Estas acciones no abren datos operativos por defecto.
 
 ### 17.3 Gracia y suspensión
 
-La duración de la gracia y las funciones permitidas requieren decisión. La propuesta a evaluar es:
+La duración de la gracia y las funciones permitidas quedaron **decididas el 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04)** (`SU-O07` cerrada):
 
-- Gracia con servicio normal durante un plazo explícito.
-- Después, impedir nuevas escrituras comerciales.
-- Conservar lectura/exportación de datos durante un alcance por definir.
-- Permitir siempre renovación y consulta del estado.
-
-Esta propuesta no está aprobada y no debe interpretarse como regla vigente.
+- Gracia de **7 días** con servicio normal tras el fin del periodo.
+- Después, suspensión: se impiden las escrituras operativas.
+- Se conserva la lectura/exportación de datos durante la suspensión.
+- La renovación y la consulta del estado comercial permanecen siempre disponibles.
+- Offline: la proyección del servidor comunica el fin de gracia; el reloj local no extiende vigencia.
 
 ### 17.4 Errores
 
@@ -883,18 +874,18 @@ Estos criterios son requisitos futuros, no pruebas ejecutadas por esta entrega.
 
 | ID | Decisión | Impacto |
 |---|---|---|
-| `SU-O01` | Alta, autenticación, recuperación y revocación del operador | Antes de exponer revisión real |
-| `SU-O02` | Confirmar qué pertenencias consumen asiento y límites numéricos por plan | Antes de invitaciones limitadas |
-| `SU-O03` | Fecha que selecciona tasa BCV, días sin publicación y monedas de pago admitidas | Antes de cotización/aprobación |
-| `SU-O04` | Año de 365 días o año civil y regla para 29 de febrero | Antes de vender periodicidad anual |
-| `SU-O05` | Precios USD por plan y periodicidad | Antes de cotizaciones reales |
-| `SU-O06` | Inicio de periodo inicial y renovación tardía | Antes de aprobar pagos |
-| `SU-O07` | Duración de gracia y funciones permitidas en gracia/suspensión, incluida política offline | Antes de enforcement comercial |
-| `SU-O08` | Tratamiento de cuentas que superan el asiento tras cambio de plan | Antes de reducción de plan |
-| `SU-O09` | Formatos/tamaños de captura, retención, copias y eliminación | Antes de archivos reales |
-| `SU-O10` | Pagos parciales, excedentes, varios periodos y duplicados sospechosos | Antes de admitir esos casos |
-| `SU-O11` | Prorrateo o cambio solo en el siguiente periodo | Antes de cambio anticipado |
-| `SU-O12` | Canal/interfaz del operador | Antes de operación; no se deduce un módulo del Hub |
+| `SU-O01` | ~~Alta, autenticación, recuperación y revocación del operador~~ **Cerrada 2026-11-26 en [D23](decisions.md#d23--operador-de-nightingale-identidad-ciclo-de-vida-y-canal-t03):** Keycloak + credencial opaca revocable en API; ciclo de vida como componente de API gestionado por operadores con acción separada | — |
+| `SU-O02` | ~~Confirmar qué pertenencias consumen asiento y límites numéricos por plan~~ **Cerrada 2026-11-26 en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01):** regla §8.1 confirmada; límites 2/5/20 | — |
+| `SU-O03` | ~~Fecha que selecciona tasa BCV, días sin publicación y monedas de pago admitidas~~ **Cerrada 2026-11-26 en [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02):** tasa de la fecha del pago verificada, tasa anterior si no hay publicación; pagos en VES y USD | — |
+| `SU-O04` | ~~Año de 365 días o año civil y regla para 29 de febrero~~ **Cerrada 2026-11-26 en [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02):** año civil; 29 de febrero termina el 28 de febrero siguiente | — |
+| `SU-O05` | ~~Precios USD por plan y periodicidad~~ **Cerrada 2026-11-26 en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01):** 18/100, 24/240, 75/500 USD | — |
+| `SU-O06` | ~~Inicio de periodo inicial y renovación tardía~~ **Cerrada 2026-11-26 en [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02):** inicio en aprobación; anticipada desde `endsAt` sin perder días | — |
+| `SU-O07` | ~~Duración de gracia y funciones permitidas en gracia/suspensión, incluida política offline~~ **Cerrada 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04):** 7 días de gracia; suspensión con lectura y renovación; reloj local no extiende | — |
+| `SU-O08` | ~~Tratamiento de cuentas que superan el asiento tras cambio de plan~~ **Cerrada 2026-11-26 en [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01):** §8.4 confirmado, sin desactivación automática | — |
+| `SU-O09` | ~~Formatos/tamaños de captura, retención, copias y eliminación~~ **Cerrada 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04):** JPG/PNG/PDF, 5 MB, una captura por reporte; retención mientras la cuenta exista | — |
+| `SU-O10` | ~~Pagos parciales, excedentes, varios periodos y duplicados sospechosos~~ **Cerrada 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04):** solo pago completo; parcial/excedente se rechaza; un reporte por periodo; coincidencias solo advierten | — |
+| `SU-O11` | ~~Prorrateo o cambio solo en el siguiente periodo~~ **Cerrada 2026-11-26 en [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04):** sin prorrateo; el cambio aplica al siguiente periodo aprobado | — |
+| `SU-O12` | ~~Canal/interfaz del operador~~ **Cerrada 2026-11-26 en [D23](decisions.md#d23--operador-de-nightingale-identidad-ciclo-de-vida-y-canal-t03):** rutas de operador en la misma aplicación FastAPI; sin módulo del Hub deducido | — |
 
 Las decisiones pendientes no impiden revisar la especificación base. Bloquean solo el comportamiento que dependa de ellas.
 

@@ -32,6 +32,7 @@ from src.api.authorization.application.authorization_cases import (
     identified_users,
 )
 from src.api.authorization.domain.errors import AccessDenied
+from src.api.subscriptions.application.seat_cases import ensure_seat_available
 from src.core import Err, Ok, Result
 from src.core.db import transaction
 from src.core.schema import BaseModel, PaginatedResponse
@@ -219,6 +220,13 @@ async def apply_invitation_operation(
         if membership.status == data.status:
             return Err(AccountRuleError("NO_CHANGES", membership.version))
 
+        if data.status == "active":
+            # Reactivation occupies a seat again and follows the plan limit (D21).
+            seats = await ensure_seat_available(db, context.account.id)
+
+            if isinstance(seats, Err):
+                return Err(AccountRuleError("SEAT_LIMIT_REACHED", membership.version))
+
         users = await identified_users(db, [entity_key])
         membership = await dao_memberships.set_status(
             db, membership, data.status, now, commit=False
@@ -334,6 +342,13 @@ async def apply_invitation_operation(
 
     if membership is not Empty and membership.status == "active":
         return Err(AccountRuleError("NO_CHANGES", membership.version))
+
+    # Accepting occupies a seat; the subscription row lock in the check
+    # serializes two acceptances of the last seat (D21, account-subscriptions §8.3).
+    seats = await ensure_seat_available(db, context.account.id)
+
+    if isinstance(seats, Err):
+        return Err(AccountRuleError("SEAT_LIMIT_REACHED", None))
 
     if membership is Empty:
         membership = await dao_memberships.create_membership(

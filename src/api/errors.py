@@ -143,6 +143,8 @@ async def http_error(request: Request, error: HTTPException):
         in {
             "NO_CHANGES",
             "INVALID_STATE_TRANSITION",
+            "SEAT_LIMIT_REACHED",
+            "REPORT_NOT_PENDING",
             "IDEMPOTENCY_CONFLICT",
             "VERSION_CONFLICT",
             "CURSOR_EXPIRED",

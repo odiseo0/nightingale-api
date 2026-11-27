@@ -110,6 +110,14 @@ class AccountDAO(DAO[Account, BaseModel, BaseModel]):
 
 
 class AccountMembershipDAO(DAO[AccountMembership, BaseModel, BaseModel]):
+    async def count_active(self, db: AsyncSession, account_id: UUID) -> int:
+        return await self.count(
+            db,
+            select(self.model).where(
+                self.model.account_id == account_id, self.model.status == "active"
+            ),
+        )
+
     async def page(
         self, db: AsyncSession, account_id: UUID, offset: int, shows: int
     ) -> tuple[list[AccountMembership], int]:

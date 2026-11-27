@@ -51,6 +51,22 @@ from src.api.specialties.infrastructure.odontogram_api import (
 from src.api.specialties.infrastructure.templates_api import (
     router as specialties_router,
 )
+from src.api.subscriptions.infrastructure.catalog_api import (
+    router as operator_plans_router,
+)
+from src.api.subscriptions.infrastructure.quotes_api import (
+    operator_rates_router,
+    quotes_router,
+)
+from src.api.subscriptions.infrastructure.reports_api import (
+    router as payment_reports_router,
+)
+from src.api.subscriptions.infrastructure.reviews_api import (
+    router as operator_reports_router,
+)
+from src.api.subscriptions.infrastructure.subscriptions_api import (
+    router as account_subscription_router,
+)
 from src.api.sync.infrastructure.capabilities_api import router as capabilities_router
 from src.api.sync.infrastructure.downloads_api import router as downloads_router
 from src.api.sync.infrastructure.events_api import router as events_router
@@ -98,3 +114,9 @@ router.include_router(odontogram_router)
 router.include_router(analytics_router)
 router.include_router(vademecum_products_router)
 router.include_router(vademecum_monographs_router)
+router.include_router(operator_plans_router)
+router.include_router(operator_rates_router)
+router.include_router(quotes_router)
+router.include_router(payment_reports_router)
+router.include_router(operator_reports_router)
+router.include_router(account_subscription_router)

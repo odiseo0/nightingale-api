@@ -254,6 +254,41 @@ La planificación usa las reglas de `planning-task-breakdown`; datasets, bibliot
 - El contenido pendiente se publica con aviso visible, estado de revisión, fuentes, procedencia, corte del registro, huella de fuente y calidad del vínculo/resolución. Las referencias extranjeras no se presentan como registros venezolanos.
 - Cada importación administrativa valida todo el archivo y crea un release por huella SHA-256; guarda su contenido y lo activa en una sola transacción. Solo un release está activo, repetir la huella no cambia datos y los releases anteriores se conservan. La identidad administrativa es separada y el rol runtime recibe solo SELECT sobre las tablas del componente.
 
+### D21 · Planes, precios y asientos de suscripciones (T01)
+
+**Decidido por el usuario el 2026-11-26** durante la ejecución de T01 de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md). Cierra `SU-O02`, `SU-O05` y `SU-O08` de [account-subscriptions.md](account-subscriptions.md); no autoriza por sí solo código, migraciones ni contratos.
+
+- **Precios USD (`SU-O05`):** médico independiente USD 18 por 30 días y USD 100 por año; consultorio pequeño USD 24 y USD 240; centro médico USD 75 y USD 500. Son los precios iniciales del catálogo; un cambio posterior crea una versión nueva del plan conforme a §7.3.
+- **Cómputo de asientos (`SU-O02`):** se confirma la regla de §8.1. Cuenta cada pertenencia humana activa y única por cuenta, incluido el propietario; un usuario con varias relaciones profesionales en la misma cuenta consume un solo asiento. Invitaciones pendientes, pertenencias inactivas, dispositivos, pacientes/contactos y el operador de Nightingale no consumen asiento.
+- **Límites numéricos (`SU-O02`):** independiente 2 asientos, consultorio pequeño 5, centro médico 20.
+- **Exceso de asientos (`SU-O08`):** se confirma §8.4. Una reducción de plan o corrección que deje a la cuenta por encima del límite no desactiva personas automáticamente; conserva acceso e historia, impide nuevas incorporaciones y reactivaciones hasta volver al límite y señala la situación al propietario.
+
+### D22 · Tasa BCV, monedas y periodos de suscripciones (T02)
+
+**Decidido por el usuario el 2026-11-26** durante la ejecución de T02 de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md). Cierra `SU-O03`, `SU-O04` y `SU-O06` de [account-subscriptions.md](account-subscriptions.md); no autoriza por sí solo código, migraciones ni integración BCV automática.
+
+- **Fecha de la tasa (`SU-O03`):** se aplica la tasa BCV de la fecha del pago declarada y verificada por el operador. Si ese día no hay publicación, se usa la tasa publicada más reciente anterior. Si la fecha del pago no es verificable, el operador no aprueba con una tasa elegida por el cliente y registra su decisión conforme a la política administrativa.
+- **Monedas de pago admitidas (`SU-O03`):** VES y USD. La aprobación conserva importe y moneda efectivamente verificados junto a la tasa, fecha y fuente aplicadas.
+- **Periodicidad anual (`SU-O04`):** un año es el año civil en `America/Caracas`: el periodo termina en la misma fecha civil del año siguiente. Un inicio el 29 de febrero termina el 28 de febrero del año siguiente.
+- **Inicio de periodos (`SU-O06`):** se confirma la propuesta de §11. El periodo inicial comienza en el instante de aprobación del operador. La renovación anticipada comienza en el `endsAt` del último periodo aprobado, sin perder días. La renovación tardía comienza en el instante de aprobación del servidor, sin retroactividad por fechas declaradas salvo corrección administrativa justificada.
+
+### D23 · Operador de Nightingale: identidad, ciclo de vida y canal (T03)
+
+**Decidido por el usuario el 2026-11-26** durante la ejecución de T03 de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md). Cierra `SU-O01` y `SU-O12` de [account-subscriptions.md](account-subscriptions.md); no autoriza por sí solo código, migraciones ni contratos.
+
+- **Autenticación (`SU-O01`):** el operador se autentica en Keycloak con una identidad separada del personal de cuentas. API lo reconoce como operador de plataforma y emite una credencial opaca sin vencimiento, revocable en API, siguiendo el patrón vigente de dispositivos. No recibe pertenencia, rol de cuenta ni acceso clínico. La revocación en API es la que retira el acceso; logout o desactivación en Keycloak no revocan por sí solos una credencial ya emitida.
+- **Ciclo de vida (`SU-O01`):** el alta, la recuperación y la revocación de operadores son un componente de la propia API, gestionable por el usuario, no solo un script. Un operador con la acción separada de gestión de operadores puede dar de alta, revocar y recuperar a otros operadores. La recuperación revoca la credencial anterior y emite una nueva; no se recuperan secretos guardados. El alta del primer operador usa el flujo administrativo de despliegue.
+- **Canal (`SU-O12`):** rutas de operador dentro de la misma aplicación FastAPI, protegidas por acciones de plataforma separadas del RBAC de cuentas. No se deduce un módulo del Hub ni una interfaz nueva en esta etapa.
+
+### D24 · Gracia, evidencias y excepciones de pago en suscripciones (T04)
+
+**Decidido por el usuario el 2026-11-26** durante la ejecución de T04 de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md). Cierra `SU-O07` y `SU-O09`–`SU-O11` de [account-subscriptions.md](account-subscriptions.md); no autoriza por sí solo código, migraciones ni almacenamiento.
+
+- **Gracia y suspensión (`SU-O07`):** 7 días de gracia con servicio normal tras el fin del periodo. Después, suspensión: se bloquean las escrituras operativas, se conserva la lectura/exportación de datos y permanecen siempre disponibles la renovación y la consulta del estado comercial. Offline: el servidor comunica el fin de gracia en la proyección; el reloj local no extiende vigencia ni concede días. Nada de esto borra datos ni revoca identidades.
+- **Capturas (`SU-O09`):** formatos admitidos JPG, PNG y PDF; máximo 5 MB por archivo; una captura por reporte. La evidencia y los reportes se conservan mientras la cuenta exista; no se borran al rechazar ni al vencer la suscripción. La eliminación solo ocurre por un proceso administrativo trazado. Copias de seguridad y restauración siguen la política general de operación antes de datos reales.
+- **Pagos atípicos (`SU-O10`):** solo se aprueba como periodo completo un reporte cuyo importe verificado cubre el importe debido. Pagos parciales o excedentes no se aprueban: el operador los rechaza con motivo y el cliente presenta un reporte corregido. Varios periodos requieren un reporte por periodo. Las coincidencias de referencia parcial generan advertencia al operador, nunca rechazo ni borrado automático.
+- **Cambio de plan (`SU-O11`):** sin prorrateo. El nuevo plan y su precio aplican al siguiente periodo aprobado; el tiempo pagado del plan anterior se conserva completo. Un plan inferior exige cumplir el límite de asientos o la política de exceso de D21.
+
 ## Propuestas
 
 | ID | Propuesta, motivo y alternativa | Consecuencia / revisión |

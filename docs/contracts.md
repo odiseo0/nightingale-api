@@ -17,6 +17,8 @@ Selección aprobada para v1: esquemas Pydantic de domain derivados del BaseModel
 
 Para el modelo de datos operativo cubierto, [database-schema.md](database-schema.md) es la única fuente de diseño por instrucción del usuario del 2026-10-24. Sus acuerdos sustituyen las reglas previas incompatibles de D07; las propuestas pendientes se distinguen en el propio esquema. El borrador lógico anterior queda retirado. La revisión 1.0 añade soporte físico de acceso/sync/auditoría en §9, sin convertirlo en contrato HTTP; el comportamiento y las proyecciones públicas viven en api-v1.md. Analítica, Hub y módulos excluidos conservan sus fuentes y tareas posteriores.
 
+Suscripciones de cuenta (2026-11-26): el diseño HTTP de cuenta y operador vive en [api-v1.md](api-v1.md) §14 como fuente única hasta su implementación; la física en database-schema.md §§17–18 y las decisiones en D21–D24. Las rutas de operador son contrato de API igual que las de cuenta; ningún artefacto del Hub las duplica.
+
 La precedencia depende del tema: SRS y decisiones funcionales confirmadas fijan requisitos del producto; API posee la aceptación remota y todos los contratos y funciones de servidor del Hub; Hub posee su interfaz web; escritorio posee comandos, SQLite y operación local. [D11](decisions.md#d11--interfaz-del-hub-y-servidor-en-nightingale-api) sustituye el reparto previo de API pública, accesos, reglas y solicitudes en un servidor del Hub. La copia del escritorio ya trasladada es antecedente; las fuentes originales y sus versiones figuran en [sources.md](sources.md). Las propuestas no sustituyen acuerdos confirmados.
 
 ## Operaciones y resultados

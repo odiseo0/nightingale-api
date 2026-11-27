@@ -235,6 +235,11 @@ async def get_me(
     return Ok(response)
 
 
+async def count_active_members(db: AsyncSession, account_id: UUID) -> int:
+    """Active memberships are the seat unit (account-subscriptions.md §8.1, D21)."""
+    return await dao_memberships.count_active(db, account_id)
+
+
 async def get_account_context(
     db: AsyncSession,
     credential: str | None,

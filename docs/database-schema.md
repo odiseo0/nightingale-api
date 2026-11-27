@@ -2653,3 +2653,207 @@ Antes de abrir la transacción de escritura se validan contexto, los 6.264 produ
 La única transacción inserta dataset, productos, ingredientes, monografías y vínculos en lotes acotados con `commit=False`; después desactiva el release anterior y activa el nuevo. La coordinación de activación y el índice parcial impiden dos activos confirmados. Un error revierte todas las inserciones y el cambio de activo. Repetir una huella no escribe ni altera activación. Las lecturas usan solo el release activo y validan el documento JSONB al reconstruir la respuesta.
 
 La migración concede `SELECT` sobre las cinco tablas a `nightingale_runtime`; no concede INSERT, UPDATE, DELETE, TRUNCATE ni DDL. La importación usa `VADEMECUM_IMPORT_DATABASE_URI` con identidad administrativa distinta del runtime, fuera del servidor. El downgrade revoca los privilegios y elimina las cinco tablas en orden de dependencias sin tocar el resto del esquema.
+
+## 17. Suscripciones de cuenta · diseño para revisión C02
+
+Diseño físico del núcleo comercial de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md) según [account-subscriptions.md](account-subscriptions.md) y las decisiones [D21](decisions.md#d21--planes-precios-y-asientos-de-suscripciones-t01), [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02) y [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04). Pendiente de aceptación e implementación. Añade cuatro tablas al esquema `nightingale`, sin modificar tablas existentes. Las tasas BCV, reportes, revisiones y evidencias se diseñan aparte en la revisión de T06; la FK de origen de cada periodo hacia su aprobación se añade con ellas.
+
+### 17.1 `subscription_plans`
+
+Una fila por identidad comercial estable. El catálogo inicial contiene `independent`, `small_practice` y `medical_center`; retirar un plan cambia `status`, nunca borra la fila.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `code` | `text` | Sí | Sin valor | UQ; CHECK en `independent`, `small_practice`, `medical_center` |
+| `name` | `text` | Sí | Sin valor | CHECK no vacío |
+| `description` | `text` | Sí | Sin valor | CHECK no vacío |
+| `status` | `text` | Sí | `available` | CHECK `available` o `retired` |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; aceptación optimista |
+
+`code` es el conjunto cerrado decidido en `SU-D09`; añadir un plan futuro exige revisar el CHECK. Retirar impide nuevas contrataciones pero conserva la historia (`SU-O05`/§7.3).
+
+### 17.2 `subscription_plan_versions`
+
+Una fila por versión histórica de precios y asientos de un plan. Las filas son inmutables: cambiar precio o límite inserta la versión siguiente; las cotizaciones, reportes y periodos referencian la versión usada y nunca se recalculan (§7.3, D21).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `plan_id` | `uuid` | Sí | Sin valor | FK a `subscription_plans.id`, RESTRICT |
+| `version` | `integer` | Sí | Sin valor | UQ con `plan_id`; CHECK positivo |
+| `seat_limit` | `integer` | Sí | Sin valor | CHECK positivo |
+| `price_30d_usd` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor que cero |
+| `price_year_usd` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor que cero |
+| `currency` | `text` | Sí | `USD` | CHECK `USD` (ISO 4217) |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+UQ `(plan_id, version)`; FK RESTRICT. Los importes usan `numeric` exacto con dos decimales (§9.1); no se admite NaN ni infinito por el tipo y la escala. Los valores iniciales de la versión 1 son los de D21: 18/100 con 2 asientos, 24/240 con 5 y 75/500 con 20.
+
+### 17.3 `account_subscriptions`
+
+Una fila por cuenta con relación comercial. El estado es una etiqueta administrativa; la disponibilidad efectiva se calcula con fechas del servidor (§10.2) y nunca reutiliza `accounts.status`.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | UQ; FK a `accounts.id`, RESTRICT |
+| `plan_version_id` | `uuid` | Sí | Sin valor | FK a `subscription_plan_versions.id`, RESTRICT; versión contratada vigente o próxima según D24 |
+| `status` | `text` | Sí | `pending_activation` | CHECK `pending_activation`, `active`, `grace`, `suspended` o `cancelled` |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; aceptación optimista y coordinación de revisiones |
+
+UQ `account_id` garantiza una sola suscripción por cuenta. La fila se bloquea (`SELECT ... FOR UPDATE`) en aprobaciones, cambios de plan y comprobaciones de asientos para serializar efectos sobre la misma cuenta (§8.3, §14.3). El cambio de plan sin prorrateo de D24 actualiza `plan_version_id` con efecto en el siguiente periodo aprobado; el periodo vigente conserva su propia versión.
+
+### 17.4 `subscription_periods`
+
+Una fila por intervalo pagado y aprobado. Los intervalos son `[starts_at, ends_at)` con inicio incluido y fin excluido (§11.1).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `subscription_id` | `uuid` | Sí | Sin valor | FK a `account_subscriptions.id`, RESTRICT |
+| `plan_version_id` | `uuid` | Sí | Sin valor | FK a `subscription_plan_versions.id`, RESTRICT; versión congelada del periodo |
+| `periodicity` | `text` | Sí | Sin valor | CHECK `days_30` o `year_1` |
+| `starts_at` | `timestamptz` | Sí | Sin valor | CHECK finito |
+| `ends_at` | `timestamptz` | Sí | Sin valor | CHECK finito y posterior a `starts_at` |
+| `sequence` | `integer` | Sí | Sin valor | UQ con `subscription_id`; CHECK positivo |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+UQ `(subscription_id, sequence)` ordena la historia. El no solape de periodos ordinarios se garantiza con una restricción de exclusión sobre `(subscription_id WITH =, tstzrange(starts_at, ends_at) WITH &&)`, que requiere la extensión `btree_gist` para comparar `uuid`; la migración la crea y la prueba de carrera de T12 la verifica con conexiones independientes. La FK `origin_review_id` hacia la aprobación de origen y su UQ (una aprobación produce como máximo un periodo) se definen en §18.6 junto a la tabla de revisiones. La gracia de 7 días (D24) no se persiste: se deriva de `ends_at` al evaluar disponibilidad.
+
+### 17.5 Asientos sin tabla nueva
+
+El consumo de asientos se calcula desde `account_memberships` activas de la cuenta según la regla confirmada en D21: cada pertenencia humana activa y única cuenta una vez, incluido el propietario; un usuario con varias relaciones profesionales en la misma cuenta no duplica asiento; invitaciones pendientes, pertenencias inactivas, dispositivos, pacientes y el operador no cuentan. No se duplica identidad ni se crea tabla de asientos.
+
+La comprobación del límite (`seat_limit` de la versión aplicable) ocurre dentro de la misma transacción que acepta una invitación, reactiva una pertenencia o cambia de plan, con el bloqueo de la fila `account_subscriptions` de esa cuenta como punto de serialización. Así, dos aceptaciones concurrentes del último asiento tienen un solo ganador y una reducción de plan con exceso no desactiva a nadie (D21): solo impide nuevas incorporaciones hasta volver al límite. La consulta de consumo usa el índice existente de pertenencias por cuenta; no se añade índice nuevo sin caso medido.
+
+### 17.6 Integridad, concurrencia y permisos
+
+- Toda escritura de estas tablas ocurre dentro de la transacción del caso de uso con DAOs `commit=False`; la aprobación confirma decisión, periodo, suscripción, historia, recibo y auditoría una sola vez (§14).
+- Las lecturas de disponibilidad usan el reloj del servidor (`datetime_now()`), nunca fechas del cliente.
+- El rol `nightingale_runtime` recibe los privilegios mínimos de estas tablas a través de los DAOs; ningún flujo del personal escribe el catálogo, que solo modifica el operador con su acción separada (D23). El detalle de grants se fija en la migración de T12.
+- El downgrade elimina las cuatro tablas en orden de dependencias sin tocar el resto del esquema.
+
+## 18. Suscripciones: tasas, reportes, revisiones y operador · diseño para revisión C03
+
+Completa el diseño físico de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md) según [account-subscriptions.md](account-subscriptions.md) y las decisiones [D22](decisions.md#d22--tasa-bcv-monedas-y-periodos-de-suscripciones-t02), [D23](decisions.md#d23--operador-de-nightingale-identidad-ciclo-de-vida-y-canal-t03) y [D24](decisions.md#d24--gracia-evidencias-y-excepciones-de-pago-en-suscripciones-t04). Pendiente de aceptación e implementación. Añade seis tablas al esquema `nightingale` y dos columnas a `subscription_periods` (§17.4). Los bytes de las capturas nunca se guardan en PostgreSQL: solo metadatos y una referencia interna de almacenamiento privado.
+
+### 18.1 `platform_operators`
+
+Una fila por operador de plataforma. No es un `app_users` de cuenta ni tiene pertenencia: la identidad es separada según D23.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `oidc_issuer` | `text` | Sí | Sin valor | UQ con `oidc_subject`; comparación exacta |
+| `oidc_subject` | `text` | Sí | Sin valor | UQ con `oidc_issuer` |
+| `display_name` | `text` | Sí | Sin valor | CHECK no vacío |
+| `actions` | `text[]` | Sí | Sin valor | CHECK no vacío y subconjunto de `review`, `catalog`, `rates`, `operators`; acciones de plataforma separadas del RBAC de cuentas (§14.1 de api-v1) |
+| `status` | `text` | Sí | `active` | CHECK `active` o `revoked` |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo |
+
+### 18.2 `platform_operator_credentials`
+
+Credencial opaca sin vencimiento, revocable en API, siguiendo el patrón de `device_tokens`. Se guarda solo la huella del secreto, que se entrega una vez.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `operator_id` | `uuid` | Sí | Sin valor | FK a `platform_operators.id`, RESTRICT |
+| `token_hash` | `text` | Sí | Sin valor | UQ; CHECK 64 hex minúsculos |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `revoked_at` | `timestamptz` | No | Nulo | CHECK finito si presente; nulo = vigente |
+
+Índice `(operator_id)` para revocar todas las credenciales de un operador. La recuperación marca `revoked_at` en las anteriores y emite una nueva en la misma transacción; nunca se recupera un secreto guardado (D23).
+
+### 18.3 `bcv_exchange_rates`
+
+Una fila por fecha de publicación registrada por el operador con su fuente. La selección usa la fecha del pago verificada y, si no hay publicación ese día, la más reciente anterior (D22).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `rate_date` | `date` | Sí | Sin valor | UQ; CHECK finito |
+| `rate_ves_per_usd` | `numeric(18,6)` | Sí | Sin valor | CHECK mayor que cero |
+| `source` | `text` | Sí | Sin valor | CHECK no vacío; origen administrativo de la tasa |
+| `registered_by` | `uuid` | Sí | Sin valor | FK a `platform_operators.id`, RESTRICT |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+UQ `rate_date`: una tasa oficial por fecha. Una corrección antes de aprobar registra una fila nueva en otra fecha o ajusta la fila del día con auditoría; ninguna aprobación ya confirmada se recalcula (§9.4). Las tasas históricas se conservan sin retención automática.
+
+### 18.4 `payment_reports`
+
+Una fila por presentación del cliente. Los datos declarados son inmutables tras presentar salvo corrección trazada antes de revisar; los datos verificados viven solo en `subscription_reviews` (§12.5).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `account_id` | `uuid` | Sí | Sin valor | FK a `accounts.id`, RESTRICT |
+| `subscription_id` | `uuid` | Sí | Sin valor | Parte de FK compuesta; el reporte no cruza cuentas |
+| `plan_version_id` | `uuid` | Sí | Sin valor | FK a `subscription_plan_versions.id`, RESTRICT; intención de plan/precio |
+| `periodicity` | `text` | Sí | Sin valor | CHECK `days_30` o `year_1` |
+| `status` | `text` | Sí | `pending` | CHECK `pending`, `approved` o `rejected` |
+| `declared_paid_on` | `date` | Sí | Sin valor | CHECK finito; fecha del pago declarada |
+| `declared_amount` | `numeric(12,2)` | Sí | Sin valor | CHECK mayor que cero |
+| `declared_currency` | `text` | Sí | Sin valor | CHECK `VES` o `USD` (D22) |
+| `declared_method` | `text` | Sí | Sin valor | CHECK no vacío; método o banco descrito por el cliente |
+| `declared_reference_last4` | `text` | No | Nulo | CHECK 4 dígitos si presente; texto, conserva ceros iniciales; sin unicidad |
+| `declared_note` | `text` | No | Nulo | CHECK no vacío si presente |
+| `previous_report_id` | `uuid` | No | Nulo | FK a `payment_reports.id`, RESTRICT; vínculo de nueva presentación (§15) |
+| `submitted_by` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT; actor que presentó |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+| `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |
+| `version` | `integer` | Sí | 1 | CHECK positivo; coordinación de revisión concurrente |
+
+La FK compuesta `(subscription_id, account_id)` referencia una UQ `(id, account_id)` nueva de `account_subscriptions`, de modo que un reporte no pueda apuntar a una suscripción de otra cuenta. Los últimos cuatro dígitos no son únicos (§12.6): las coincidencias solo generan advertencia al operador (D24). Índice `(account_id, created_at)` para la lista propia y `(status, created_at)` para la bandeja de pendientes del operador.
+
+### 18.5 `payment_report_evidence`
+
+Una fila por captura cargada; D24 fija una captura por reporte. Solo metadatos: los bytes viven en almacenamiento privado fuera de la base y de la ruta pública.
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `report_id` | `uuid` | Sí | Sin valor | UQ; FK a `payment_reports.id`, RESTRICT |
+| `storage_key` | `text` | Sí | Sin valor | UQ; nombre interno generado por API; nunca URL pública |
+| `content_type` | `text` | Sí | Sin valor | CHECK `image/jpeg`, `image/png` o `application/pdf` (D24) |
+| `size_bytes` | `integer` | Sí | Sin valor | CHECK positivo y no mayor que 5242880 (5 MB, D24) |
+| `sha256` | `text` | Sí | Sin valor | CHECK 64 hex minúsculos; integridad de la carga |
+| `uploaded_by` | `uuid` | Sí | Sin valor | FK a `app_users.id`, RESTRICT |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+La fila solo se inserta cuando la carga terminó y su vínculo es válido (§13.3); una carga fallida no deja evidencia ni efecto. La retención es mientras la cuenta exista; la eliminación es un proceso administrativo trazado (D24), no un efecto del rechazo ni del vencimiento.
+
+### 18.6 `subscription_reviews`
+
+Una fila por decisión del operador sobre un reporte. La UQ sobre `report_id` hace imposible reabrir o decidir dos veces el mismo reporte; una corrección del cliente es una presentación nueva (§15).
+
+| Columna | Tipo | Obligatoria | Por defecto | Clave / regla |
+|---|---|---|---|---|
+| `id` | `uuid` | Sí | Sin valor | PK; CHECK UUIDv7 |
+| `report_id` | `uuid` | Sí | Sin valor | UQ; FK a `payment_reports.id`, RESTRICT |
+| `operator_id` | `uuid` | Sí | Sin valor | FK a `platform_operators.id`, RESTRICT; quién decidió realmente |
+| `decision` | `text` | Sí | Sin valor | CHECK `approved` o `rejected` |
+| `verified_paid_on` | `date` | No | Nulo | CHECK finito si presente; obligatorio al aprobar |
+| `verified_amount` | `numeric(12,2)` | No | Nulo | CHECK mayor que cero si presente; obligatorio al aprobar |
+| `verified_currency` | `text` | No | Nulo | CHECK `VES` o `USD` si presente; obligatorio al aprobar |
+| `bcv_rate_id` | `uuid` | No | Nulo | FK a `bcv_exchange_rates.id`, RESTRICT; tasa aplicada cuando el pago verificado es VES |
+| `reason` | `text` | No | Nulo | CHECK no vacío si presente; obligatorio al rechazar; sin secretos ni datos bancarios completos |
+| `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
+
+Un CHECK de coherencia exige que `approved` tenga fecha, importe y moneda verificados, y que `rejected` tenga motivo. Los datos verificados no sobrescriben la declaración (§12.5). La aprobación congela precio, versión, tasa y periodo en las filas relacionadas; los informes no revalorizan pagos antiguos (§9.4).
+
+`subscription_periods` (§17.4) recibe ahora `origin_review_id uuid` NN con FK a `subscription_reviews.id` RESTRICT y UQ, que garantiza que una aprobación produce como máximo un periodo ordinario (§11.6). La restricción de exclusión de intervalos sigue impidiendo solapes aunque una carrera eluda la coordinación de aplicación.
+
+### 18.7 Integridad, concurrencia y permisos
+
+- Aprobar confirma en una sola transacción: revisión, cambio de estado del reporte, periodo con `origin_review_id`, suscripción, recibo, auditoría y aviso mínimo; las lecturas de archivo y red ocurren fuera (§14.1).
+- Dos operadores sobre el mismo reporte se serializan con el bloqueo de la fila del reporte y su `version`; el perdedor recibe duplicado o conflicto y la UQ de `subscription_reviews.report_id` es la última línea de defensa.
+- `nightingale_runtime` recibe los privilegios mínimos por DAO; las capturas nunca aparecen en journal, snapshots, logs ni auditoría (§21.2). El detalle de grants se fija en la migración de T13.
+- El downgrade elimina las seis tablas en orden de dependencias y retira las columnas y UQ añadidas a `subscription_periods` y `account_subscriptions`, sin tocar el resto del esquema.

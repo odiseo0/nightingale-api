@@ -306,6 +306,8 @@ Preparación no acredita versión de esquema, permisos de negocio ni aislamiento
 
 Se usaron las guías oficiales actuales para FastAPI/Pydantic/uv/Uvicorn y la guía 2.1 para SQLAlchemy; sus APIs se contrastaron con las versiones instaladas y pruebas. No se añadieron pytest, Ruff, caché o un proveedor de identidad. HTTPX 0.28.1 ya venía en el entorno y sirve al TestClient; unittest pertenece a Python.
 
+**Evidencias de suscripciones (T17, 2026-11-26):** la captura de pago reutiliza el adaptador privado existente `src/core/services/report_storage.py` (S3 con `aioaws` fijado en `uv.lock` por Etapa 3, con alternativa local bajo `STORAGE_ROOT`), sin dependencia nueva. La decisión cumple D24/OWASP: validación por firma real (JPEG/PNG/PDF), máximo 5 MB, una captura por reporte, nombre interno generado, bytes fuera de la base/transacción/sync y descarga reautorizada; el `storage_key` nunca se expone ni se registra.
+
 ## Evidencia y límites
 
 - Instalación bloqueada/offline comprobada tras incorporar el extra asyncio; wheel y sdist construidos e inspeccionados. No contienen secretos, entorno virtual, caché ni temporales. Se verificó el punto de entrada `nightingale-api = src.application:main`.

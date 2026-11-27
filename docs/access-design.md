@@ -26,6 +26,19 @@ La captura clínica es opcional y registra las secciones permitidas. Sus proyecc
 
 Cada recibo clínico conserva `clinical_section`. Duplicados y GET exigen `read_write` vigente en esa sección antes de leer o validar el resultado; `read`/`none` no reciben cuerpos, `originalResult` ni conflictos informativos. Las revisiones compartidas usan su sección real. Los recibos históricos ambiguos permanecen sin alcance y fallan cerrados. Las lecturas de resultados, capturas y deltas clínicos registran evidencia en la misma transacción. La migración 20261116_03 impide reasignar cuenta, ID o paciente de las filas clínicas actuales.
 
+## Operador de Nightingale · decidido en D23 (2026-11-26)
+
+El operador de plataforma para revisión de suscripciones se autentica en Keycloak con identidad separada del personal y recibe de API una credencial opaca sin vencimiento, revocable en API, siguiendo el patrón de dispositivos del personal. No tiene pertenencia, rol de cuenta ni acceso clínico; sus acciones de plataforma son separadas del RBAC de cuentas. Alta, recuperación y revocación son un componente de la propia API gestionado por operadores con la acción separada; el alta inicial usa el flujo administrativo de despliegue y la recuperación revoca la credencial anterior y emite una nueva. Canal: rutas de operador en la misma aplicación FastAPI. Detalle en [D23](decisions.md#d23--operador-de-nightingale-identidad-ciclo-de-vida-y-canal-t03).
+
+## Suscripciones de cuenta · diseño para C03 (2026-11-26)
+
+El componente `subscriptions` añade dos ámbitos de acceso separados (D21–D24, diseño HTTP en [api-v1.md](api-v1.md) §14):
+
+- **Cuenta:** todas las acciones de suscripción (consulta, cotización, reporte, evidencia, cambio de plan, cancelación) son del propietario con dispositivo registrado activo. El asistente no recibe permiso de suscripción por defecto. Presentar un reporte no activa ni extiende; la autorización precede a la existencia del objeto y un reporte o evidencia ajeno devuelve 404.
+- **Operador:** identidad Keycloak separada del personal con credencial opaca revocable en API y acciones de plataforma `review`, `catalog`, `rates` y `operators`. No tiene pertenencia ni rol de cuenta, no abre rutas clínicas ni rutas bajo `A`, y un token del personal no abre las rutas de operador. Alta inicial por flujo administrativo de despliegue; el resto del ciclo de vida se gestiona por API con la acción `operators`.
+
+La indisponibilidad comercial (gracia vencida, suspensión) se distingue de la credencial inválida: la lectura y la renovación permanecen disponibles y nada revoca identidades ni borra datos (D24).
+
 ## Acceso futuro del Hub acordado por D11
 
 | Recorrido | Regla vigente de alcance | Diseño pendiente |

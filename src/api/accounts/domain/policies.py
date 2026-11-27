@@ -320,13 +320,17 @@ def projection_audiences() -> dict[str, tuple[str, ...]]:
             "schedule_block",
             "appointment",
             "appointment_history",
+            "subscription",
         ]
     }
 
     rules.update(
         {
             entity: ("owner",)
-            for entity in ["account_device", "membership", "invitation", "service"]
+            for entity in [
+                "account_device", "membership", "invitation", "service",
+                "subscription_admin",
+            ]
         }
     )
     policies = operation_policies()

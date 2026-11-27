@@ -79,6 +79,7 @@ Los errores HTTP y la correlación se resuelven en soporte común; no añadir Re
 | `communications` | Planificación de recordatorios, trabajos, intentos, entregas y recepción de webhooks; adaptación de n8n | Hechos aceptados y lecturas limitadas de Citas; futuros casos de acceso del Hub dentro de API, sin duplicarlos |
 | `analytics` | Consumo incremental, cursor ETL y proyecciones de indicadores básicos | Eventos/lecturas autorizadas; PostgreSQL analítico separado |
 | `audit` | Evidencia de acciones y consulta autorizada; política de acceso y retención | Contexto validado y hechos del caso de uso; no usa logs como sustituto |
+| `subscriptions` | Planes/versiones, suscripciones/periodos, cotizaciones USD/BCV, reportes de pago, revisiones, evidencias (metadatos), asientos y operadores de plataforma con sus credenciales | Casos de uso y tipos de accounts (cuenta, pertenencias para asientos) y sync/audit en la misma aceptación; almacenamiento privado vía core/services. El operador no obtiene rol de cuenta ni acceso clínico (D23) |
 
 El usuario exige separar cuentas de autenticación/autorización global. `access` era la agrupación anterior y ya no tiene módulos fuente ni imports; no es un tercer propietario. Esta corrección conserva las tablas físicas y la evidencia histórica.
 

@@ -55,92 +55,92 @@ No hay trabajo paralelo. Facturación de pacientes depende de este plan solo par
 
 ### Fase 1 · Decisiones de producto
 
-- [ ] **T01:** Cerrar planes, precios, cómputo/límites de asientos y exceso.
-- [ ] **T02:** Cerrar BCV, monedas, duración anual e inicio/renovación de periodos.
+- [x] **T01:** Cerrar planes, precios, cómputo/límites de asientos y exceso.
+- [x] **T02:** Cerrar BCV, monedas, duración anual e inicio/renovación de periodos.
 
 #### C01 · Catálogo y reglas temporales decididos
 
-- [ ] `SU-O02`–`SU-O06` y `SU-O08` tienen respuesta registrada sin valores supuestos.
-- [ ] Ejemplos ficticios de dinero/periodos y enlaces documentales son coherentes.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] `SU-O02`–`SU-O06` y `SU-O08` tienen respuesta registrada sin valores supuestos.
+- [x] Ejemplos ficticios de dinero/periodos y enlaces documentales son coherentes.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 2 · Operador, políticas y diseño físico
 
-- [ ] **T03:** Cerrar autenticación, recuperación y canal del operador.
-- [ ] **T04:** Cerrar gracia/offline, archivos, pagos excepcionales y cambio de plan.
-- [ ] **T05:** Diseñar físicamente planes, suscripciones, periodos y asientos.
+- [x] **T03:** Cerrar autenticación, recuperación y canal del operador.
+- [x] **T04:** Cerrar gracia/offline, archivos, pagos excepcionales y cambio de plan.
+- [x] **T05:** Diseñar físicamente planes, suscripciones, periodos y asientos.
 
 #### C02 · Políticas y núcleo físico revisables
 
-- [ ] `SU-O01`, `SU-O07` y `SU-O09`–`SU-O12` tienen decisiones explícitas.
-- [ ] El núcleo físico protege moneda, historia, intervalos y unicidad de efecto.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] `SU-O01`, `SU-O07` y `SU-O09`–`SU-O12` tienen decisiones explícitas.
+- [x] El núcleo físico protege moneda, historia, intervalos y unicidad de efecto.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 3 · Revisión y contratos de diseño
 
-- [ ] **T06:** Diseñar físicamente tasas, reportes, revisiones y evidencias.
-- [ ] **T07:** Diseñar rutas/operaciones, acceso y proyecciones en fuentes únicas.
-- [ ] **T08:** Implementar dominio de dinero, BCV y cálculo de periodos.
+- [x] **T06:** Diseñar físicamente tasas, reportes, revisiones y evidencias.
+- [x] **T07:** Diseñar rutas/operaciones, acceso y proyecciones en fuentes únicas.
+- [x] **T08:** Implementar dominio de dinero, BCV y cálculo de periodos.
 
 #### C03 · Diseño completo y dominio temporal/monetario
 
-- [ ] Contratos cubren cuenta, operador, revisión, recuperación y no divulgación.
-- [ ] Cálculos exactos, 30 días, anual y renovaciones pasan pruebas de dominio.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Contratos cubren cuenta, operador, revisión, recuperación y no divulgación.
+- [x] Cálculos exactos, 30 días, anual y renovaciones pasan pruebas de dominio.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 4 · Dominio y base de operador/persistencia
 
-- [ ] **T09:** Implementar dominio de planes, suscripciones y asientos.
-- [ ] **T10:** Implementar dominio de reportes, evidencia y transiciones de revisión.
-- [ ] **T11:** Implementar identidad y contexto limitado del operador según T03.
+- [x] **T09:** Implementar dominio de planes, suscripciones y asientos.
+- [x] **T10:** Implementar dominio de reportes, evidencia y transiciones de revisión.
+- [x] **T11:** Implementar identidad y contexto limitado del operador según T03.
 
 #### C04 · Reglas y actor administrativo verificados
 
-- [ ] Dominio deniega estados/relaciones inválidos sin SQL ni proveedores.
-- [ ] Operador autentica solo con acciones aprobadas y sin acceso clínico.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Dominio deniega estados/relaciones inválidos sin SQL ni proveedores.
+- [x] Operador autentica solo con acciones aprobadas y sin acceso clínico.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 5 · Persistencia y catálogo operativo
 
-- [ ] **T12:** Implementar migración/modelos/DAOs de planes, suscripciones y periodos.
-- [ ] **T13:** Implementar migración/modelos/DAOs de tasas, reportes, revisiones y evidencias.
-- [ ] **T14:** Implementar administración versionada del catálogo de planes.
+- [x] **T12:** Implementar migración/modelos/DAOs de planes, suscripciones y periodos.
+- [x] **T13:** Implementar migración/modelos/DAOs de tasas, reportes, revisiones y evidencias.
+- [x] **T14:** Implementar administración versionada del catálogo de planes.
 
 #### C05 · Persistencia y catálogo funcionales
 
-- [ ] Migraciones up/down/reapply, restricciones y privilegios SQL pasan en PostgreSQL.
-- [ ] Versiones de planes preservan precios/asientos históricos y autorización de operador.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Migraciones up/down/reapply, restricciones y privilegios SQL pasan en PostgreSQL.
+- [x] Versiones de planes preservan precios/asientos históricos y autorización de operador.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 6 · Cotización, asientos y almacenamiento
 
-- [ ] **T15:** Implementar registro BCV y cotizaciones para cuentas.
-- [ ] **T16:** Integrar límite de asientos con invitaciones/reactivaciones/cambios de plan.
-- [ ] **T17:** Seleccionar con fuentes oficiales e implementar almacenamiento privado de evidencias.
+- [x] **T15:** Implementar registro BCV y cotizaciones para cuentas.
+- [x] **T16:** Integrar límite de asientos con invitaciones/reactivaciones/cambios de plan.
+- [x] **T17:** Seleccionar con fuentes oficiales e implementar almacenamiento privado de evidencias.
 
 #### C06 · Recorrido previo al pago y evidencia privada
 
-- [ ] Cotizaciones conservan tasa/redondeo y no alteran historia.
-- [ ] Carreras de asientos y validación/descarga privada de archivos pasan.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Cotizaciones conservan tasa/redondeo y no alteran historia.
+- [x] Carreras de asientos y validación/descarga privada de archivos pasan.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 7 · Reportes y decisión manual
 
-- [ ] **T18:** Implementar presentación/consulta de reportes por la cuenta.
-- [ ] **T19:** Implementar bandeja/detalle/evidencia para el operador.
-- [ ] **T20:** Implementar aprobación atómica y creación/extensión única de periodos.
+- [x] **T18:** Implementar presentación/consulta de reportes por la cuenta.
+- [x] **T19:** Implementar bandeja/detalle/evidencia para el operador.
+- [x] **T20:** Implementar aprobación atómica y creación/extensión única de periodos.
 
 #### C07 · Activación manual transaccional
 
-- [ ] Presentar no activa; aprobar confirma decisión, periodo, historia, recibo y auditoría una vez.
-- [ ] Respuesta perdida y dos operadores no duplican días o efectos.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Presentar no activa; aprobar confirma decisión, periodo, historia, recibo y auditoría una vez.
+- [x] Respuesta perdida y dos operadores no duplican días o efectos.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-26.**
 
 ### Fase 8 · Rechazo, sincronización y administración comercial
 
-- [ ] **T21:** Implementar rechazo y nueva presentación con historia.
-- [ ] **T22:** Implementar proyección comercial mínima en snapshot/delta/SSE.
-- [ ] **T23:** Implementar renovación anticipada/tardía, cambio de plan y cancelación.
+- [x] **T21:** Implementar rechazo y nueva presentación con historia.
+- [x] **T22:** Implementar proyección comercial mínima en snapshot/delta/SSE.
+- [x] **T23:** Implementar renovación anticipada/tardía, cambio de plan y cancelación.
 
 #### C08 · Ciclo comercial recuperable
 

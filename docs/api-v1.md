@@ -776,3 +776,95 @@ Python normaliza `q` y los textos persistidos con Unicode NFKD, elimina marcas d
 - `monographId` filtra productos por cualquier vínculo simple o de combinación del mismo release antes de contar y paginar.
 
 Nunca se indexan ni consultan mecanismo, indicaciones, posología, seguridad, fuentes, procedencia u otro texto clínico para `q`.
+
+## 14. Diseño de suscripciones de cuenta para C03
+
+Diseño de [P-20261117-02-account-subscriptions](../tasks/P-20261117-02-account-subscriptions/plan.md) según [account-subscriptions.md](account-subscriptions.md) y las decisiones D21–D24. Pendiente de aceptación e implementación; no cambia `contractVersion` ni las rutas existentes. Física en [database-schema.md](database-schema.md) §§17–18.
+
+### 14.1 Actores y acceso
+
+Dos ámbitos separados que nunca se mezclan en una misma ruta:
+
+- **Cuenta:** rutas bajo `A` con token de dispositivo y pertenencia activa. Todas las acciones de suscripción son del **propietario**; el asistente no recibe permiso de suscripción por defecto (§6.2 de la especificación). La autorización precede a la existencia del objeto: un reporte o evidencia de otra cuenta devuelve el mismo 404 `NOT_FOUND` que uno inexistente.
+- **Operador:** rutas bajo `/v1/operator` con credencial de operador vigente (D23). La credencial no es un token de dispositivo de cuenta: no abre ninguna ruta bajo `A` ni ninguna ruta clínica, y un token de dispositivo del personal no abre las rutas de operador. Cada ruta exige su acción de plataforma: `review` (bandeja, detalle, evidencia, aprobación, rechazo), `catalog` (planes y versiones), `rates` (tasas BCV) u `operators` (gestión de operadores).
+
+### 14.2 Rutas de la cuenta
+
+Todas exigen propietario con dispositivo registrado activo. Las escrituras son online, con `operationId` UUIDv7 generado por el cliente para idempotencia y recuperación de respuesta perdida, igual que la aceptación de invitaciones; no pasan por el lote de operaciones de sync.
+
+| Método | Ruta | Respuesta | Entrada / comportamiento |
+|---|---|---|---|
+| GET | `A/subscription` | `SubscriptionResponse` | plan y versión vigentes, estado, periodo actual, fin de gracia cuando aplique, asientos usados/límite, `subscriptionVersion` |
+| POST | `A/subscription/quotes` | `QuoteResponse` | `QuoteRequest{operationId, planCode, periodicity}`; 201; conserva USD, tasa, fecha/fuente BCV y VES calculado (§9.2); no activa nada |
+| POST | `A/subscription/reports` | `PaymentReportResponse` | `PaymentReportCreateRequest{operationId, planCode, periodicity, declaredPaidOn, declaredAmount, declaredCurrency, declaredMethod, declaredReferenceLast4?, declaredNote?, previousReportId?}`; 201; deja `pending`, sin activar ni extender |
+| GET | `A/subscription/reports` | `PaginatedResponse<PaymentReportResponse>` | `page`, `shows`, filtro `status`; solo reportes de la cuenta |
+| GET | `A/subscription/reports/{report_id}` | `PaymentReportDetailResponse` | declaración, estado, evidencia (metadatos) y, si fue revisado, resultado visible para la cuenta: decisión, periodo concedido o motivo seguro |
+| POST | `A/subscription/reports/{report_id}/evidence` | `PaymentReportEvidenceResponse` | multipart; una captura por reporte (D24); JPG/PNG/PDF validado por firma real, máximo 5 MB; 409 `EVIDENCE_ALREADY_PRESENT` si ya existe; solo mientras el reporte está `pending` |
+| GET | `A/subscription/reports/{report_id}/evidence` | archivo | descarga reautorizada del propietario; `Content-Disposition` con nombre generado; nunca URL pública |
+| POST | `A/subscription/plan-changes` | `SubscriptionResponse` | `PlanChangeRequest{operationId, expectedVersion, planCode}`; aplica al siguiente periodo aprobado (D24); un plan inferior exige asientos dentro del límite o política de exceso D21 |
+| POST | `A/subscription/cancellation` | `SubscriptionResponse` | `CancellationRequest{operationId, expectedVersion}`; conserva el tiempo pagado; no borra datos |
+
+Presentar un reporte no cambia estado ni vigencia. El cliente no elige operador, resultado ni periodo. `accountId` de ruta se contrasta con la identidad autenticada en cada caso.
+
+### 14.3 Rutas del operador
+
+Prefijo `/v1/operator`, credencial de operador vigente. La emisión de credencial usa el access token OIDC de la identidad de operador registrada, siguiendo el patrón de `/v1/auth/device-tokens`; el alta inicial del primer operador es un flujo administrativo de despliegue fuera del servidor (D23).
+
+| Método | Ruta | Acción | Respuesta | Entrada / comportamiento |
+|---|---|---|---|---|
+| POST | `/v1/operator/credentials` | identidad OIDC de operador | `OperatorTokenIssued` | 201; entrega el secreto una sola vez; solo huella persistida |
+| GET | `/v1/operator/payment-reports` | `review` | `PaginatedResponse<OperatorPaymentReportResponse>` | `page`, `shows`, filtros `status`, `accountId`, `from`, `until`; orden `(createdAt, id)` |
+| GET | `/v1/operator/payment-reports/{report_id}` | `review` | `OperatorPaymentReportDetailResponse` | declaración completa, metadatos de evidencia, historial de presentaciones vinculadas y advertencias de coincidencia de referencia parcial (nunca rechazo automático) |
+| GET | `/v1/operator/payment-reports/{report_id}/evidence` | `review` | archivo | descarga reautorizada en cada petición |
+| POST | `/v1/operator/payment-reports/{report_id}/approval` | `review` | `ApprovalResultResponse` | `ApprovalRequest{operationId, expectedVersion, verifiedPaidOn, verifiedAmount, verifiedCurrency, bcvRateId?}`; confirma revisión, estado, periodo, suscripción, recibo y auditoría en una transacción; 409 `REPORT_NOT_PENDING` si ya fue decidido |
+| POST | `/v1/operator/payment-reports/{report_id}/rejection` | `review` | `PaymentReportResponse` | `RejectionRequest{operationId, expectedVersion, reason}`; motivo seguro sin datos bancarios completos; la suscripción conserva su estado anterior |
+| GET | `/v1/operator/bcv-rates` | `rates` | `PaginatedResponse<BcvRateResponse>` | `page`, `shows`, rango `from`/`until` por `rateDate` |
+| POST | `/v1/operator/bcv-rates` | `rates` | `BcvRateResponse` | `BcvRateCreateRequest{operationId, rateDate, rateVesPerUsd, source}`; 201; 409 `RATE_DATE_EXISTS` si la fecha ya tiene tasa |
+| GET | `/v1/operator/plans` | `catalog` | `PaginatedResponse<OperatorPlanResponse>` | planes con sus versiones e historia |
+| POST | `/v1/operator/plans/{code}/versions` | `catalog` | `OperatorPlanResponse` | `PlanVersionCreateRequest{operationId, expectedVersion, seatLimit, price30dUsd, priceYearUsd}`; crea la versión siguiente; las anteriores quedan intactas |
+| POST | `/v1/operator/plans/{code}/retirement` | `catalog` | `OperatorPlanResponse` | `PlanRetirementRequest{operationId, expectedVersion}`; impide nuevas contrataciones, conserva historia |
+| GET | `/v1/operator/operators` | `operators` | `PaginatedResponse<OperatorResponse>` | operadores con estado; sin huellas ni secretos |
+| POST | `/v1/operator/operators` | `operators` | `OperatorResponse` | `OperatorCreateRequest{operationId, oidcIssuer, oidcSubject, displayName}`; 201 |
+| POST | `/v1/operator/operators/{operator_id}/revocation` | `operators` | `OperatorResponse` | revoca operador y sus credenciales en una transacción |
+| POST | `/v1/operator/operators/{operator_id}/credential-recovery` | `operators` | `OperatorTokenIssued` | revoca credenciales anteriores y emite una nueva; nunca recupera secretos |
+
+Un operador no puede aprobar con una tasa elegida por el cliente: `bcvRateId` referencia una tasa registrada, y la regla de selección (fecha del pago verificada, si no la más reciente anterior) se comprueba en el caso de uso (D22). Aprobar un reporte cuyo importe verificado no cubre el debido devuelve 422 `PAYMENT_MISMATCH`; el operador debe rechazar en su lugar (D24).
+
+### 14.4 Modelos públicos
+
+| Modelo | Campos |
+|---|---|
+| `SubscriptionResponse` | `plan{code, name}`, `planVersion{version, seatLimit, price30dUsd, priceYearUsd, currency}`, `status`, `currentPeriod{startsAt, endsAt, periodicity}` nulo si no hay, `graceEndsAt` nulo salvo gracia, `seats{used, limit}`, `subscriptionVersion`, `updatedAt` |
+| `QuoteRequest` | `operationId`, `planCode` (`independent`, `smallPractice`, `medicalCenter`), `periodicity` (`days_30`, `year_1`) |
+| `QuoteResponse` | `quoteId`, `planCode`, `planVersion`, `periodicity`, `amountUsd`, `bcvRate`, `bcvRateDate`, `bcvRateSource`, `amountVes`, `roundingRule`, `quotedAt` |
+| `PaymentReportResponse` | `reportId`, `planCode`, `periodicity`, `status`, `declared{paidOn, amount, currency, method, referenceLast4?, note?}`, `evidence` metadatos o nulo, `previousReportId` nulo si no aplica, `createdAt`, `version` |
+| `PaymentReportDetailResponse` | lo anterior más `review{decision, decidedAt, grantedPeriod{startsAt, endsAt}?, reason?}` nulo mientras `pending` |
+| `PaymentReportEvidenceResponse` | `contentType`, `sizeBytes`, `sha256`, `uploadedAt`; nunca `storageKey` ni URL |
+| `ApprovalRequest` | `operationId`, `expectedVersion`, `verifiedPaidOn`, `verifiedAmount`, `verifiedCurrency` (`VES`, `USD`), `bcvRateId` obligatorio si la moneda verificada es `VES` |
+| `ApprovalResultResponse` | `reportId`, `decision`, `grantedPeriod{startsAt, endsAt, periodicity, sequence}`, `subscription{status, subscriptionVersion}`, `duplicate` para recuperación idempotente |
+| `BcvRateResponse` | `rateId`, `rateDate`, `rateVesPerUsd`, `source`, `registeredAt` |
+| `OperatorTokenIssued` | `operatorId`, `token` (una sola vez), `issuedAt`; `Cache-Control: no-store` |
+
+Los importes viajan como texto decimal con dos fracciones (`"18.00"`), la tasa con hasta seis; nunca como número binario de punto flotante. `referenceLast4` es texto de exactamente cuatro dígitos y conserva ceros iniciales.
+
+### 14.5 Errores específicos
+
+Además de los códigos vigentes (401 credencial inválida, 403 sin permiso, 404 objeto ajeno o inexistente, 409 versión/duplicado, 422 validación):
+
+| Código | HTTP | Significado |
+|---|---|---|
+| `SUBSCRIPTION_SUSPENDED` | 403 | escritura operativa bloqueada por suspensión comercial; la lectura y la renovación siguen disponibles (D24) |
+| `SEAT_LIMIT_REACHED` | 409 | aceptación/reactivación/cambio superaría el límite de asientos |
+| `PLAN_UNAVAILABLE` | 409 | plan retirado o no disponible para nuevas contrataciones |
+| `REPORT_NOT_PENDING` | 409 | el reporte ya fue aprobado o rechazado |
+| `EVIDENCE_ALREADY_PRESENT` | 409 | el reporte ya tiene su captura (una por reporte) |
+| `PAYMENT_MISMATCH` | 422 | importe verificado insuficiente o excedente; corresponde rechazo |
+| `RATE_DATE_EXISTS` | 409 | ya existe tasa para esa fecha |
+
+La indisponibilidad comercial nunca se presenta como credencial inválida (§17.4 de la especificación). Un objeto de otra cuenta sigue devolviendo 404 antes de revelar cualquier situación comercial.
+
+### 14.6 Proyección de sincronización
+
+El snapshot/delta añade una proyección comercial mínima por audiencia (§18 de la especificación): la entidad `subscription` (audiencia `members`) lleva `planCode`, `status`, `currentPeriodEndsAt`, `graceEndsAt`, `subscriptionVersion` y `updatedAt`; la entidad `subscription_admin` (audiencia `owner`) añade `seats{used, limit}`. Reportes, tasas, motivos de revisión y evidencias no aparecen en snapshot, delta, SSE, journal, logs ni métricas. La versión comercial es independiente de `permissionEpoch` salvo que una política cambie el alcance de lectura. El reloj del cliente no extiende vigencia; la política offline aplica el fin de gracia comunicado por el servidor (D24).
+
+El delta (`change_log`) solo registra los cambios comerciales causados por operaciones del personal con recibo (la primera presentación que crea la relación, acción `SubmitPaymentReport`). Las decisiones del operador no tienen dispositivo de miembro y por tanto no generan fila de delta: los consumidores recuperan aprobaciones y rechazos mediante la captura (snapshot), que siempre refleja el estado vigente.
