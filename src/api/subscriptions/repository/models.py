@@ -192,7 +192,7 @@ class PlatformOperator(Base):
         CheckConstraint("btrim(display_name)<>''", name="display_name"),
         CheckConstraint(
             "cardinality(actions) > 0 AND "
-            "actions <@ ARRAY['review','catalog','rates','operators']::text[]",
+            "actions <@ ARRAY['review','catalog','rates','operators','metrics']::text[]",
             name="actions",
         ),
         CheckConstraint("status IN ('active','revoked')", name="status"),

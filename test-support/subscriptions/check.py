@@ -386,6 +386,98 @@ async def check_submissions(client, factory, administrative, tokens):
     assert cancelled.json()["status"] == "active"
     assert cancelled.json()["currentPeriod"] is not None
 
+    # Operator lifecycle (D23): OIDC-issued credential, management, recovery, revocation.
+    import base64 as b64
+    import json as jsonlib
+
+    def subject_of(token):
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return jsonlib.loads(b64.urlsafe_b64decode(payload))["sub"]
+
+    manager, _ = await make_operator(["operators"])
+    expect(await client.get("/v1/operator/operators"), 401)
+    expect(await client.get("/v1/operator/operators", headers=reviewer), 403)
+
+    created_operator = await client.post("/v1/operator/operators", json={
+        "operationId": str(uuid7()), "oidcIssuer": oidc.ISSUER,
+        "oidcSubject": subject_of(outsider["access_token"]),
+        "displayName": "Operador OIDC ficticio", "actions": ["review"],
+    }, headers=manager)
+    expect(created_operator, 201)
+    new_operator_id = created_operator.json()["operator"]["operatorId"]
+
+    issued = await client.post("/v1/operator/credentials",
+                               headers={"Authorization": f"Bearer {outsider['access_token']}"})
+    expect(issued, 201)
+    first_credential = {"Authorization": f"Bearer {issued.json()['accessToken']}"}
+    expect(await client.get("/v1/operator/payment-reports", headers=first_credential), 200)
+
+    recovered = await client.post(
+        f"/v1/operator/operators/{new_operator_id}/credential-recovery", headers=manager
+    )
+    expect(recovered, 201)
+    # Recovery revokes the previous credential and never recovers secrets.
+    expect(await client.get("/v1/operator/payment-reports", headers=first_credential), 401)
+    second_credential = {"Authorization": f"Bearer {recovered.json()['accessToken']}"}
+    expect(await client.get("/v1/operator/payment-reports", headers=second_credential), 200)
+
+    revoked_operator = await client.post(
+        f"/v1/operator/operators/{new_operator_id}/revocation", headers=manager
+    )
+    expect(revoked_operator, 200)
+    # Revoking the operator revokes its credentials: the old token is invalid.
+    expect(await client.get("/v1/operator/payment-reports", headers=second_credential), 401)
+    issued_after = await client.post("/v1/operator/credentials",
+                                     headers={"Authorization": f"Bearer {outsider['access_token']}"})
+    expect(issued_after, 401)
+
+    listed_operators = await client.get("/v1/operator/operators", headers=manager)
+    expect(listed_operators, 200)
+    assert listed_operators.json()["total"] >= 4
+
+    # Suspension: operational writes are blocked, reads and renewal stay open (D24).
+    from datetime import datetime, timedelta, timezone
+
+    past = datetime.now(timezone.utc) - timedelta(days=10)
+    async with administrative() as db:
+        await db.execute(text(
+            "UPDATE nightingale.account_subscriptions SET status='active' "
+            f"WHERE account_id='{account_id}'"
+        ))
+        await db.execute(text(
+            "UPDATE nightingale.subscription_periods sp SET "
+            f"ends_at='{past}'::timestamptz - ((SELECT max(sequence) FROM "
+            " nightingale.subscription_periods WHERE subscription_id=sp.subscription_id)"
+            " - sp.sequence) * interval '30 days', "
+            f"starts_at='{past}'::timestamptz - ((SELECT max(sequence) FROM "
+            " nightingale.subscription_periods WHERE subscription_id=sp.subscription_id)"
+            " - sp.sequence + 1) * interval '30 days' "
+            f"WHERE subscription_id IN (SELECT id FROM nightingale.account_subscriptions "
+            f"WHERE account_id='{account_id}')"
+        ))
+        await db.commit()
+
+    blocked = await client.post(
+        account_base + "/sync/operations",
+        headers=owner_headers,
+        json={"operations": [{
+            "operationId": str(uuid7()), "contractVersion": 1,
+            "action": "CreateInvitation", "entityKey": str(uuid7()),
+            "expectedVersion": 0,
+            "payload": {"inviteeUserId": outsider_device["userId"]},
+        }]},
+    )
+    expect(blocked, 403)
+    assert blocked.json()["code"] == "SUBSCRIPTION_SUSPENDED"
+
+    # Reads and the commercial routes are never gated.
+    suspended_state = await client.get(subscription_url, headers=owner_headers)
+    expect(suspended_state, 200)
+    assert suspended_state.json()["status"] == "suspended"
+    renewal = await client.post(base, json=payload(uuid7()), headers=owner_headers)
+    expect(renewal, 201)
+
     # A revoked operator loses access even with the same credential.
     async with administrative() as db:
         await db.execute(text(
@@ -394,6 +486,28 @@ async def check_submissions(client, factory, administrative, tokens):
         ))
         await db.commit()
     expect(await client.get("/v1/operator/payment-reports", headers=reviewer), 403)
+
+    # A revoked operator cannot produce effects either: approval is denied and
+    # nothing new is decided.
+    late_approval = await client.post(
+        f"/v1/operator/payment-reports/{uuid7()}/approval",
+        json=approval_body(uuid7()), headers=reviewer,
+    )
+    expect(late_approval, 403)
+
+    # Logs, journal and audit never contain captures, storage keys, secrets or
+    # declared banking data (§21.2).
+    async with administrative() as db:
+        journal = await db.scalar(text(
+            "SELECT count(*) FROM nightingale.change_log WHERE "
+            "projection_json::text LIKE '%storage%' OR projection_json::text LIKE '%0071%' OR "
+            "projection_json::text LIKE '%transferencia%' OR projection_json::text LIKE '%declared%'"
+        ))
+        audit = await db.scalar(text(
+            "SELECT count(*) FROM nightingale.audit_events WHERE "
+            "coalesce(object_key::text,'') LIKE '%0071%' OR coalesce(object_key::text,'') LIKE '%transferencia%'"
+        ))
+        assert journal == 0 and audit == 0, (journal, audit)
 
 
 async def main():

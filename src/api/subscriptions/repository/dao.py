@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.subscriptions.repository.models import (
@@ -119,6 +119,15 @@ class SubscriptionPlanVersionDAO(DAO[SubscriptionPlanVersion, BaseModel, BaseMod
 
 
 class AccountSubscriptionDAO(DAO[AccountSubscription, BaseModel, BaseModel]):
+    async def by_account(
+        self, db: AsyncSession, account_id: UUID
+    ) -> AccountSubscription | EmptyType:
+        row = await db.scalar(
+            select(AccountSubscription).where(AccountSubscription.account_id == account_id)
+        )
+
+        return Empty if row is None else row
+
     async def by_account_for_update(
         self, db: AsyncSession, account_id: UUID
     ) -> AccountSubscription | EmptyType:
@@ -174,6 +183,32 @@ dao_account_subscriptions = AccountSubscriptionDAO(AccountSubscription)
 
 
 class PlatformOperatorDAO(DAO[PlatformOperator, BaseModel, BaseModel]):
+    async def insert_operator(self, db: AsyncSession, values: dict) -> None:
+        await self.create(db, commit=False, obj_in=values)
+
+    async def by_oidc(
+        self, db: AsyncSession, issuer: str, subject: str
+    ) -> PlatformOperator | EmptyType:
+        row = await db.scalar(
+            select(PlatformOperator).where(
+                PlatformOperator.oidc_issuer == issuer,
+                PlatformOperator.oidc_subject == subject,
+            )
+        )
+
+        return Empty if row is None else row
+
+    async def page(self, db: AsyncSession, page: int, shows: int) -> tuple[list, int]:
+        statement = select(PlatformOperator)
+        total = await self.count(db, statement)
+        rows = await db.scalars(
+            statement.order_by(PlatformOperator.created_at, PlatformOperator.id)
+            .offset((page - 1) * shows)
+            .limit(shows)
+        )
+
+        return list(rows), total
+
     async def by_credential_hash(
         self, db: AsyncSession, token_hash: str
     ) -> PlatformOperator | EmptyType:
@@ -192,7 +227,33 @@ class PlatformOperatorDAO(DAO[PlatformOperator, BaseModel, BaseModel]):
         return Empty if row is None else row
 
 
+class PlatformOperatorCredentialDAO(DAO[PlatformOperatorCredential, BaseModel, BaseModel]):
+    async def insert_credential(
+        self, db: AsyncSession, credential_id: UUID, operator_id: UUID, token_hash: str
+    ) -> None:
+        await self.create(
+            db,
+            commit=False,
+            obj_in={
+                "id": credential_id,
+                "operator_id": operator_id,
+                "token_hash": token_hash,
+            },
+        )
+
+    async def revoke_all(self, db: AsyncSession, operator_id: UUID, now) -> None:
+        await db.execute(
+            update(PlatformOperatorCredential)
+            .where(
+                PlatformOperatorCredential.operator_id == operator_id,
+                PlatformOperatorCredential.revoked_at.is_(None),
+            )
+            .values(revoked_at=now)
+        )
+
+
 dao_platform_operators = PlatformOperatorDAO(PlatformOperator)
+dao_operator_credentials = PlatformOperatorCredentialDAO(PlatformOperatorCredential)
 
 
 class BcvRateDAO(DAO[BcvExchangeRate, BaseModel, BaseModel]):
@@ -456,3 +517,123 @@ class SubscriptionPeriodDAO(DAO[SubscriptionPeriod, BaseModel, BaseModel]):
 
 
 dao_subscription_periods = SubscriptionPeriodDAO(SubscriptionPeriod)
+
+
+class MetricsDAO(DAO[AccountSubscription, BaseModel, BaseModel]):
+    """Bounded administrative aggregates (§22); never patient or clinical data."""
+
+    async def accounts_by_plan(self, db: AsyncSession) -> list[tuple]:
+        rows = await db.execute(
+            select(
+                SubscriptionPlan.code,
+                AccountSubscription.status,
+                func.count(),
+            )
+            .join(
+                SubscriptionPlanVersion,
+                SubscriptionPlanVersion.id == AccountSubscription.plan_version_id,
+            )
+            .join(SubscriptionPlan, SubscriptionPlan.id == SubscriptionPlanVersion.plan_id)
+            .group_by(SubscriptionPlan.code, AccountSubscription.status)
+            .order_by(SubscriptionPlan.code, AccountSubscription.status)
+        )
+
+        return list(rows.all())
+
+    async def expiring_soon(self, db: AsyncSession, until) -> list[tuple]:
+        latest = (
+            select(
+                SubscriptionPeriod.subscription_id,
+                func.max(SubscriptionPeriod.sequence).label("sequence"),
+            )
+            .group_by(SubscriptionPeriod.subscription_id)
+            .subquery()
+        )
+        rows = await db.execute(
+            select(AccountSubscription.account_id, SubscriptionPeriod.ends_at)
+            .join(
+                SubscriptionPeriod,
+                SubscriptionPeriod.subscription_id == AccountSubscription.id,
+            )
+            .join(
+                latest,
+                (latest.c.subscription_id == SubscriptionPeriod.subscription_id)
+                & (latest.c.sequence == SubscriptionPeriod.sequence),
+            )
+            .where(
+                SubscriptionPeriod.ends_at > func.now(),
+                SubscriptionPeriod.ends_at <= until,
+            )
+            .order_by(SubscriptionPeriod.ends_at)
+        )
+
+        return list(rows.all())
+
+    async def pending_reports(self, db: AsyncSession) -> tuple[int, object]:
+        row = (
+            await db.execute(
+                select(func.count(), func.min(PaymentReport.created_at)).where(
+                    PaymentReport.status == "pending"
+                )
+            )
+        ).one()
+
+        return row[0], row[1]
+
+    async def periods_by_plan(self, db: AsyncSession) -> list[tuple]:
+        rows = await db.execute(
+            select(
+                SubscriptionPlan.code,
+                SubscriptionPeriod.periodicity,
+                func.count(),
+            )
+            .join(
+                SubscriptionPlanVersion,
+                SubscriptionPlanVersion.id == SubscriptionPeriod.plan_version_id,
+            )
+            .join(SubscriptionPlan, SubscriptionPlan.id == SubscriptionPlanVersion.plan_id)
+            .group_by(SubscriptionPlan.code, SubscriptionPeriod.periodicity)
+            .order_by(SubscriptionPlan.code, SubscriptionPeriod.periodicity)
+        )
+
+        return list(rows.all())
+
+    async def verified_amounts(self, db: AsyncSession) -> list[tuple]:
+        # Historical verified amounts stay in their own currency; VES is never
+        # revalued nor mixed with USD (§22).
+        rows = await db.execute(
+            select(SubscriptionReview.verified_currency, func.sum(SubscriptionReview.verified_amount))
+            .where(SubscriptionReview.decision == "approved")
+            .group_by(SubscriptionReview.verified_currency)
+            .order_by(SubscriptionReview.verified_currency)
+        )
+
+        return list(rows.all())
+
+    async def seats_over_limit(self, db: AsyncSession) -> list[tuple]:
+        from src.api.accounts.repository.models import AccountMembership
+
+        active = (
+            select(
+                AccountMembership.account_id,
+                func.count().label("used"),
+            )
+            .where(AccountMembership.status == "active")
+            .group_by(AccountMembership.account_id)
+            .subquery()
+        )
+        rows = await db.execute(
+            select(AccountSubscription.account_id, active.c.used, SubscriptionPlanVersion.seat_limit)
+            .join(active, active.c.account_id == AccountSubscription.account_id)
+            .join(
+                SubscriptionPlanVersion,
+                SubscriptionPlanVersion.id == AccountSubscription.plan_version_id,
+            )
+            .where(active.c.used > SubscriptionPlanVersion.seat_limit)
+            .order_by(AccountSubscription.account_id)
+        )
+
+        return list(rows.all())
+
+
+dao_metrics = MetricsDAO(AccountSubscription)

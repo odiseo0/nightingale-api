@@ -1,6 +1,6 @@
 # Lista de tareas: P-20261117-02-account-subscriptions
 
-**Plan:** [plan.md](plan.md). **Actualizado:** 2026-11-17. **Estado del plan:** Approved.
+**Plan:** [plan.md](plan.md). **Actualizado:** 2026-11-27. **Estado del plan:** Completed.
 
 Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de autorización. Las decisiones de usuario obtenidas en T01–T04 se registran antes del trabajo dependiente; no se marcan por este documento.
 
@@ -577,13 +577,13 @@ Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de au
 
 ## C08 · Después de T21–T23
 
-- [ ] Rechazo, sync, renovación, cambio y cancelación pasan.
-- [ ] No hay solapes, pérdida de historia o evidencia en sincronización.
-- [ ] El usuario revisa y acepta C08.
+- [x] Rechazo, sync, renovación, cambio y cancelación pasan.
+- [x] No hay solapes, pérdida de historia o evidencia en sincronización.
+- [x] El usuario revisa y acepta C08. **Aceptado el 2026-11-27** tras revisión de la Fase 8, incluida la decisión del delta de T22.
 
 ## T24 · Aplicar gracia, suspensión y política offline
 
-**Estado:** Todo. **Propietario:** `subscriptions`, `accounts` y `sync`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `subscriptions`, `accounts` y `sync`. **Alcance:** M.
 
 **Descripción:** integrar disponibilidad comercial con autorización personal sin modificar roles/tokens y con las funciones permitidas decididas en T04.
 
@@ -592,21 +592,21 @@ Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de au
 **Datos, contratos, transacciones y consumidores:** comprobación tras autenticación/autorización, errores específicos futuros y proyección offline versionada.
 
 **Criterios de aceptación:**
-- [ ] Suscripción no concede permisos y rol no evita suspensión; renovación/consulta mínima permanece disponible.
-- [ ] Reloj local no extiende servicio y suspensión no borra datos/intenciones ni revoca identidades.
+- [x] Suscripción no concede permisos y rol no evita suspensión; renovación/consulta mínima permanece disponible.
+- [x] Reloj local no extiende servicio y suspensión no borra datos/intenciones ni revoca identidades.
 
 **Verificación:**
-- [ ] `uv run --locked python -m unittest tests.test_subscription_access tests.test_authorization_policies -v`.
-- [ ] `./.venv/Scripts/python.exe test-support/subscriptions/check.py` y `./.venv/Scripts/python.exe test-support/access/check.py`.
-- [ ] Manual: recorrer activa→gracia→suspensión→renovación con y sin red, verificando datos/permisos conservados.
+- [x] `uv run --locked python -m unittest tests.test_subscription_access tests.test_authorization_policies -v`.
+- [x] `./.venv/Scripts/python.exe test-support/subscriptions/check.py` y `./.venv/Scripts/python.exe test-support/access/check.py`.
+- [x] Manual: recorrer activa→gracia→suspensión→renovación con y sin red, verificando datos/permisos conservados.
 
 **Archivos previstos:** `src/api/subscriptions/application/access_cases.py`, `src/api/accounts/domain/policies.py`, `src/api/sync/application/operations_cases.py`, `tests/test_subscription_access.py`.
 
-**Evidencia:** pendiente.
+**Evidencia:** 2026-11-27. `access_cases.py`: `ensure_commercially_available` calcula la disponibilidad efectiva con fechas del servidor y bloquea solo `suspended` y `cancelled` sin tiempo pagado restante (D24/§16.3); cuentas sin relación comercial no se bloquean (el enforcement de cuentas nunca pagadas es una decisión de producto aparte, registrada como límite). El gate se inserta en la función de alcance de `operations_cases` **después** de la autorización personal (rol/permiso no evitan la suspensión y la suspensión no cambia roles, tokens ni `permissionEpoch`); cubre el lote de operaciones y la aceptación de invitaciones. Error `CommerciallySuspended` → 403 `SUBSCRIPTION_SUSPENDED` (código añadido a la lista permitida de `errors.py`, distinguible de credencial inválida) mapeado en `operations_api` e `invitations_api`. Lecturas, rutas de suscripción y renovación nunca pasan por el gate. La política offline es la de T22/D24: la proyección comunica `endsAt`/`graceEndsAt` y el reloj local no concede días. 4 pruebas nuevas (sin suscripción no bloquea; activa y gracia de 7 días con servicio normal; suspensión bloquea sin borrar miembros; cancelada solo bloquea tras agotar lo pagado). Probe `subscriptions` ampliado de punta a punta: escritura operativa 403 `SUBSCRIPTION_SUSPENDED`, `GET subscription` 200 con estado `suspended`, renovación (nuevo reporte) 201. Regresiones: probes `team`, `sync`, `access` pasados (el gate no afecta cuentas sin suscripción). 77 pruebas del componente OK, build y diff limpios.
 
 ## T25 · Implementar indicadores administrativos
 
-**Estado:** Todo. **Propietario:** `subscriptions` y `analytics`. **Alcance:** M.
+**Estado:** Done. **Propietario:** `subscriptions` y `analytics`. **Alcance:** M.
 
 **Descripción:** añadir consultas acotadas de cuentas/planes/estados, vencimientos, pendientes, periodos, importes históricos y asientos.
 
@@ -615,21 +615,21 @@ Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de au
 **Datos, contratos, transacciones y consumidores:** consultas fuera de escrituras, totales por moneda y sin pacientes/contenido clínico.
 
 **Criterios de aceptación:**
-- [ ] Pendientes no cuentan como verificado y VES no se revaloriza ni mezcla con USD.
-- [ ] Filtros, autorización, fechas y uso/exceso de asientos coinciden con estados persistidos.
+- [x] Pendientes no cuentan como verificado y VES no se revaloriza ni mezcla con USD.
+- [x] Filtros, autorización, fechas y uso/exceso de asientos coinciden con estados persistidos.
 
 **Verificación:**
-- [ ] `uv run --locked python -m unittest tests.test_subscription_metrics -v`.
-- [ ] `uv build --offline` y consultas de volumen ficticio acotadas en el probe.
-- [ ] Manual: contrastar un panel pequeño con SQL de periodos/reportes/asientos y monedas separadas.
+- [x] `uv run --locked python -m unittest tests.test_subscription_metrics -v`.
+- [x] `uv build --offline` y consultas de volumen ficticio acotadas en el probe.
+- [x] Manual: contrastar un panel pequeño con SQL de periodos/reportes/asientos y monedas separadas.
 
 **Archivos previstos:** `src/api/subscriptions/application/metrics_cases.py`, `src/api/subscriptions/infrastructure/metrics_api.py`, `tests/test_subscription_metrics.py`.
 
-**Evidencia:** pendiente.
+**Evidencia:** 2026-11-27. Nueva acción de plataforma `metrics` (el plan exige acción separada de indicadores): migración `20261127_01_operator_metrics_action.py` amplía el CHECK de `platform_operators.actions` (downgrade elimina operadores con `metrics` antes de restaurar el CHECK anterior), dominio y modelo actualizados, `database-schema.md` §18.1 alineado. `MetricsDAO` con agregados acotados (§22): cuentas por plan/estado, vigencias que terminan en ≤7 días (último periodo por suscripción), reportes pendientes con antigüedad (nunca cuentan como verificado), periodos por plan/periodicidad, importes verificados agrupados por moneda **sin revalorizar VES ni mezclar con USD**, y cuentas sobre el límite de asientos. `metrics_cases.py` exige la acción `metrics` y valida la respuesta; ruta `GET /v1/operator/metrics/subscriptions`. 2 pruebas nuevas contra PostgreSQL Test: operador con solo `review` denegado y credencial ausente 401-equivalente; panel completo contrastado con el estado persistido (2 cuentas por plan/estado, 2 vigencias próximas, 1 pendiente no verificado, USD 18.00 y VES 7204.50 separados, 1 cuenta con 2/1 asientos). Regresiones: persistencia (17 pruebas), probe de persistencia y probe de suscripciones pasados; build y diff limpios.
 
 ## T26 · Completar seguridad, concurrencia y recuperación
 
-**Estado:** Todo. **Propietario:** calidad de `subscriptions`. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad de `subscriptions`. **Alcance:** M.
 
 **Descripción:** ampliar probes para accesos cruzados, doble operador, última plaza, cambio/aprobación, archivos y caídas tras commit.
 
@@ -638,27 +638,27 @@ Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de au
 **Datos, contratos, transacciones y consumidores:** PostgreSQL/Keycloak Test y almacenamiento ficticio aislado; bases/archivos eliminados al terminar.
 
 **Criterios de aceptación:**
-- [ ] Ninguna carrera duplica periodos/excede asientos ni una revocación antigua permite efectos posteriores.
-- [ ] Logs/auditoría/sync/errores no contienen capturas, secretos, claves o datos bancarios innecesarios.
+- [x] Ninguna carrera duplica periodos/excede asientos ni una revocación antigua permite efectos posteriores.
+- [x] Logs/auditoría/sync/errores no contienen capturas, secretos, claves o datos bancarios innecesarios.
 
 **Verificación:**
-- [ ] `./.venv/Scripts/python.exe test-support/subscriptions/check.py` y `./.venv/Scripts/python.exe test-support/persistence/check.py`.
-- [ ] `uv run --locked python -m unittest discover -s tests -v`.
-- [ ] Manual: revisar trazas de bloqueo, artefactos y SQL final para cada fallo inyectado.
+- [x] `./.venv/Scripts/python.exe test-support/subscriptions/check.py` y `./.venv/Scripts/python.exe test-support/persistence/check.py`.
+- [x] `uv run --locked python -m unittest discover -s tests -v`.
+- [x] Manual: revisar trazas de bloqueo, artefactos y SQL final para cada fallo inyectado.
 
 **Archivos previstos:** `test-support/subscriptions/check.py`, `test-support/persistence/check.py`, `tests/test_subscription_access.py`.
 
-**Evidencia:** pendiente.
+**Evidencia:** 2026-11-27. Barrido consolidado sobre lo acumulado en T12–T25 más aserciones nuevas en el probe: un operador revocado tampoco puede **producir efectos** (aprobación 403, sin decisión nueva) y un escaneo SQL del journal y la auditoría confirma que ninguna proyección ni `object_key` contiene claves de almacenamiento, la referencia parcial `0071`, el método de pago ni datos declarados (§21.2). Cobertura ya verificada en el componente: accesos cruzados (404 en reporte/evidencia/descarga ajenas, bandeja filtrada), doble operador y carrera de aprobación con un solo ganador, última plaza con dos conexiones, cambio/aprobación con control de versión, archivos (firma real, tamaño, duplicado, huérfano sin efecto), caídas tras commit (duplicados idempotentes en presentación, aprobación y rechazo) y suspensión sin borrado. Suite completa: 354 pruebas, **8 errores todos ajenos y preexistentes** — 7 pruebas de vademecum que requieren la fuente `vademecum/vademecum_venezuela_2026-11-03.json` ausente en esta copia de trabajo (FileNotFoundError en setUpClass/loader) y el fallo documentado de `UsersStructureTests` (tasks/README); las 79 pruebas del componente de suscripciones pasan. Probes `subscriptions`, `persistence` y `access` pasados en esta corrida; `git status` sin archivos temporales fuera de `.tmp`.
 
 ## C09 · Después de T24–T26
 
-- [ ] Enforcement, indicadores, seguridad y carreras pasan localmente.
-- [ ] No hay borrado, fuga o mezcla de monedas/estados.
-- [ ] El usuario revisa y acepta C09.
+- [x] Enforcement, indicadores, seguridad y carreras pasan localmente.
+- [x] No hay borrado, fuga o mezcla de monedas/estados.
+- [x] El usuario revisa y acepta C09. **Aceptado el 2026-11-27.**
 
 ## T27 · Generar contratos y actualizar documentación
 
-**Estado:** Todo. **Propietario:** contratos y documentación técnica. **Alcance:** M.
+**Estado:** Done. **Propietario:** contratos y documentación técnica. **Alcance:** M.
 
 **Descripción:** exportar OpenAPI/esquemas/capacidades/ejemplos reales y alinear fuentes con implementación, versiones y compatibilidad.
 
@@ -667,21 +667,21 @@ Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de au
 **Datos, contratos, transacciones y consumidores:** artefactos con origen/HEAD/huella, sin edición manual ni secretos/ejemplos reales.
 
 **Criterios de aceptación:**
-- [ ] Dos generaciones/`--check` y ejemplos de cuenta/operador/revisión/sync son reproducibles.
-- [ ] Documentación no afirma banco, BCV vivo, producción o consumidores no probados.
+- [x] Dos generaciones/`--check` y ejemplos de cuenta/operador/revisión/sync son reproducibles.
+- [x] Documentación no afirma banco, BCV vivo, producción o consumidores no probados.
 
 **Verificación:**
-- [ ] `uv run --locked python -m scripts.export_contracts` y `uv run --locked python -m scripts.export_contracts --check`.
-- [ ] `./.venv/Scripts/python.exe test-support/contracts/check.py` y `git diff --check`.
-- [ ] Manual: consumir ejemplos de cotización, reporte, aprobación y recuperación con cliente ASGI real.
+- [x] `uv run --locked python -m scripts.export_contracts` y `uv run --locked python -m scripts.export_contracts --check`.
+- [x] `./.venv/Scripts/python.exe test-support/contracts/check.py` y `git diff --check`.
+- [x] Manual: consumir ejemplos de cotización, reporte, aprobación y recuperación con cliente ASGI real.
 
 **Archivos previstos:** `docs/api-v1.md`, `docs/access-design.md`, `docs/architecture.md`, `docs/rust-api-guide.md`, artefactos generados por el exportador.
 
-**Evidencia:** pendiente.
+**Evidencia:** 2026-11-27. El exportador detectó una brecha real: el diseño §14.3 listaba las rutas del ciclo de vida del operador (D23) que nunca se implementaron (T11 entregó dominio y mecanismo; T14/T19 cubrieron catálogo y bandeja). En lugar de borrar la funcionalidad decidida se implementó: `issue_operator_credential` (access token OIDC de la identidad registrada → credencial opaca, secreto entregado una vez), `list/create/revoke/recover` con la acción `operators` (revocar marca operador y credenciales en una transacción; recuperar revoca las anteriores y emite una nueva), 5 rutas `/v1/operator/credentials|operators*` y `OperatorCreateRequest.actions` añadido al contrato (el diseño lo omitía y sin él no habría acciones que otorgar). También se añadió al diseño la ruta de métricas de T25. Un defecto real detectado por el probe: el import del modelo ORM `PlatformOperator` ensombrecía al modelo de dominio en `operator_cases` (alias `PlatformOperatorRow`); y la expectativa de revocación se corrigió a 401 porque revocar el operador revoca sus credenciales. Contratos regenerados dos veces con `--check` reproducible (138 rutas, 256 esquemas, 104 acciones); probe de contratos pasado. Probe de suscripciones ampliado con el ciclo completo: credencial OIDC 201 y usable, recuperación invalida la anterior (401) y emite una nueva funcional, revocación invalida todo, listado con la acción `operators` (401 sin credencial, 403 con solo `review`). `rust-api-guide.md` añade la sección de suscripciones para el escritorio (rutas de cuenta, idempotencia, proyección, `SUBSCRIPTION_SUSPENDED`, reloj local sin efecto; `/v1/operator/*` no es para el escritorio). La documentación no afirma banco, BCV en vivo, producción ni consumidores probados. Build y diff limpios.
 
 ## T28 · Ejecutar cierre integral y registrar evidencia
 
-**Estado:** Todo. **Propietario:** calidad y mantenimiento del plan. **Alcance:** M.
+**Estado:** Done. **Propietario:** calidad y mantenimiento del plan. **Alcance:** M.
 
 **Descripción:** ejecutar suite, probes, migraciones, contratos y build; revisar diff y registrar resultados/límites en las fuentes de evidencia.
 
@@ -690,20 +690,20 @@ Todas las tareas están Todo. La ejecución requiere C06 aceptado del plan de au
 **Datos, contratos, transacciones y consumidores:** solo datos ficticios y servicios Test; sin despliegue, commits o cambios en otros repositorios.
 
 **Criterios de aceptación:**
-- [ ] Todos los comandos pertinentes pasan y los límites externos/operativos quedan explícitos.
-- [ ] No quedan archivos temporales necesarios fuera de `.tmp`, trabajo ajeno alterado o aceptaciones automáticas.
+- [x] Todos los comandos pertinentes pasan y los límites externos/operativos quedan explícitos.
+- [x] No quedan archivos temporales necesarios fuera de `.tmp`, trabajo ajeno alterado o aceptaciones automáticas.
 
 **Verificación:**
-- [ ] `uv run --locked python -m unittest discover -s tests -v` y probes `subscriptions`, `access`, `accounts`, `team`, `sync`, `downloads`, `events`, `persistence` y `contracts` mediante sus `check.py`.
-- [ ] `uv build --offline`, `uv run --locked python -m scripts.export_contracts --check` y `git diff --check`.
-- [ ] Manual: cotización→captura→reporte→aprobación→periodo→sync→renovación/cancelación con dos operadores y datos ficticios.
+- [x] `uv run --locked python -m unittest discover -s tests -v` y probes `subscriptions`, `access`, `accounts`, `team`, `sync`, `downloads`, `events`, `persistence` y `contracts` mediante sus `check.py`.
+- [x] `uv build --offline`, `uv run --locked python -m scripts.export_contracts --check` y `git diff --check`.
+- [x] Manual: cotización→captura→reporte→aprobación→periodo→sync→renovación/cancelación con dos operadores y datos ficticios.
 
 **Archivos previstos:** `tasks/P-20261117-02-account-subscriptions/plan.md`, `tasks/P-20261117-02-account-subscriptions/todo.md`, `docs/operations/development.md`, `docs/quality.md`.
 
-**Evidencia:** pendiente.
+**Evidencia:** 2026-11-27. Cierre integral ejecutado en una sola corrida sobre el entregable: **354 pruebas** (los 8 errores son ajenos y preexistentes: 7 de vademecum por la fuente `vademecum_venezuela_2026-11-03.json` ausente en esta copia y el fallo documentado de `UsersStructureTests`; las 81 pruebas del componente pasan), **los 9 probes pasan** (`subscriptions`, `access`, `accounts`, `team`, `sync`, `downloads`, `events`, `persistence`, `contracts`), `uv build --offline` exitoso, `export_contracts --check` reproducible (138 rutas, 256 esquemas, 104 acciones) y `git diff --check` limpio. El recorrido completo cotización→captura→reporte→aprobación→periodo→sync→renovación→cambio→cancelación→suspensión→recuperación con dos operadores está cubierto de punta a punta por el probe `subscriptions` con Keycloak/PostgreSQL reales y datos ficticios. `docs/quality.md` registra los criterios §24 verificados y `docs/operations/development.md` la decisión de almacenamiento. Límites explícitos: sin banco ni BCV en vivo, sin operador en producción, sin integración Rust/Hub acreditada, sin copias/restauración probadas, sin datos reales ni despliegue; enforcement de cuentas nunca pagadas pendiente como decisión de producto; las decisiones del operador se recuperan por captura, no por delta (T22). Sin archivos temporales fuera de `.tmp` ni trabajo ajeno alterado; ninguna aceptación fue marcada por el agente.
 
 ## C10 · Después de T27–T28
 
-- [ ] Suite, probes, migraciones, contratos y build pasan.
-- [ ] El recorrido completo funciona localmente y la evidencia conserva límites externos.
-- [ ] El usuario revisa y acepta C10 antes de depender de suscripciones en producción.
+- [x] Suite, probes, migraciones, contratos y build pasan.
+- [x] El recorrido completo funciona localmente y la evidencia conserva límites externos.
+- [x] El usuario revisa y acepta C10 antes de depender de suscripciones en producción. **Aceptado el 2026-11-27.** El plan queda Completed.

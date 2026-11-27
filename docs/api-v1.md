@@ -824,7 +824,8 @@ Prefijo `/v1/operator`, credencial de operador vigente. La emisión de credencia
 | POST | `/v1/operator/plans/{code}/versions` | `catalog` | `OperatorPlanResponse` | `PlanVersionCreateRequest{operationId, expectedVersion, seatLimit, price30dUsd, priceYearUsd}`; crea la versión siguiente; las anteriores quedan intactas |
 | POST | `/v1/operator/plans/{code}/retirement` | `catalog` | `OperatorPlanResponse` | `PlanRetirementRequest{operationId, expectedVersion}`; impide nuevas contrataciones, conserva historia |
 | GET | `/v1/operator/operators` | `operators` | `PaginatedResponse<OperatorResponse>` | operadores con estado; sin huellas ni secretos |
-| POST | `/v1/operator/operators` | `operators` | `OperatorResponse` | `OperatorCreateRequest{operationId, oidcIssuer, oidcSubject, displayName}`; 201 |
+| POST | `/v1/operator/operators` | `operators` | `OperatorResponse` | `OperatorCreateRequest{operationId, oidcIssuer, oidcSubject, displayName, actions}`; 201; `actions` es un subconjunto no vacío de `review`, `catalog`, `rates`, `operators`, `metrics` |
+| GET | `/v1/operator/metrics/subscriptions` | `metrics` | `SubscriptionMetricsResponse` | indicadores administrativos acotados (§22 de la especificación): cuentas por plan/estado, vigencias próximas, pendientes con antigüedad, periodos por plan/periodicidad, importes verificados por moneda sin mezclar ni revalorizar, y cuentas sobre el límite de asientos |
 | POST | `/v1/operator/operators/{operator_id}/revocation` | `operators` | `OperatorResponse` | revoca operador y sus credenciales en una transacción |
 | POST | `/v1/operator/operators/{operator_id}/credential-recovery` | `operators` | `OperatorTokenIssued` | revoca credenciales anteriores y emite una nueva; nunca recupera secretos |
 

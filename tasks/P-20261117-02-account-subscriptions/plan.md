@@ -1,6 +1,6 @@
 # P-20261117-02-account-subscriptions: suscripciones con verificación manual
 
-**Estado:** Approved. **Creado:** 2026-11-17. **Actualizado:** 2026-11-17. **Lista de tareas:** [todo.md](todo.md).
+**Estado:** Completed. **Creado:** 2026-11-17. **Actualizado:** 2026-11-27. **Lista de tareas:** [todo.md](todo.md).
 
 ## 1. Contexto y resultado
 
@@ -144,32 +144,32 @@ No hay trabajo paralelo. Facturación de pacientes depende de este plan solo par
 
 #### C08 · Ciclo comercial recuperable
 
-- [ ] Rechazos conservan estado anterior y nuevas presentaciones no borran historia.
-- [ ] Sync no entrega evidencias y renovaciones/cambios no solapan periodos.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Rechazos conservan estado anterior y nuevas presentaciones no borran historia.
+- [x] Sync no entrega evidencias y renovaciones/cambios no solapan periodos.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-27.**
 
 ### Fase 9 · Enforcement, indicadores y seguridad
 
-- [ ] **T24:** Aplicar gracia/suspensión y política offline sin cambiar permisos personales.
-- [ ] **T25:** Implementar indicadores administrativos por plan, estado, moneda y asientos.
-- [ ] **T26:** Completar pruebas de aislamiento, concurrencia, archivos y recuperación.
+- [x] **T24:** Aplicar gracia/suspensión y política offline sin cambiar permisos personales.
+- [x] **T25:** Implementar indicadores administrativos por plan, estado, moneda y asientos.
+- [x] **T26:** Completar pruebas de aislamiento, concurrencia, archivos y recuperación.
 
 #### C09 · Seguridad y operación local comprobadas
 
-- [ ] Suspensión no borra datos ni abre acceso; indicadores no mezclan monedas/estados.
-- [ ] Aprobaciones, asientos, cambios de plan y accesos cruzados pasan probes reales.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Suspensión no borra datos ni abre acceso; indicadores no mezclan monedas/estados.
+- [x] Aprobaciones, asientos, cambios de plan y accesos cruzados pasan probes reales.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-27.**
 
 ### Fase 10 · Contratos y cierre
 
-- [ ] **T27:** Generar/verificar contratos y actualizar documentación de comportamiento.
-- [ ] **T28:** Ejecutar cierre integral y registrar evidencia y límites.
+- [x] **T27:** Generar/verificar contratos y actualizar documentación de comportamiento.
+- [x] **T28:** Ejecutar cierre integral y registrar evidencia y límites.
 
 #### C10 · Suscripciones listas para revisión final
 
-- [ ] Suite, probes, migraciones, contratos y build pasan sobre el entregable.
-- [ ] El flujo cotización→reporte→revisión→periodo→renovación funciona con datos ficticios.
-- [ ] Revisión y aceptación expresa del usuario.
+- [x] Suite, probes, migraciones, contratos y build pasan sobre el entregable.
+- [x] El flujo cotización→reporte→revisión→periodo→renovación funciona con datos ficticios.
+- [x] Revisión y aceptación expresa del usuario. **Aceptado el 2026-11-27.**
 
 ## 7. Riesgos y mitigación
 

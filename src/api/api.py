@@ -54,6 +54,12 @@ from src.api.specialties.infrastructure.templates_api import (
 from src.api.subscriptions.infrastructure.catalog_api import (
     router as operator_plans_router,
 )
+from src.api.subscriptions.infrastructure.metrics_api import (
+    router as operator_metrics_router,
+)
+from src.api.subscriptions.infrastructure.operators_api import (
+    router as platform_operators_router,
+)
 from src.api.subscriptions.infrastructure.quotes_api import (
     operator_rates_router,
     quotes_router,
@@ -120,3 +126,5 @@ router.include_router(quotes_router)
 router.include_router(payment_reports_router)
 router.include_router(operator_reports_router)
 router.include_router(account_subscription_router)
+router.include_router(operator_metrics_router)
+router.include_router(platform_operators_router)

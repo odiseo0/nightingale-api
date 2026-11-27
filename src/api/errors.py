@@ -138,13 +138,14 @@ async def http_error(request: Request, error: HTTPException):
         request,
         error.status_code,
         error.detail
-        if error.status_code in (409, 410)
+        if (error.status_code in (409, 410) or error.status_code == 403)
         and error.detail
         in {
             "NO_CHANGES",
             "INVALID_STATE_TRANSITION",
             "SEAT_LIMIT_REACHED",
             "REPORT_NOT_PENDING",
+            "SUBSCRIPTION_SUSPENDED",
             "IDEMPOTENCY_CONFLICT",
             "VERSION_CONFLICT",
             "CURSOR_EXPIRED",

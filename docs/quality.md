@@ -122,3 +122,16 @@ Dominio/aplicación sin red; integridad, migraciones, idempotencia concurrente y
 ## Evidencia clínica de Etapa 2 · T25/C08
 
 Los casos E06–E14 y E22–E24 están comprobados en el servidor mediante suite, persistencia y probes HTTP reales. Los siete tipos aparecen en timeline con filtros autorizados; captura/delta conservan hechos históricos, correcciones y anulaciones. Integración con consumidores, operación con datos reales y producción siguen pendientes.
+
+## Evidencia de suscripciones de cuenta · P-20261117-02 (2026-11-26/27)
+
+El componente `subscriptions` se comprobó con datos ficticios y servicios Test aislados. Criterios verificados de la especificación §24:
+
+- **Catálogo y dinero (24.1):** los tres planes comparten funciones y difieren solo en precio/asientos (D21); cambiar un precio crea versión y no altera historia; USD×BCV con `Decimal` y redondeo único `ROUND_HALF_UP`; tasa/fecha/fuente congeladas en la aprobación; los informes no revalorizan.
+- **Periodos (24.2):** 30 días no es mes calendario; año civil con 29-feb→28-feb; renovación anticipada sin perder días y tardía en la aprobación (D22); no solape por exclusión `tstzrange`; repetir aprobación no añade días (PK de revisión + UQ de origen).
+- **Reportes (24.3):** presentar no activa; aprobar activa/extiende una vez; rechazar conserva el estado anterior; declarados y verificados separados; `referenceLast4` texto con ceros y sin unicidad; nueva presentación vinculada sin borrar historia.
+- **Asientos (24.4):** regla D21 sobre pertenencias activas; dispositivos/invitaciones/pacientes no cuentan; dos aceptaciones concurrentes por la última plaza tienen un solo ganador (prueba con dos conexiones); la reducción de plan no desactiva a nadie.
+- **Seguridad (24.5):** sin acceso a reportes/evidencias ajenos (404); el operador no accede a clínica (sin pertenencia ni rol); archivos validan firma real, tamaño y almacenamiento privado; la descarga reautoriza; ninguna captura en journal, logs, sync ni métricas (escaneo SQL en el probe).
+- **Offline (24.6):** el reloj del cliente no extiende vigencia (proyección con `endsAt`/`graceEndsAt` del servidor); una aprobación desconocida se recupera por captura sin duplicarla; la suspensión no borra datos ni intenciones. La experiencia del escritorio requiere pruebas en su repositorio.
+
+Comandos de cierre y resultados en la evidencia de T28 del plan. Límites: sin banco ni BCV en vivo, sin operador en producción, sin integración Rust/Hub acreditada, sin datos reales ni despliegue; el enforcement de cuentas nunca pagadas queda como decisión de producto pendiente.

@@ -44,6 +44,7 @@ from src.api.audit.application.audit_cases import record_control, record_operati
 from src.api.audit.domain.audit import ControlAudit, OperationAudit
 from src.api.authorization.application.authorization_cases import authenticate
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
+from src.api.care_plans.application.plan_cases import apply_care_plan_operation
 from src.api.clinical_records.application.access_cases import (
     clinical_result_allowed,
     clinical_result_section,
@@ -59,13 +60,6 @@ from src.api.clinical_records.application.conditions_cases import (
 from src.api.clinical_records.application.immunizations_cases import (
     apply_immunization_operation,
 )
-from src.api.care_plans.application.plan_cases import apply_care_plan_operation
-from src.api.diagnostic_results.application.report_cases import apply_diagnostic_operation
-from src.api.specialties.application.odontogram_cases import apply_dental_operation
-from src.api.specialties.application.template_cases import apply_specialty_operation
-from src.api.medications.application.medication_cases import (
-    apply_declared_medication_operation,
-)
 from src.api.clinical_records.application.measurements_cases import (
     apply_measurement_operation,
 )
@@ -73,7 +67,13 @@ from src.api.clinical_records.application.notes_cases import apply_note_operatio
 from src.api.clinical_records.domain.conditions import (
     SetPatientClinicalSectionReviewPayload,
 )
+from src.api.diagnostic_results.application.report_cases import (
+    apply_diagnostic_operation,
+)
 from src.api.encounters.application.encounters_cases import apply_encounter_operation
+from src.api.medications.application.medication_cases import (
+    apply_declared_medication_operation,
+)
 from src.api.patients.application.contacts_cases import (
     apply_contact_operation,
 )
@@ -93,27 +93,30 @@ from src.api.services.application.services_cases import (
     service_projection_accounts,
 )
 from src.api.services.domain.offers import ServiceOfferResponse
+from src.api.specialties.application.odontogram_cases import apply_dental_operation
+from src.api.specialties.application.template_cases import apply_specialty_operation
+from src.api.subscriptions.application.access_cases import ensure_commercially_available
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
 from src.api.sync.domain.operations import (
     ALLERGY_SCHEMAS,
     ANTECEDENT_SCHEMAS,
     APPOINTMENT_SCHEMAS,
     BLOCK_SCHEMAS,
+    CARE_PLAN_SCHEMAS,
     CONDITION_SCHEMAS,
     CONTACT_SCHEMAS,
+    DENTAL_SCHEMAS,
+    DIAGNOSTIC_SCHEMAS,
     ENCOUNTER_SCHEMAS,
     EXCEPTION_SCHEMAS,
     IMMUNIZATION_SCHEMAS,
-    MEDICATION_SCHEMAS,
-    CARE_PLAN_SCHEMAS,
-    DIAGNOSTIC_SCHEMAS,
-    SPECIALTY_SCHEMAS,
-    DENTAL_SCHEMAS,
     MEASUREMENT_SCHEMAS,
+    MEDICATION_SCHEMAS,
     NOTE_SCHEMAS,
     OFFER_SCHEMAS,
     RULE_SCHEMAS,
     SERVICE_SCHEMAS,
+    SPECIALTY_SCHEMAS,
     OperationBatch,
     OperationBatchResult,
     OperationEnvelope,
@@ -233,6 +236,13 @@ async def authorized_context(
     ) or context.device_status == "revoked":
         return Err(AccessDenied())
 
+    # Commercial gate after personal authorization (D24): suspension blocks new
+    # operational writes without touching roles, tokens or clinical permissions.
+    commercially = await ensure_commercially_available(db, account_id)
+
+    if isinstance(commercially, Err):
+        return Err(commercially.error)
+
     if own_service:
         permission = await service_permission(db, context)
 
@@ -260,13 +270,24 @@ def _operation_fingerprint(
             and payload.clinical_permissions.specialty_templates == "read_write"
             and payload.clinical_permissions.specialty_templates == "read_write"
         )
-        partial = operation.action.startswith("Update") or operation.action == "CorrectPatientMeasurement"
+        partial = (
+            operation.action.startswith("Update")
+            or operation.action == "CorrectPatientMeasurement"
+        )
         canonical["payload"] = payload.model_dump(
             mode="json",
             by_alias=True,
             exclude_unset=partial and not legacy_correction,
-            exclude={"clinical_permissions": {"declared_medications", "care_plans", "diagnostic_reports", "specialty_templates"}}
-            if legacy_permissions else None,
+            exclude={
+                "clinical_permissions": {
+                    "declared_medications",
+                    "care_plans",
+                    "diagnostic_reports",
+                    "specialty_templates",
+                }
+            }
+            if legacy_permissions
+            else None,
         )
 
     return hashlib.sha256(
@@ -360,8 +381,13 @@ async def accept_operation(
 
         now = await dao_heads.get_server_time(db)
         receipt = await dao_receipts.get_by(
-            db, where={"account_id": account_id, "actor_user_id": actor.user_id, "operation_id": operation.operation_id},
-            execution_options={"populate_existing": True}
+            db,
+            where={
+                "account_id": account_id,
+                "actor_user_id": actor.user_id,
+                "operation_id": operation.operation_id,
+            },
+            execution_options={"populate_existing": True},
         )
 
         if receipt is not Empty:
@@ -435,8 +461,13 @@ async def accept_operation(
 
         for dependency in operation.depends_on:
             previous = await dao_receipts.get_by(
-                db, where={"account_id": account_id, "actor_user_id": actor.user_id, "operation_id": dependency},
-                execution_options={"populate_existing": True}
+                db,
+                where={
+                    "account_id": account_id,
+                    "actor_user_id": actor.user_id,
+                    "operation_id": dependency,
+                },
+                execution_options={"populate_existing": True},
             )
 
             if previous is Empty or previous.status != "accepted":
@@ -1242,8 +1273,13 @@ async def get_operation(
             return Err(AccessDenied())
 
         receipt = await dao_receipts.get_by(
-            db, where={"account_id": account_id, "actor_user_id": context.actor.user_id, "operation_id": operation_id},
-            execution_options={"populate_existing": True}
+            db,
+            where={
+                "account_id": account_id,
+                "actor_user_id": context.actor.user_id,
+                "operation_id": operation_id,
+            },
+            execution_options={"populate_existing": True},
         )
 
         if receipt is Empty:

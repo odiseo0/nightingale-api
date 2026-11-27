@@ -107,3 +107,9 @@ Cada respuesta incluye `catalog` con `schemaVersion`, `registryCutoffDate`, `med
 Los listados devuelven `items`/`total`; `shows` llega a 500. Una página posterior al final está vacía y conserva el total. 404 significa objeto ausente después de autorización; 503 indica catálogo sin release activo o dependencia no disponible. 401/403 exigen revisar el acceso vigente.
 
 Estas lecturas no participan en capturas, Change Log, Outbox ni almacenamiento offline. No las conviertas en medicación declarada o prescripción de un paciente. No hay endpoints de escritura/revisión ni contenido histórico/suplementario. La referencia ejecutable está en los JSON generados; esta guía no acredita un consumidor Rust implementado.
+
+## Suscripciones de la cuenta
+
+Diseño completo en [api-v1.md](api-v1.md) §14. El escritorio consume solo las rutas de cuenta con el token de dispositivo del propietario: `GET A/subscription` (plan, estado efectivo, periodo, gracia y asientos), `POST A/subscription/quotes`, `POST/GET A/subscription/reports` con `operationId` idempotente (repetir la misma intención recupera el mismo reporte; contenido distinto da 409 `IDEMPOTENCY_CONFLICT`), subida/descarga de la captura (JPG/PNG/PDF, máximo 5 MB, una por reporte) y `POST .../plan-changes` y `.../cancellation` con `expectedVersion`. Presentar un reporte nunca activa ni extiende; la aprobación es manual por un operador de Nightingale.
+
+La disponibilidad comercial llega por snapshot/delta como entidades `subscription` (miembros) y `subscription_admin` (propietario); las decisiones del operador se recuperan por captura, no por delta. Una escritura operativa con la suscripción suspendida devuelve 403 `SUBSCRIPTION_SUSPENDED`; la lectura, la renovación y las rutas de suscripción siguen disponibles. El reloj local no extiende vigencia: se aplica el `endsAt`/`graceEndsAt` comunicado por el servidor. Las rutas `/v1/operator/*` no son para el escritorio.

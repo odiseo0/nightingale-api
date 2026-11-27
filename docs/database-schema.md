@@ -2752,7 +2752,7 @@ Una fila por operador de plataforma. No es un `app_users` de cuenta ni tiene per
 | `oidc_issuer` | `text` | Sí | Sin valor | UQ con `oidc_subject`; comparación exacta |
 | `oidc_subject` | `text` | Sí | Sin valor | UQ con `oidc_issuer` |
 | `display_name` | `text` | Sí | Sin valor | CHECK no vacío |
-| `actions` | `text[]` | Sí | Sin valor | CHECK no vacío y subconjunto de `review`, `catalog`, `rates`, `operators`; acciones de plataforma separadas del RBAC de cuentas (§14.1 de api-v1) |
+| `actions` | `text[]` | Sí | Sin valor | CHECK no vacío y subconjunto de `review`, `catalog`, `rates`, `operators`, `metrics`; acciones de plataforma separadas del RBAC de cuentas (§14.1 de api-v1) |
 | `status` | `text` | Sí | `active` | CHECK `active` o `revoked` |
 | `created_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito |
 | `updated_at` | `timestamptz` | Sí | CURRENT_TIMESTAMP | CHECK finito y no anterior a `created_at` |

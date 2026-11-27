@@ -755,6 +755,101 @@
       "title": "AppointmentResponse",
       "type": "object"
     },
+    "ApprovalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "bcvRateId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bcvrateid"
+        },
+        "expectedVersion": {
+          "minimum": 1.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "verifiedAmount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Verifiedamount"
+        },
+        "verifiedCurrency": {
+          "enum": [
+            "VES",
+            "USD"
+          ],
+          "title": "Verifiedcurrency",
+          "type": "string"
+        },
+        "verifiedPaidOn": {
+          "format": "date",
+          "title": "Verifiedpaidon",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "verifiedPaidOn",
+        "verifiedAmount",
+        "verifiedCurrency"
+      ],
+      "title": "ApprovalRequest",
+      "type": "object"
+    },
+    "ApprovalResultResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "const": "approved",
+          "default": "approved",
+          "title": "Decision",
+          "type": "string"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "grantedPeriod": {
+          "$ref": "#/$defs/GrantedPeriodResult"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "subscription": {
+          "$ref": "#/$defs/SubscriptionStateView"
+        }
+      },
+      "required": [
+        "reportId",
+        "grantedPeriod",
+        "subscription"
+      ],
+      "title": "ApprovalResultResponse",
+      "type": "object"
+    },
     "AuditEventResponse": {
       "properties": {
         "accountId": {
@@ -974,6 +1069,141 @@
         "availableIntervals"
       ],
       "title": "AvailabilityResponse",
+      "type": "object"
+    },
+    "BcvRateCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "rateDate": {
+          "format": "date",
+          "title": "Ratedate",
+          "type": "string"
+        },
+        "rateVesPerUsd": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Ratevesperusd"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "rateDate",
+        "rateVesPerUsd",
+        "source"
+      ],
+      "title": "BcvRateCreateRequest",
+      "type": "object"
+    },
+    "BcvRatePage": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/BcvRateResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "BcvRatePage",
+      "type": "object"
+    },
+    "BcvRateResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "rateDate": {
+          "format": "date",
+          "title": "Ratedate",
+          "type": "string"
+        },
+        "rateId": {
+          "format": "uuid",
+          "title": "Rateid",
+          "type": "string"
+        },
+        "rateVesPerUsd": {
+          "title": "Ratevesperusd",
+          "type": "string"
+        },
+        "registeredAt": {
+          "format": "date-time",
+          "title": "Registeredat",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rateId",
+        "rateDate",
+        "rateVesPerUsd",
+        "source",
+        "registeredAt"
+      ],
+      "title": "BcvRateResponse",
+      "type": "object"
+    },
+    "Body_uploadPaymentReportEvidence": {
+      "properties": {
+        "file": {
+          "contentMediaType": "application/octet-stream",
+          "title": "File",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "Body_uploadPaymentReportEvidence",
+      "type": "object"
+    },
+    "CancellationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "minimum": 1.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion"
+      ],
+      "title": "CancellationRequest",
       "type": "object"
     },
     "CapabilitiesResponse": {
@@ -3117,6 +3347,32 @@
       "title": "ContactResponse",
       "type": "object"
     },
+    "CurrentPeriodView": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        },
+        "periodicity": {
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "startsAt": {
+          "format": "date-time",
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "periodicity"
+      ],
+      "title": "CurrentPeriodView",
+      "type": "object"
+    },
     "DeclaredMedicationHistoryResponse": {
       "additionalProperties": false,
       "properties": {
@@ -3525,6 +3781,56 @@
         "version"
       ],
       "title": "DeclaredMedicationResponse",
+      "type": "object"
+    },
+    "DeclaredPayment": {
+      "additionalProperties": false,
+      "description": "What the client states; immutable after submission (§12.5).",
+      "properties": {
+        "amount": {
+          "$ref": "#/$defs/Money-Output"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Note"
+        },
+        "paidOn": {
+          "format": "date",
+          "title": "Paidon",
+          "type": "string"
+        },
+        "referenceLast4": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Referencelast4"
+        }
+      },
+      "required": [
+        "paidOn",
+        "amount",
+        "method"
+      ],
+      "title": "DeclaredPayment",
       "type": "object"
     },
     "DefaultAppointmentWindow": {
@@ -4782,6 +5088,59 @@
       "title": "DiagnosticReportResultResponse",
       "type": "object"
     },
+    "EvidenceView": {
+      "additionalProperties": false,
+      "properties": {
+        "contentType": {
+          "title": "Contenttype",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "sizeBytes": {
+          "exclusiveMinimum": 0.0,
+          "title": "Sizebytes",
+          "type": "integer"
+        },
+        "uploadedAt": {
+          "format": "date-time",
+          "title": "Uploadedat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contentType",
+        "sizeBytes",
+        "sha256",
+        "uploadedAt"
+      ],
+      "title": "EvidenceView",
+      "type": "object"
+    },
+    "ExpiringSubscription": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountId",
+        "endsAt"
+      ],
+      "title": "ExpiringSubscription",
+      "type": "object"
+    },
     "FieldError": {
       "properties": {
         "code": {
@@ -4808,6 +5167,74 @@
         "code"
       ],
       "title": "FieldError",
+      "type": "object"
+    },
+    "GrantedPeriodResult": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        },
+        "periodicity": {
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 1.0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "startsAt": {
+          "format": "date-time",
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "periodicity",
+        "sequence"
+      ],
+      "title": "GrantedPeriodResult",
+      "type": "object"
+    },
+    "GrantedPeriodView": {
+      "additionalProperties": false,
+      "properties": {
+        "endsAt": {
+          "format": "date-time",
+          "title": "Endsat",
+          "type": "string"
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 1.0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "startsAt": {
+          "format": "date-time",
+          "title": "Startsat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "startsAt",
+        "endsAt",
+        "periodicity",
+        "sequence"
+      ],
+      "title": "GrantedPeriodView",
       "type": "object"
     },
     "GrowthPoint": {
@@ -5272,6 +5699,60 @@
         "version"
       ],
       "title": "MemberResponse",
+      "type": "object"
+    },
+    "Money-Input": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Amount"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "Money-Output": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "title": "Amount",
+          "type": "string"
+        },
+        "currency": {
+          "enum": [
+            "USD",
+            "VES"
+          ],
+          "title": "Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "title": "Money",
       "type": "object"
     },
     "Monograph": {
@@ -6457,6 +6938,532 @@
         }
       ]
     },
+    "OperatorCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "enum": [
+              "review",
+              "catalog",
+              "rates",
+              "operators",
+              "metrics"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Actions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "displayName": {
+          "minLength": 1,
+          "title": "Displayname",
+          "type": "string"
+        },
+        "oidcIssuer": {
+          "minLength": 1,
+          "title": "Oidcissuer",
+          "type": "string"
+        },
+        "oidcSubject": {
+          "minLength": 1,
+          "title": "Oidcsubject",
+          "type": "string"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "oidcIssuer",
+        "oidcSubject",
+        "displayName",
+        "actions"
+      ],
+      "title": "OperatorCreateRequest",
+      "type": "object"
+    },
+    "OperatorPage": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/OperatorView"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "OperatorPage",
+      "type": "object"
+    },
+    "OperatorPaymentReportDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declared": {
+          "$ref": "#/$defs/DeclaredPayment"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "referenceWarnings": {
+          "items": {
+            "$ref": "#/$defs/ReferenceWarning"
+          },
+          "title": "Referencewarnings",
+          "type": "array"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "resubmissions": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Resubmissions",
+          "type": "array"
+        },
+        "review": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewOutcomeView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "submittedBy": {
+          "format": "uuid",
+          "title": "Submittedby",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reportId",
+        "accountId",
+        "planCode",
+        "periodicity",
+        "status",
+        "declared",
+        "submittedBy",
+        "createdAt",
+        "version"
+      ],
+      "title": "OperatorPaymentReportDetail",
+      "type": "object"
+    },
+    "OperatorPaymentReportPage": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/OperatorPaymentReportView"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "OperatorPaymentReportPage",
+      "type": "object"
+    },
+    "OperatorPaymentReportView": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declared": {
+          "$ref": "#/$defs/DeclaredPayment"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "submittedBy": {
+          "format": "uuid",
+          "title": "Submittedby",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reportId",
+        "accountId",
+        "planCode",
+        "periodicity",
+        "status",
+        "declared",
+        "submittedBy",
+        "createdAt",
+        "version"
+      ],
+      "title": "OperatorPaymentReportView",
+      "type": "object"
+    },
+    "OperatorPlanPage": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/OperatorPlanView"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "OperatorPlanPage",
+      "type": "object"
+    },
+    "OperatorPlanResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "plan": {
+          "$ref": "#/$defs/OperatorPlanView"
+        }
+      },
+      "required": [
+        "plan"
+      ],
+      "title": "OperatorPlanResponse",
+      "type": "object"
+    },
+    "OperatorPlanVersionView": {
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "currency": {
+          "const": "USD",
+          "title": "Currency",
+          "type": "string"
+        },
+        "price30DUsd": {
+          "title": "Price30Dusd",
+          "type": "string"
+        },
+        "priceYearUsd": {
+          "title": "Priceyearusd",
+          "type": "string"
+        },
+        "seatLimit": {
+          "minimum": 1.0,
+          "title": "Seatlimit",
+          "type": "integer"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "seatLimit",
+        "price30DUsd",
+        "priceYearUsd",
+        "currency",
+        "createdAt"
+      ],
+      "title": "OperatorPlanVersionView",
+      "type": "object"
+    },
+    "OperatorPlanView": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "retired"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "versions": {
+          "items": {
+            "$ref": "#/$defs/OperatorPlanVersionView"
+          },
+          "title": "Versions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "description",
+        "status",
+        "version",
+        "versions"
+      ],
+      "title": "OperatorPlanView",
+      "type": "object"
+    },
+    "OperatorResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "operator": {
+          "$ref": "#/$defs/OperatorView"
+        }
+      },
+      "required": [
+        "operator"
+      ],
+      "title": "OperatorResponse",
+      "type": "object"
+    },
+    "OperatorTokenIssued": {
+      "additionalProperties": false,
+      "properties": {
+        "accessToken": {
+          "title": "Accesstoken",
+          "type": "string"
+        },
+        "issuedAt": {
+          "format": "date-time",
+          "title": "Issuedat",
+          "type": "string"
+        },
+        "operatorId": {
+          "format": "uuid",
+          "title": "Operatorid",
+          "type": "string"
+        },
+        "tokenType": {
+          "const": "Bearer",
+          "default": "Bearer",
+          "title": "Tokentype",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accessToken",
+        "operatorId",
+        "issuedAt"
+      ],
+      "title": "OperatorTokenIssued",
+      "type": "object"
+    },
+    "OperatorView": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "displayName": {
+          "title": "Displayname",
+          "type": "string"
+        },
+        "operatorId": {
+          "format": "uuid",
+          "title": "Operatorid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "revoked"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operatorId",
+        "displayName",
+        "actions",
+        "status",
+        "version"
+      ],
+      "title": "OperatorView",
+      "type": "object"
+    },
     "PaginatedResponse_AccountDeviceResponse_": {
       "properties": {
         "items": {
@@ -7489,6 +8496,28 @@
         "total"
       ],
       "title": "PaginatedResponse[PatientProfileResponse]",
+      "type": "object"
+    },
+    "PaginatedResponse_PaymentReportResponse_": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PaymentReportResponse"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total": {
+          "minimum": 0.0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "total"
+      ],
+      "title": "PaginatedResponse[PaymentReportResponse]",
       "type": "object"
     },
     "PaginatedResponse_ProfessionalResponse_": {
@@ -10168,6 +11197,498 @@
       "title": "PatientProfileResponse",
       "type": "object"
     },
+    "PaymentReportCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "declaredAmount": {
+          "$ref": "#/$defs/Money-Input"
+        },
+        "declaredMethod": {
+          "minLength": 1,
+          "title": "Declaredmethod",
+          "type": "string"
+        },
+        "declaredNote": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Declarednote"
+        },
+        "declaredPaidOn": {
+          "format": "date",
+          "title": "Declaredpaidon",
+          "type": "string"
+        },
+        "declaredReferenceLast4": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9]{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Declaredreferencelast4"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        }
+      },
+      "required": [
+        "operationId",
+        "planCode",
+        "periodicity",
+        "declaredPaidOn",
+        "declaredAmount",
+        "declaredMethod"
+      ],
+      "title": "PaymentReportCreateRequest",
+      "type": "object"
+    },
+    "PaymentReportDetailResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declared": {
+          "$ref": "#/$defs/DeclaredPayment"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "review": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewOutcomeView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reportId",
+        "planCode",
+        "periodicity",
+        "status",
+        "declared",
+        "createdAt",
+        "version"
+      ],
+      "title": "PaymentReportDetailResponse",
+      "type": "object"
+    },
+    "PaymentReportResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "declared": {
+          "$ref": "#/$defs/DeclaredPayment"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        },
+        "previousReportId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Previousreportid"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "reportId",
+        "planCode",
+        "periodicity",
+        "status",
+        "declared",
+        "createdAt",
+        "version"
+      ],
+      "title": "PaymentReportResponse",
+      "type": "object"
+    },
+    "PendingReportsSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 0.0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "oldestCreatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Oldestcreatedat"
+        }
+      },
+      "required": [
+        "count"
+      ],
+      "title": "PendingReportsSummary",
+      "type": "object"
+    },
+    "PlanChangeRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "minimum": 1.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "planCode": {
+          "title": "Plancode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "planCode"
+      ],
+      "title": "PlanChangeRequest",
+      "type": "object"
+    },
+    "PlanPeriodicityCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 0.0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "periodicity": {
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "title": "Plancode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "planCode",
+        "periodicity",
+        "count"
+      ],
+      "title": "PlanPeriodicityCount",
+      "type": "object"
+    },
+    "PlanRetirementRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "minimum": 1.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion"
+      ],
+      "title": "PlanRetirementRequest",
+      "type": "object"
+    },
+    "PlanStatusCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 0.0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "planCode": {
+          "title": "Plancode",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "planCode",
+        "status",
+        "count"
+      ],
+      "title": "PlanStatusCount",
+      "type": "object"
+    },
+    "PlanSummaryView": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "name"
+      ],
+      "title": "PlanSummaryView",
+      "type": "object"
+    },
+    "PlanVersionCreateRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "minimum": 1.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "price30DUsd": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Price30Dusd"
+        },
+        "priceYearUsd": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Priceyearusd"
+        },
+        "seatLimit": {
+          "minimum": 1.0,
+          "title": "Seatlimit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "seatLimit",
+        "price30DUsd",
+        "priceYearUsd"
+      ],
+      "title": "PlanVersionCreateRequest",
+      "type": "object"
+    },
+    "PlanVersionSummaryView": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "price30DUsd": {
+          "title": "Price30Dusd",
+          "type": "string"
+        },
+        "priceYearUsd": {
+          "title": "Priceyearusd",
+          "type": "string"
+        },
+        "seatLimit": {
+          "minimum": 1.0,
+          "title": "Seatlimit",
+          "type": "integer"
+        },
+        "version": {
+          "minimum": 1.0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "seatLimit",
+        "price30DUsd",
+        "priceYearUsd",
+        "currency"
+      ],
+      "title": "PlanVersionSummaryView",
+      "type": "object"
+    },
     "ProfessionalResponse": {
       "properties": {
         "createdAt": {
@@ -10231,6 +11752,118 @@
       "title": "ProfessionalResponse",
       "type": "object"
     },
+    "QuoteRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "planCode",
+        "periodicity"
+      ],
+      "title": "QuoteRequest",
+      "type": "object"
+    },
+    "QuoteResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "amountUsd": {
+          "title": "Amountusd",
+          "type": "string"
+        },
+        "amountVes": {
+          "title": "Amountves",
+          "type": "string"
+        },
+        "bcvRate": {
+          "title": "Bcvrate",
+          "type": "string"
+        },
+        "bcvRateDate": {
+          "format": "date",
+          "title": "Bcvratedate",
+          "type": "string"
+        },
+        "bcvRateSource": {
+          "title": "Bcvratesource",
+          "type": "string"
+        },
+        "periodicity": {
+          "enum": [
+            "days_30",
+            "year_1"
+          ],
+          "title": "Periodicity",
+          "type": "string"
+        },
+        "planCode": {
+          "enum": [
+            "independent",
+            "small_practice",
+            "medical_center"
+          ],
+          "title": "Plancode",
+          "type": "string"
+        },
+        "planVersion": {
+          "minimum": 1.0,
+          "title": "Planversion",
+          "type": "integer"
+        },
+        "quoteId": {
+          "format": "uuid",
+          "title": "Quoteid",
+          "type": "string"
+        },
+        "quotedAt": {
+          "format": "date-time",
+          "title": "Quotedat",
+          "type": "string"
+        },
+        "roundingRule": {
+          "const": "ROUND_HALF_UP",
+          "default": "ROUND_HALF_UP",
+          "title": "Roundingrule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quoteId",
+        "planCode",
+        "planVersion",
+        "periodicity",
+        "amountUsd",
+        "bcvRate",
+        "bcvRateDate",
+        "bcvRateSource",
+        "amountVes",
+        "quotedAt"
+      ],
+      "title": "QuoteResponse",
+      "type": "object"
+    },
     "ReadyResponse": {
       "properties": {
         "database": {
@@ -10287,6 +11920,106 @@
         "entered-in-error"
       ],
       "type": "string"
+    },
+    "ReferenceWarning": {
+      "additionalProperties": false,
+      "description": "Partial-reference coincidences only warn the operator; they never\nreject or delete anything by themselves (§12.6, D24).",
+      "properties": {
+        "accountId": {
+          "format": "uuid",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "declaredAmount": {
+          "$ref": "#/$defs/Money-Output"
+        },
+        "declaredPaidOn": {
+          "format": "date",
+          "title": "Declaredpaidon",
+          "type": "string"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "accountId",
+        "status",
+        "declaredPaidOn",
+        "declaredAmount"
+      ],
+      "title": "ReferenceWarning",
+      "type": "object"
+    },
+    "RejectionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expectedVersion": {
+          "minimum": 1.0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "operationId": {
+          "format": "uuid",
+          "title": "Operationid",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "expectedVersion",
+        "reason"
+      ],
+      "title": "RejectionRequest",
+      "type": "object"
+    },
+    "RejectionResultResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "const": "rejected",
+          "default": "rejected",
+          "title": "Decision",
+          "type": "string"
+        },
+        "duplicate": {
+          "default": false,
+          "title": "Duplicate",
+          "type": "boolean"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "reportId": {
+          "format": "uuid",
+          "title": "Reportid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reportId",
+        "reason"
+      ],
+      "title": "RejectionResultResponse",
+      "type": "object"
     },
     "RelationshipResponse": {
       "properties": {
@@ -10521,6 +12254,51 @@
         "version"
       ],
       "title": "ReportAttachmentResponse",
+      "type": "object"
+    },
+    "ReviewOutcomeView": {
+      "additionalProperties": false,
+      "properties": {
+        "decidedAt": {
+          "format": "date-time",
+          "title": "Decidedat",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "approved",
+            "rejected"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "grantedPeriod": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GrantedPeriodView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "decision",
+        "decidedAt"
+      ],
+      "title": "ReviewOutcomeView",
       "type": "object"
     },
     "ScheduleBlockResponse": {
@@ -10820,6 +12598,54 @@
         "version"
       ],
       "title": "ScheduleRuleResponse",
+      "type": "object"
+    },
+    "SeatOverrun": {
+      "additionalProperties": false,
+      "properties": {
+        "accountId": {
+          "format": "uuid",
+          "title": "Accountid",
+          "type": "string"
+        },
+        "limit": {
+          "minimum": 1.0,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "used": {
+          "minimum": 0.0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accountId",
+        "used",
+        "limit"
+      ],
+      "title": "SeatOverrun",
+      "type": "object"
+    },
+    "SeatUsageView": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "minimum": 1.0,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "used": {
+          "minimum": 0.0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "used",
+        "limit"
+      ],
+      "title": "SeatUsageView",
       "type": "object"
     },
     "SeriesPointResponse": {
@@ -11722,6 +13548,152 @@
       "title": "SpecialtyTemplateResponse",
       "type": "object"
     },
+    "SubscriptionMetricsResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "accountsByPlan": {
+          "items": {
+            "$ref": "#/$defs/PlanStatusCount"
+          },
+          "title": "Accountsbyplan",
+          "type": "array"
+        },
+        "expiringSoon": {
+          "items": {
+            "$ref": "#/$defs/ExpiringSubscription"
+          },
+          "title": "Expiringsoon",
+          "type": "array"
+        },
+        "generatedAt": {
+          "format": "date-time",
+          "title": "Generatedat",
+          "type": "string"
+        },
+        "pendingReports": {
+          "$ref": "#/$defs/PendingReportsSummary"
+        },
+        "periodsByPlan": {
+          "items": {
+            "$ref": "#/$defs/PlanPeriodicityCount"
+          },
+          "title": "Periodsbyplan",
+          "type": "array"
+        },
+        "seatsOverLimit": {
+          "items": {
+            "$ref": "#/$defs/SeatOverrun"
+          },
+          "title": "Seatsoverlimit",
+          "type": "array"
+        },
+        "verifiedAmounts": {
+          "items": {
+            "$ref": "#/$defs/VerifiedAmount"
+          },
+          "title": "Verifiedamounts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "accountsByPlan",
+        "expiringSoon",
+        "pendingReports",
+        "periodsByPlan",
+        "verifiedAmounts",
+        "seatsOverLimit",
+        "generatedAt"
+      ],
+      "title": "SubscriptionMetricsResponse",
+      "type": "object"
+    },
+    "SubscriptionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "currentPeriod": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CurrentPeriodView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "graceEndsAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Graceendsat"
+        },
+        "plan": {
+          "$ref": "#/$defs/PlanSummaryView"
+        },
+        "planVersion": {
+          "$ref": "#/$defs/PlanVersionSummaryView"
+        },
+        "seats": {
+          "$ref": "#/$defs/SeatUsageView"
+        },
+        "status": {
+          "enum": [
+            "pending_activation",
+            "active",
+            "grace",
+            "suspended",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "subscriptionVersion": {
+          "minimum": 1.0,
+          "title": "Subscriptionversion",
+          "type": "integer"
+        },
+        "updatedAt": {
+          "format": "date-time",
+          "title": "Updatedat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan",
+        "planVersion",
+        "status",
+        "seats",
+        "subscriptionVersion",
+        "updatedAt"
+      ],
+      "title": "SubscriptionResponse",
+      "type": "object"
+    },
+    "SubscriptionStateView": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "subscriptionVersion": {
+          "minimum": 1.0,
+          "title": "Subscriptionversion",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status",
+        "subscriptionVersion"
+      ],
+      "title": "SubscriptionStateView",
+      "type": "object"
+    },
     "SyncChange": {
       "properties": {
         "changeKind": {
@@ -12217,6 +14189,25 @@
       ],
       "title": "VademecumReferenceSource",
       "type": "object"
+    },
+    "VerifiedAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "total": {
+          "title": "Total",
+          "type": "string"
+        }
+      },
+      "required": [
+        "currency",
+        "total"
+      ],
+      "title": "VerifiedAmount",
+      "type": "object"
     }
   },
   "$id": "urn:nightingale:public-models:1.3",
@@ -12234,7 +14225,7 @@
       "pydantic": "2.14.1",
       "sqlalchemy": "2.1.6"
     },
-    "sourceHead": "6bf5dbfc8de399670d8d7b59f4569bbd4e4094db",
-    "sourceSha256": "72e686743e48c0e25464d63389abdbba18dd0c6a620d10ea6872b7897b9b2bc6"
+    "sourceHead": "4c2d06accf315e04f3b1ba10ae5ad770da790a8e",
+    "sourceSha256": "1af44c7b790519e3755a099f2ec3cc3bff3cc9cedb4dc6f8a595a0bbc8937eec"
   }
 }

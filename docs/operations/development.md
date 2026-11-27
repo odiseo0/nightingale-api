@@ -308,6 +308,10 @@ Se usaron las guías oficiales actuales para FastAPI/Pydantic/uv/Uvicorn y la gu
 
 **Evidencias de suscripciones (T17, 2026-11-26):** la captura de pago reutiliza el adaptador privado existente `src/core/services/report_storage.py` (S3 con `aioaws` fijado en `uv.lock` por Etapa 3, con alternativa local bajo `STORAGE_ROOT`), sin dependencia nueva. La decisión cumple D24/OWASP: validación por firma real (JPEG/PNG/PDF), máximo 5 MB, una captura por reporte, nombre interno generado, bytes fuera de la base/transacción/sync y descarga reautorizada; el `storage_key` nunca se expone ni se registra.
 
+## Suscripciones de cuenta · cierre P-20261117-02 (2026-11-27)
+
+Cierre integral: 354 pruebas (8 errores ajenos preexistentes: 7 de vademecum por fuente ausente en la copia y `UsersStructureTests` documentado), los 9 probes (`subscriptions`, `access`, `accounts`, `team`, `sync`, `downloads`, `events`, `persistence`, `contracts`) pasados con PostgreSQL/Keycloak Test reales, build offline exitoso, contratos reproducibles (138 rutas) y diff limpio. Migraciones nuevas: `20261126_01` (núcleo + catálogo D21), `20261126_02` (tasas/reportes/revisiones/evidencias/operador), `20261127_01` (acción `metrics`). El probe `subscriptions` cubre el recorrido completo con dos operadores. Límites en [quality.md](../quality.md).
+
 ## Evidencia y límites
 
 - Instalación bloqueada/offline comprobada tras incorporar el extra asyncio; wheel y sdist construidos e inspeccionados. No contienen secretos, entorno virtual, caché ni temporales. Se verificó el punto de entrada `nightingale-api = src.application:main`.

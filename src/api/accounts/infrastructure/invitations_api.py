@@ -19,6 +19,7 @@ from src.api.accounts.domain.errors import (
 )
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.errors import no_query_parameters, request_correlation_id
+from src.api.subscriptions.application.access_cases import CommerciallySuspended
 from src.api.sync.application.operations_cases import accept_invitation
 from src.api.sync.domain.errors import ResultExpired
 from src.core import Err, Ok
@@ -72,6 +73,8 @@ async def read_account_invitations(
             raise HTTPException(401)
         case Err(AccessDenied()):
             raise HTTPException(403)
+        case Err(CommerciallySuspended()):
+            raise HTTPException(403, detail="SUBSCRIPTION_SUSPENDED")
         case Err(AccountNotFound()):
             raise HTTPException(404)
         case unexpected:
@@ -105,6 +108,8 @@ async def accept_own_invitation(
             raise HTTPException(401)
         case Err(AccessDenied()):
             raise HTTPException(403)
+        case Err(CommerciallySuspended()):
+            raise HTTPException(403, detail="SUBSCRIPTION_SUSPENDED")
         case Err(AccountNotFound() | AccountObjectNotFound()):
             raise HTTPException(404)
         case Err(ResultExpired()):

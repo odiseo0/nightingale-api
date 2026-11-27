@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.accounts.domain.errors import AccountNotFound, AccountObjectNotFound
 from src.api.authorization.domain.errors import AccessDenied, InvalidCredential
 from src.api.errors import no_query_parameters, request_correlation_id
+from src.api.subscriptions.application.access_cases import CommerciallySuspended
 from src.api.sync.application.operations_cases import get_operation, submit_batch
 from src.api.sync.domain.errors import OperationNotFound, ResultExpired
 from src.api.sync.domain.operations import (
@@ -64,6 +65,10 @@ async def accept_operations(
             raise HTTPException(status.HTTP_401_UNAUTHORIZED)
         case Err(AccessDenied()):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
+        case Err(CommerciallySuspended()):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail="SUBSCRIPTION_SUSPENDED"
+            )
         case Err(AccountNotFound() | AccountObjectNotFound()):
             raise HTTPException(status.HTTP_404_NOT_FOUND)
         case Err(ResultExpired()):
@@ -97,6 +102,10 @@ async def read_operation(
             raise HTTPException(status.HTTP_401_UNAUTHORIZED)
         case Err(AccessDenied()):
             raise HTTPException(status.HTTP_403_FORBIDDEN)
+        case Err(CommerciallySuspended()):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail="SUBSCRIPTION_SUSPENDED"
+            )
         case Err(AccountNotFound() | OperationNotFound()):
             raise HTTPException(status.HTTP_404_NOT_FOUND)
         case Err(ResultExpired()):
